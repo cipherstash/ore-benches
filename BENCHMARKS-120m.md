@@ -7,6 +7,8 @@
 
 ## Benchmark Results
 
+The following tests were conducted on a single table in Postgres containing 120 million rows of data.
+
 ### Exact
 
 |                | `plaintext_linear`          | `plaintext_btree`                | `ore_linear`                     | `ore_btree`                       |
