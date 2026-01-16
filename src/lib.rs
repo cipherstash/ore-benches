@@ -6,8 +6,7 @@ use cipherstash_client::{
     schema::ColumnConfig,
     ZeroKMSConfig,
 };
-use fake::{Dummy, Fake, Faker};
-use rand::Rng;
+use fake::{Dummy, Fake};
 use sqlx::{postgres::PgPoolOptions, types::Json, QueryBuilder};
 use std::borrow::Cow;
 use std::env;
