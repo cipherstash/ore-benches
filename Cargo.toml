@@ -17,14 +17,19 @@ rand = "0.8.5"
 cipherstash-client = { path = "../cipherstash-suite/packages/cipherstash-client", features = ["tokio"] }
 anyhow = "1.0"
 serde_json = "1.0"
+fake = "4.4.0"
 
 [[bin]]
 name = "generate_data"
 path = "src/bin/generate_data.rs"
 
 [[bin]]
-name = "encrypt_data"
-path = "src/bin/encrypt_data.rs"
+name = "encrypt_int"
+path = "src/bin/encrypt_int.rs"
+
+[[bin]]
+name = "encrypt_string"
+path = "src/bin/encrypt_string.rs"
 
 [[bench]]
 name = "exact_lookup"

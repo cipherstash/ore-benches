@@ -3,9 +3,10 @@ use cipherstash_client::{
     config::EnvSource,
     encryption::{Plaintext, ScopedCipher},
     eql::{encrypt_eql, EqlOperation, Identifier, PreparedPlaintext},
-    schema::{column::Index, ColumnConfig, ColumnType},
+    schema::ColumnConfig,
     ZeroKMSConfig,
 };
+use fake::{Dummy, Fake, Faker};
 use rand::Rng;
 use sqlx::{postgres::PgPoolOptions, types::Json, QueryBuilder};
 use std::borrow::Cow;
@@ -59,7 +60,7 @@ impl IngestOptionsBuilder {
         self
     }
 
-    pub fn build(self) -> anyhow::Result<IngestOptions> {
+    pub fn build(self) -> Result<IngestOptions> {
         Ok(IngestOptions {
             num_records: self.num_records.unwrap_or(
                 Self::DEFAULT_NUM_RECORDS,
@@ -74,7 +75,7 @@ impl IngestOptionsBuilder {
 }
 
 impl IngestOptions {
-    pub async fn ingest(self) -> anyhow::Result<()> {
+    pub async fn ingest<T, F>(self, f: F) -> Result<()> where T: Into<Plaintext> + Dummy<F> + Send {
         let database_url =
             env::var("DATABASE_URL").context("DATABASE_URL environment variable must be set")?;
 
@@ -99,7 +100,6 @@ impl IngestOptions {
         let scoped_cipher = Arc::new(scoped_cipher);
 
         let column_config = Cow::Borrowed(&self.column_config);
-        let mut rng = rand::thread_rng();
 
         println!("Encrypting and inserting {} values...", self.num_records);
         for batch_start in (0..self.num_records).step_by(self.batch_size) {
@@ -108,7 +108,7 @@ impl IngestOptions {
 
             let prepared = (0..batch_count)
                 .map(|_| {
-                    let x = rng.gen::<i32>();
+                    let x: T = f.fake();
                     PreparedPlaintext::new(
                         // FIXME: take a reference instead of using Cow?
                         column_config.clone(),
@@ -122,7 +122,7 @@ impl IngestOptions {
 
             let out = encrypt_eql(scoped_cipher.clone(), prepared, &Default::default()).await?;
 
-            QueryBuilder::new("INSERT INTO integer_encrypted (value) ")
+            QueryBuilder::new(format!("INSERT INTO {} (value) ", self.identifier.table()))
                 .push_values(out.into_iter(), |mut b, v| {
                     b.push_bind(Json(v));
                 })

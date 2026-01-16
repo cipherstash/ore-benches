@@ -21,6 +21,7 @@ use cipherstash_client::{
     schema::{column::Index, ColumnConfig, ColumnType},
 };
 use dbbenches::IngestOptionsBuilder;
+use fake::{faker::name::raw::Name, locales::EN};
 use std::env;
 
 
@@ -34,14 +35,15 @@ async fn main() -> Result<()> {
     IngestOptionsBuilder::new()
         .num_records(num_records)
         .batch_size(1000)
-        .identifier(Identifier::new("integer_encrypted", "value"))
+        .identifier(Identifier::new("string_encrypted", "value"))
         .column_config(
             ColumnConfig::build("value")
-                .casts_as(ColumnType::Int)
-                .add_index(Index::new_ore()),
+                .casts_as(ColumnType::Utf8Str)
+                .add_index(Index::new_unique())
+                .add_index(Index::new_match()),
         )
         .build()?
-        .ingest()
+        .ingest::<String, Name<EN>>(Name(EN))
         .await?;
 
     Ok(())
