@@ -24,7 +24,6 @@ use dbbenches::IngestOptionsBuilder;
 use fake::Faker;
 use std::env;
 
-
 #[tokio::main]
 async fn main() -> Result<()> {
     let num_records: i32 = env::var("NUM_RECORDS")

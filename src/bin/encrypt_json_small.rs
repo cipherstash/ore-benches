@@ -18,27 +18,33 @@
 use anyhow::Result;
 use cipherstash_client::{
     eql::Identifier,
-    schema::{column::Index, ColumnConfig, ColumnType},
+    schema::{
+        column::{Index, IndexType},
+        ColumnConfig, ColumnType,
+    },
 };
-use dbbenches::IngestOptionsBuilder;
-use fake::{Dummy, Fake, Rng, faker::{name, internet}};
-use std::env;
+use dbbenches::{IngestOptionsBuilder, WrappedJson};
+use fake::{
+    faker::{internet, name},
+    Dummy, Fake, Rng,
+};
 use serde_json::json;
+use std::env;
 
 struct FakeJsonSmall;
 
 // FIXME: cipherstash-client doesn't have a From<serde_json::Value> for Plaintext impl yet, so we use String here
-impl Dummy<FakeJsonSmall> for String {
+impl Dummy<FakeJsonSmall> for WrappedJson {
     fn dummy_with_rng<R: Rng + ?Sized>(_config: &FakeJsonSmall, _: &mut R) -> Self {
-        json!({
+        let value = json!({
             "first_name": name::en::FirstName().fake::<String>(),
             "last_name": name::en::LastName().fake::<String>(),
             "age": (18..=99).fake::<i32>(),
             "email": internet::en::FreeEmail().fake::<String>(),
-        }).to_string()
+        });
+        WrappedJson(value)
     }
 }
-
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -53,12 +59,15 @@ async fn main() -> Result<()> {
         .identifier(Identifier::new("json_small_encrypted", "value"))
         .column_config(
             ColumnConfig::build("value")
-                .casts_as(ColumnType::Utf8Str)
-                .add_index(Index::new_unique())
-                .add_index(Index::new_match()),
+                .casts_as(ColumnType::JsonB)
+                // FIXME: There is no convenience method for SteVec yet on Index
+                .add_index(Index::new(IndexType::SteVec {
+                    prefix: "value".to_string(),
+                    term_filters: Default::default(),
+                })),
         )
         .build()?
-        .ingest::<String, _>(FakeJsonSmall)
+        .ingest::<WrappedJson, _>(FakeJsonSmall)
         .await?;
 
     Ok(())

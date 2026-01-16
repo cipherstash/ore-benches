@@ -10,8 +10,8 @@ use fake::{Dummy, Fake};
 use sqlx::{postgres::PgPoolOptions, types::Json, QueryBuilder};
 use std::borrow::Cow;
 use std::env;
-use std::sync::Arc;
 use std::fmt::Debug;
+use std::sync::Arc;
 
 pub struct IngestOptions {
     pub num_records: i32,
@@ -62,12 +62,8 @@ impl IngestOptionsBuilder {
 
     pub fn build(self) -> Result<IngestOptions> {
         Ok(IngestOptions {
-            num_records: self.num_records.unwrap_or(
-                Self::DEFAULT_NUM_RECORDS,
-            ),
-            batch_size: self.batch_size.unwrap_or(
-                Self::DEFAULT_BATCH_SIZE,
-            ),
+            num_records: self.num_records.unwrap_or(Self::DEFAULT_NUM_RECORDS),
+            batch_size: self.batch_size.unwrap_or(Self::DEFAULT_BATCH_SIZE),
             identifier: self.identifier.context("identifier is required")?,
             column_config: self.column_config.context("column_config is required")?,
         })
@@ -75,7 +71,10 @@ impl IngestOptionsBuilder {
 }
 
 impl IngestOptions {
-    pub async fn ingest<T, F>(self, f: F) -> Result<()> where T: Into<Plaintext> + Dummy<F> + Send + Debug {
+    pub async fn ingest<T, F>(self, f: F) -> Result<()>
+    where
+        T: Into<Plaintext> + Dummy<F> + Send + Debug,
+    {
         let database_url =
             env::var("DATABASE_URL").context("DATABASE_URL environment variable must be set")?;
 
@@ -135,5 +134,14 @@ impl IngestOptions {
         }
 
         Ok(())
+    }
+}
+
+#[derive(Debug)]
+pub struct WrappedJson(pub serde_json::Value);
+
+impl From<WrappedJson> for Plaintext {
+    fn from(WrappedJson(value): WrappedJson) -> Self {
+        Plaintext::JsonB(Some(value))
     }
 }

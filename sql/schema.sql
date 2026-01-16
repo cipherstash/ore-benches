@@ -27,3 +27,13 @@ CREATE TABLE IF NOT EXISTS json_small_encrypted (
     id SERIAL PRIMARY KEY,
     value eql_v2_encrypted NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS json_large_plaintext (
+    id SERIAL PRIMARY KEY,
+    value JSONB NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS json_large_encrypted (
+    id SERIAL PRIMARY KEY,
+    value eql_v2_encrypted NOT NULL
+);
