@@ -1,0 +1,60 @@
+[tasks.postgres]
+description = "Start PostgreSQL via Docker Compose"
+run = "docker compose up -d postgres"
+
+[tasks.postgres-stop]
+description = "Stop PostgreSQL Docker container"
+run = "docker compose down"
+
+[tasks.postgres-logs]
+description = "View PostgreSQL logs"
+run = "docker compose logs -f postgres"
+
+[tasks.reset-db]
+description = "Reset the database (drop and recreate)"
+depends = ["postgres"]
+run = """
+#!/usr/bin/env bash
+set -e
+
+echo "Waiting for PostgreSQL to be ready..."
+until docker exec ore-benches-postgres pg_isready -U postgres > /dev/null 2>&1; do
+  sleep 1
+done
+
+echo "Dropping and recreating database..."
+docker exec -i ore-benches-postgres psql -U postgres -d template1 -c "DROP DATABASE IF EXISTS postgres WITH (FORCE);"
+docker exec -i ore-benches-postgres psql -U postgres -d template1 -c "CREATE DATABASE postgres;"
+
+echo "Database reset complete. Run 'mise run setup-db' to set up tables and data."
+"""
+
+[tasks.setup-db]
+description = "Set up the test database (create tables and load data)"
+depends = ["postgres"]
+run = """
+#!/usr/bin/env bash
+set -e
+
+echo "Waiting for PostgreSQL to be ready..."
+until docker exec ore-benches-postgres pg_isready -U postgres > /dev/null 2>&1; do
+  sleep 1
+done
+
+echo "Downloading EQL..."
+curl -sLo /tmp/cipherstash-encrypt.sql https://github.com/cipherstash/encrypt-query-language/releases/latest/download/cipherstash-encrypt.sql
+
+echo "Installing EQL..."
+docker exec -i ore-benches-postgres psql -v ON_ERROR_STOP=1 -U postgres -d postgres < /tmp/cipherstash-encrypt.sql
+
+echo "Creating tables..."
+docker exec -i ore-benches-postgres psql -v ON_ERROR_STOP=1 -U postgres -d postgres < sql/schema.sql
+
+if [ -f sql/data.sql ]; then
+  echo "Loading data..."
+docker exec -i ore-benches-postgres psql -v ON_ERROR_STOP=1 -U postgres -d postgres < sql/data.sql
+  echo "Database setup complete!"
+else
+  echo "No data.sql found. Tables created successfully."
+fi
+"""
