@@ -10,9 +10,16 @@ sqlx = { version = "0.6", features = [ "runtime-tokio-native-tls" , "postgres" ]
 tokio = { version = "1", features = ["full"] }
 criterion = { version = "0.4.0", features = [ "async_tokio" ]}
 criterion-table = "0.4.2"
-ore-rs = "0.4.0"
+ore-rs = "0.7.0"
 hex = "0.4.3"
 hex-literal = "0.3.4"
+rand = "0.8.5"
+cipherstash-client = "0.32.2"
+anyhow = "1.0"
+
+[[bin]]
+name = "generate_data"
+path = "src/bin/generate_data.rs"
 
 [[bench]]
 name = "exact_lookup"

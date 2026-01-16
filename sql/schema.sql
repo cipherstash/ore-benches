@@ -1,9 +1,9 @@
-CREATE TABLE integer_plaintext (
+CREATE TABLE IF NOT EXISTS integer_plaintext (
     id SERIAL PRIMARY KEY,
     value INT NOT NULL
 );
 
-CREATE TABLE integer_encrypted (
+CREATE TABLE IF NOT EXISTS integer_encrypted (
     id SERIAL PRIMARY KEY,
-    value cs_encrypted_v2 NOT NULL
+    value eql_v2_encrypted NOT NULL
 );

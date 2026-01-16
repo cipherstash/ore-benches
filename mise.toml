@@ -10,6 +10,10 @@ run = "docker compose down"
 description = "View PostgreSQL logs"
 run = "docker compose logs -f postgres"
 
+[tasks.psql]
+description = "Connect to PostgreSQL via psql"
+run = "docker exec -it ore-benches-postgres psql -U postgres -d postgres"
+
 [tasks.reset-db]
 description = "Reset the database (drop and recreate)"
 depends = ["postgres"]
@@ -50,11 +54,5 @@ docker exec -i ore-benches-postgres psql -v ON_ERROR_STOP=1 -U postgres -d postg
 echo "Creating tables..."
 docker exec -i ore-benches-postgres psql -v ON_ERROR_STOP=1 -U postgres -d postgres < sql/schema.sql
 
-if [ -f sql/data.sql ]; then
-  echo "Loading data..."
-docker exec -i ore-benches-postgres psql -v ON_ERROR_STOP=1 -U postgres -d postgres < sql/data.sql
-  echo "Database setup complete!"
-else
-  echo "No data.sql found. Tables created successfully."
-fi
+echo "Database setup complete!"
 """
