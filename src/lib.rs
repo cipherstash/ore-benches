@@ -11,6 +11,7 @@ use sqlx::{postgres::PgPoolOptions, types::Json, QueryBuilder};
 use std::borrow::Cow;
 use std::env;
 use std::sync::Arc;
+use std::fmt::Debug;
 
 pub struct IngestOptions {
     pub num_records: i32,
@@ -74,7 +75,7 @@ impl IngestOptionsBuilder {
 }
 
 impl IngestOptions {
-    pub async fn ingest<T, F>(self, f: F) -> Result<()> where T: Into<Plaintext> + Dummy<F> + Send {
+    pub async fn ingest<T, F>(self, f: F) -> Result<()> where T: Into<Plaintext> + Dummy<F> + Send + Debug {
         let database_url =
             env::var("DATABASE_URL").context("DATABASE_URL environment variable must be set")?;
 
@@ -108,6 +109,7 @@ impl IngestOptions {
             let prepared = (0..batch_count)
                 .map(|_| {
                     let x: T = f.fake();
+
                     PreparedPlaintext::new(
                         // FIXME: take a reference instead of using Cow?
                         column_config.clone(),
