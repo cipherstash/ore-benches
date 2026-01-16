@@ -1,3 +1,6 @@
+[tools]
+rust = "latest"
+
 [tasks.postgres]
 description = "Start PostgreSQL via Docker Compose"
 run = "docker compose up -d postgres"
