@@ -60,8 +60,19 @@ docker exec -i ore-benches-postgres psql -v ON_ERROR_STOP=1 -U postgres -d postg
 echo "Database setup complete!"
 """
 
+[tasks."bench:build"]
+description = "Build all binaries in release mode"
+run = """
+#!/usr/bin/env bash
+set -e
+
+echo "Building binaries in release mode..."
+cargo build --release
+"""
+
 [tasks."bench:ingest:_run"]
 description = "Internal: Run a generic ingest benchmark"
+depends = ["bench:build"]
 run = """
 #!/usr/bin/env bash
 set -e
