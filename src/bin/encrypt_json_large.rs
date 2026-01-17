@@ -138,7 +138,7 @@ async fn main() -> Result<()> {
         .parse()
         .expect("NUM_RECORDS must be a valid integer");
 
-    IngestOptionsBuilder::new()
+    IngestOptionsBuilder::new("encrypt_json_large")
         .num_records(num_records)
         .batch_size(1000)
         .identifier(Identifier::new("json_large_encrypted", "value"))

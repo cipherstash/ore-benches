@@ -31,7 +31,7 @@ async fn main() -> Result<()> {
         .parse()
         .expect("NUM_RECORDS must be a valid integer");
 
-    IngestOptionsBuilder::new()
+    IngestOptionsBuilder::new("encrypt_string")
         .num_records(num_records)
         .batch_size(1000)
         .identifier(Identifier::new("string_encrypted", "value"))

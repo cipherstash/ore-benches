@@ -16,7 +16,9 @@ hex-literal = "0.3.4"
 rand = "0.8.5"
 cipherstash-client = { version = "0.32.2", features = ["tokio"] }
 anyhow = "1.0"
+serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+chrono = "0.4"
 fake = { version = "4.4.0", features = ["chrono"] }
 
 [[bin]]
@@ -30,6 +32,10 @@ path = "src/bin/encrypt_int.rs"
 [[bin]]
 name = "encrypt_string"
 path = "src/bin/encrypt_string.rs"
+
+[[bin]]
+name = "combine_benchmark"
+path = "src/bin/combine_benchmark.rs"
 
 [[bench]]
 name = "exact_lookup"

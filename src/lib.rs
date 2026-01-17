@@ -7,6 +7,7 @@ use cipherstash_client::{
     ZeroKMSConfig,
 };
 use fake::{Dummy, Fake};
+use serde_json::json;
 use sqlx::{postgres::PgPoolOptions, types::Json, QueryBuilder};
 use std::borrow::Cow;
 use std::env;
@@ -14,6 +15,7 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 pub struct IngestOptions {
+    pub bench_name: String,
     pub num_records: i32,
     pub batch_size: usize,
     pub identifier: Identifier,
@@ -21,6 +23,7 @@ pub struct IngestOptions {
 }
 
 pub struct IngestOptionsBuilder {
+    bench_name: String,
     num_records: Option<i32>,
     batch_size: Option<usize>,
     identifier: Option<Identifier>,
@@ -31,8 +34,9 @@ impl IngestOptionsBuilder {
     const DEFAULT_BATCH_SIZE: usize = 1000;
     const DEFAULT_NUM_RECORDS: i32 = 100_000;
 
-    pub fn new() -> Self {
+    pub fn new(bench_name: impl Into<String>) -> Self {
         Self {
+            bench_name: bench_name.into(),
             num_records: None,
             batch_size: None,
             identifier: None,
@@ -62,6 +66,7 @@ impl IngestOptionsBuilder {
 
     pub fn build(self) -> Result<IngestOptions> {
         Ok(IngestOptions {
+            bench_name: self.bench_name,
             num_records: self.num_records.unwrap_or(Self::DEFAULT_NUM_RECORDS),
             batch_size: self.batch_size.unwrap_or(Self::DEFAULT_BATCH_SIZE),
             identifier: self.identifier.context("identifier is required")?,
@@ -83,7 +88,11 @@ impl IngestOptions {
             .parse()
             .expect("NUM_RECORDS must be a valid integer");
 
-        println!("Connecting to database...");
+        let hf_iteration: i32 = env::var("HYPERFINE_ITERATION")
+            .unwrap_or_else(|_| "0".to_string())
+            .parse()
+            .expect("HYPERFINE_ITERATION must be a valid integer");
+
         let pool = PgPoolOptions::new()
             .max_connections(5)
             .connect(&database_url)
@@ -100,7 +109,6 @@ impl IngestOptions {
 
         let column_config = Cow::Borrowed(&self.column_config);
 
-        println!("Encrypting and inserting {} values...", self.num_records);
         for batch_start in (0..self.num_records).step_by(self.batch_size) {
             let batch_end = (batch_start + self.batch_size as i32).min(self.num_records);
             let batch_count = batch_end - batch_start;
@@ -130,8 +138,13 @@ impl IngestOptions {
                 .execute(&pool)
                 .await?;
 
-            println!("Inserted {} / {} records", batch_end, num_records);
         }
+
+        let result = json!({
+            "inserted": num_records
+        });
+        let filename = format!("target/{}-{num_records}_{hf_iteration}.json", self.bench_name);
+        std::fs::write(&filename, serde_json::to_string(&result)?)?;
 
         Ok(())
     }

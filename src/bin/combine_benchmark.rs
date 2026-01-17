@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::path::Path;
+use std::process::Command;
 
 #[derive(Debug, Deserialize)]
 struct HyperfineResult {
@@ -35,8 +36,107 @@ struct CombinedResult {
 }
 
 #[derive(Debug, Serialize)]
+struct Metadata {
+    timestamp: String,
+    rust_version: String,
+    postgres_version: Option<String>,
+    host_info: HostInfo,
+}
+
+#[derive(Debug, Serialize)]
+struct HostInfo {
+    os: String,
+    cpu_model: Option<String>,
+    cpu_cores: Option<u32>,
+    total_memory_gb: Option<f64>,
+}
+
+#[derive(Debug, Serialize)]
 struct CombinedOutput {
+    metadata: Metadata,
     results: Vec<CombinedResult>,
+}
+
+fn get_command_output(cmd: &str, args: &[&str]) -> Option<String> {
+    Command::new(cmd)
+        .args(args)
+        .output()
+        .ok()
+        .and_then(|output| {
+            if output.status.success() {
+                String::from_utf8(output.stdout).ok()
+            } else {
+                None
+            }
+        })
+        .map(|s| s.trim().to_string())
+}
+
+fn get_rust_version() -> String {
+    get_command_output("rustc", &["--version"])
+        .unwrap_or_else(|| "unknown".to_string())
+}
+
+fn get_postgres_version() -> Option<String> {
+    // Try to get version from running Docker container
+    get_command_output(
+        "docker",
+        &["exec", "ore-benches-postgres", "psql", "--version"],
+    )
+}
+
+fn get_host_info() -> HostInfo {
+    let os = if cfg!(target_os = "macos") {
+        "macOS".to_string()
+    } else if cfg!(target_os = "linux") {
+        "Linux".to_string()
+    } else if cfg!(target_os = "windows") {
+        "Windows".to_string()
+    } else {
+        "Unknown".to_string()
+    };
+
+    let cpu_model = if cfg!(target_os = "macos") {
+        get_command_output("sysctl", &["-n", "machdep.cpu.brand_string"])
+    } else if cfg!(target_os = "linux") {
+        get_command_output("grep", &["-m", "1", "model name", "/proc/cpuinfo"])
+            .map(|s| s.split(':').nth(1).map(|s| s.trim().to_string()).unwrap_or(s))
+    } else {
+        None
+    };
+
+    let cpu_cores = if cfg!(target_os = "macos") {
+        get_command_output("sysctl", &["-n", "hw.ncpu"])
+            .and_then(|s| s.parse().ok())
+    } else if cfg!(target_os = "linux") {
+        get_command_output("nproc", &[])
+            .and_then(|s| s.parse().ok())
+    } else {
+        None
+    };
+
+    let total_memory_gb = if cfg!(target_os = "macos") {
+        get_command_output("sysctl", &["-n", "hw.memsize"])
+            .and_then(|s| s.parse::<u64>().ok())
+            .map(|bytes| bytes as f64 / (1024.0 * 1024.0 * 1024.0))
+    } else if cfg!(target_os = "linux") {
+        get_command_output("grep", &["MemTotal", "/proc/meminfo"])
+            .and_then(|s| {
+                s.split_whitespace()
+                    .nth(1)
+                    .and_then(|kb| kb.parse::<u64>().ok())
+                    .map(|kb| kb as f64 / (1024.0 * 1024.0))
+            })
+    } else {
+        None
+    };
+
+    HostInfo {
+        os,
+        cpu_model,
+        cpu_cores,
+        total_memory_gb,
+    }
 }
 
 fn main() -> Result<()> {
@@ -113,7 +213,15 @@ fn main() -> Result<()> {
     // Sort by num_records for consistent output
     combined_results.sort_by_key(|r| r.num_records);
 
+    let metadata = Metadata {
+        timestamp: chrono::Utc::now().to_rfc3339(),
+        rust_version: get_rust_version(),
+        postgres_version: get_postgres_version(),
+        host_info: get_host_info(),
+    };
+
     let output = CombinedOutput {
+        metadata,
         results: combined_results,
     };
 

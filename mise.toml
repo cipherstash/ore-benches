@@ -59,3 +59,41 @@ docker exec -i ore-benches-postgres psql -v ON_ERROR_STOP=1 -U postgres -d postg
 
 echo "Database setup complete!"
 """
+
+[tasks."bench:ingest:_run"]
+description = "Internal: Run a generic ingest benchmark"
+run = """
+#!/usr/bin/env bash
+set -e
+
+BENCH_NAME="$1"
+
+if [ -z "$BENCH_NAME" ]; then
+  echo "Error: BENCH_NAME argument must be provided"
+  exit 1
+fi
+
+echo "Running $BENCH_NAME ingest benchmark..."
+mise x -- hyperfine --export-json target/${BENCH_NAME}_hyperfine.json -L num_records 500,1000,10000 --runs 2 "NUM_RECORDS={num_records} ./target/release/$BENCH_NAME"
+
+echo "Combining results..."
+./target/release/combine_benchmark "$BENCH_NAME"
+
+echo "Benchmark complete! Results written to results/ingest/${BENCH_NAME}_combined.json"
+"""
+
+[tasks."bench:ingest:encrypt_int"]
+description = "Run encrypt_int ingest benchmark and combine results"
+run = "mise run bench:ingest:_run encrypt_int"
+
+[tasks."bench:ingest:encrypt_string"]
+description = "Run encrypt_string ingest benchmark and combine results"
+run = "mise run bench:ingest:_run encrypt_string"
+
+[tasks."bench:ingest:encrypt_json_small"]
+description = "Run encrypt_json_small ingest benchmark and combine results"
+run = "mise run bench:ingest:_run encrypt_json_small"
+
+[tasks."bench:ingest"]
+description = "Run all ingest benchmarks sequentially"
+depends = ["bench:ingest:encrypt_int", "bench:ingest:encrypt_string", "bench:ingest:encrypt_json_small"]
