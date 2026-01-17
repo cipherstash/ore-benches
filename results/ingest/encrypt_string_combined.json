@@ -1,0 +1,31 @@
+{
+  "results": [
+    {
+      "num_records": 500,
+      "total_time_seconds": 0.45572815966,
+      "total_records": 500,
+      "throughput_records_per_second": 1097.145281461276,
+      "average_memory_usage_bytes": 15204352,
+      "average_memory_usage_mb": 14.5,
+      "num_runs": 2
+    },
+    {
+      "num_records": 1000,
+      "total_time_seconds": 0.56475180566,
+      "total_records": 1000,
+      "throughput_records_per_second": 1770.6893364091948,
+      "average_memory_usage_bytes": 17039360,
+      "average_memory_usage_mb": 16.25,
+      "num_runs": 2
+    },
+    {
+      "num_records": 10000,
+      "total_time_seconds": 3.35785418066,
+      "total_records": 10000,
+      "throughput_records_per_second": 2978.0923953149327,
+      "average_memory_usage_bytes": 19283968,
+      "average_memory_usage_mb": 18.390625,
+      "num_runs": 2
+    }
+  ]
+}
