@@ -73,13 +73,13 @@ fn criterion_benchmark(c: &mut Criterion) {
     for (i, query) in queries.into_iter().enumerate() {
         let (_, _, scenario) = QUERIES[i];
         
-        group.bench_function(format!("match/{}/rows_{}", scenario, target_rows), |b| {
+        group.bench_function(format!("match/{}/{}", scenario, target_rows), |b| {
             b.to_async(&rt).iter(|| async {
                 let _: Vec<_> = query.execute(&pool).await.unwrap();
             })
         });
 
-        group.bench_function(format!("match_decrypt/{}/rows_{}", scenario, target_rows), |b| {
+        group.bench_function(format!("match_decrypt/{}/{}", scenario, target_rows), |b| {
             b.to_async(&rt).iter(|| async {
                 let _r: Vec<String> = black_box(query.execute_and_decrypt(&pool).await.unwrap());
             })
