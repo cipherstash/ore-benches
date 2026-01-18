@@ -10,10 +10,10 @@ use sqlx::postgres::PgPoolOptions;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
 
-static QUERIES: &[(&str, &str)] = &[
-    ("SELECT id,value::jsonb FROM string_encrypted WHERE value LIKE $1 LIMIT 10", "Bob"),
-    ("SELECT id,value::jsonb FROM string_encrypted WHERE value LIKE $1 LIMIT 10", "Johnson"),
-    ("SELECT id,value::jsonb FROM string_encrypted WHERE eql_v2.bloom_filter(value) @> eql_v2.bloom_filter($1) LIMIT 10", "Johnson"),
+static QUERIES: &[(&str, &str, &str)] = &[
+    ("SELECT id,value::jsonb FROM string_encrypted WHERE value LIKE $1 LIMIT 10", "Bob", "eql_cast_firstname"),
+    ("SELECT id,value::jsonb FROM string_encrypted WHERE value LIKE $1 LIMIT 10", "Johnson", "eql_cast_lastname"),
+    ("SELECT id,value::jsonb FROM string_encrypted WHERE eql_v2.bloom_filter(value) @> eql_v2.bloom_filter($1) LIMIT 10", "Johnson", "eql_bloom"),
 ];
 
 async fn build_query(
@@ -38,6 +38,9 @@ async fn build_query(
 fn criterion_benchmark(c: &mut Criterion) {
     let rt = Runtime::new().unwrap();
 
+    let target_rows = std::env::var("TARGET_ROWS")
+        .unwrap_or_else(|_| "unknown".to_string());
+
     let (pool, cipher) = rt.block_on(async {
         let database_url =
             std::env::var("DATABASE_URL").expect("DATABASE_URL environment variable must be set");
@@ -57,7 +60,7 @@ fn criterion_benchmark(c: &mut Criterion) {
 
     let queries = rt.block_on(async {
         let mut queries = Vec::with_capacity(QUERIES.len());
-        for (query_str, x) in QUERIES {
+        for (query_str, x, _) in QUERIES {
             let query = build_query(Arc::clone(&cipher), query_str, x).await;
             queries.push(query);
         }
@@ -68,17 +71,15 @@ fn criterion_benchmark(c: &mut Criterion) {
     group.sample_size(10);
 
     for (i, query) in queries.into_iter().enumerate() {
-        println!(
-            "Benchmarking query {}",
-            serde_json::to_string(&query.eql).unwrap()
-        );
-        group.bench_function(format!("match-{i}"), |b| {
+        let (_, _, scenario) = QUERIES[i];
+        
+        group.bench_function(format!("match/{}/rows_{}", scenario, target_rows), |b| {
             b.to_async(&rt).iter(|| async {
                 let _: Vec<_> = query.execute(&pool).await.unwrap();
             })
         });
 
-        group.bench_function(format!("match-decrypt-{i}"), |b| {
+        group.bench_function(format!("match_decrypt/{}/rows_{}", scenario, target_rows), |b| {
             b.to_async(&rt).iter(|| async {
                 let _r: Vec<String> = black_box(query.execute_and_decrypt(&pool).await.unwrap());
             })

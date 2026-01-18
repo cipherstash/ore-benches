@@ -13,30 +13,36 @@ use sqlx::postgres::PgPoolOptions;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
 
-static QUERIES: &[(&str, i32)] = &[
+static QUERIES: &[(&str, i32, &str)] = &[
     (
         "SELECT value FROM integer_encrypted WHERE value = $1 LIMIT 1",
         5000,
+        "exact",
     ),
     (
         "SELECT id,value::jsonb FROM integer_encrypted WHERE value > $1 LIMIT 10",
         5000,
+        "range_gt_10",
     ),
     (
         "SELECT id,value::jsonb FROM integer_encrypted WHERE value > $1 LIMIT 100",
         5000,
+        "range_gt_100",
     ),
     (
         "SELECT id,value::jsonb FROM integer_encrypted WHERE value < $1 LIMIT 10",
         5000,
+        "range_lt_10",
     ),
     (
         "SELECT id,value::jsonb FROM integer_encrypted WHERE value < $1 LIMIT 100",
         5000,
+        "range_lt_100",
     ),
     (
         "SELECT id,value::jsonb FROM integer_encrypted WHERE value < $1 ORDER BY value LIMIT 10",
         5000,
+        "range_lt_ordered_10",
     ),
 ];
 
@@ -62,6 +68,9 @@ async fn build_query(
 fn criterion_benchmark(c: &mut Criterion) {
     let rt = Runtime::new().unwrap();
 
+    let target_rows = std::env::var("TARGET_ROWS")
+        .unwrap_or_else(|_| "unknown".to_string());
+
     let (pool, cipher) = rt.block_on(async {
         let database_url =
             std::env::var("DATABASE_URL").expect("DATABASE_URL environment variable must be set");
@@ -81,7 +90,7 @@ fn criterion_benchmark(c: &mut Criterion) {
 
     let queries = rt.block_on(async {
         let mut queries = Vec::with_capacity(QUERIES.len());
-        for (query_str, x) in QUERIES {
+        for (query_str, x, _) in QUERIES {
             let query = build_query(Arc::clone(&cipher), query_str, *x).await;
             queries.push(query);
         }
@@ -92,17 +101,15 @@ fn criterion_benchmark(c: &mut Criterion) {
     group.sample_size(10);
 
     for (i, query) in queries.into_iter().enumerate() {
-        println!(
-            "Benchmarking query {}",
-            serde_json::to_string(&query.eql).unwrap()
-        );
-        group.bench_function(format!("range-{i}"), |b| {
+        let (_, _, scenario) = QUERIES[i];
+        
+        group.bench_function(format!("ore/{}/rows_{}", scenario, target_rows), |b| {
             b.to_async(&rt).iter(|| async {
                 let _: Vec<_> = query.execute(&pool).await.unwrap();
             })
         });
 
-        group.bench_function(format!("range-decrypt-{i}"), |b| {
+        group.bench_function(format!("ore_decrypt/{}/rows_{}", scenario, target_rows), |b| {
             b.to_async(&rt).iter(|| async {
                 let _r: Vec<i32> = black_box(query.execute_and_decrypt(&pool).await.unwrap());
             })

@@ -10,9 +10,9 @@ use sqlx::postgres::PgPoolOptions;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
 
-static QUERIES: &[(&str, &str)] = &[
-    ("SELECT value FROM string_encrypted WHERE value = $1 LIMIT 1", "Bob Johnson"),
-    ("SELECT value FROM string_encrypted WHERE eql_v2.hmac_256(value) = eql_v2.hmac_256($1::jsonb) LIMIT 1", "Bob Johnson"),
+static QUERIES: &[(&str, &str, &str)] = &[
+    ("SELECT value FROM string_encrypted WHERE value = $1 LIMIT 1", "Bob Johnson", "eql_cast"),
+    ("SELECT value FROM string_encrypted WHERE eql_v2.hmac_256(value) = eql_v2.hmac_256($1::jsonb) LIMIT 1", "Bob Johnson", "eql_hash"),
 ];
 
 async fn build_query(
@@ -37,6 +37,9 @@ async fn build_query(
 fn criterion_benchmark(c: &mut Criterion) {
     let rt = Runtime::new().unwrap();
 
+    let target_rows = std::env::var("TARGET_ROWS")
+        .unwrap_or_else(|_| "unknown".to_string());
+
     let (pool, cipher) = rt.block_on(async {
         let database_url =
             std::env::var("DATABASE_URL").expect("DATABASE_URL environment variable must be set");
@@ -56,7 +59,7 @@ fn criterion_benchmark(c: &mut Criterion) {
 
     let queries = rt.block_on(async {
         let mut queries = Vec::with_capacity(QUERIES.len());
-        for (query_str, x) in QUERIES {
+        for (query_str, x, _) in QUERIES {
             let query = build_query(Arc::clone(&cipher), query_str, *x).await;
             queries.push(query);
         }
@@ -67,17 +70,15 @@ fn criterion_benchmark(c: &mut Criterion) {
     group.sample_size(10);
 
     for (i, query) in queries.into_iter().enumerate() {
-        println!(
-            "Benchmarking query {}",
-            serde_json::to_string(&query.eql).unwrap()
-        );
-        group.bench_function(format!("exact-{i}"), |b| {
+        let (_, _, scenario) = QUERIES[i];
+        
+        group.bench_function(format!("exact/{}/rows_{}", scenario, target_rows), |b| {
             b.to_async(&rt).iter(|| async {
                 let _: Vec<_> = query.execute(&pool).await.unwrap();
             })
         });
 
-        group.bench_function(format!("exact-decrypt-{i}"), |b| {
+        group.bench_function(format!("exact_decrypt/{}/rows_{}", scenario, target_rows), |b| {
             b.to_async(&rt).iter(|| async {
                 let _r: Vec<i32> = black_box(query.execute_and_decrypt(&pool).await.unwrap());
             })

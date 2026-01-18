@@ -108,3 +108,54 @@ run = "mise run bench:ingest:_run encrypt_json_small"
 [tasks."bench:ingest"]
 description = "Run all ingest benchmarks sequentially"
 depends = ["bench:ingest:encrypt_int", "bench:ingest:encrypt_string", "bench:ingest:encrypt_json_small"]
+
+[tasks."prepare:string_encrypted"]
+description = "Prepare string_encrypted table with target row count"
+depends = ["postgres", "bench:build"]
+run = """
+#!/usr/bin/env bash
+set -e
+
+TARGET_ROWS="$1"
+
+if [ -z "$TARGET_ROWS" ]; then
+  echo "Error: target row count argument required"
+  echo "Usage: mise run prepare:string_encrypted <target_rows>"
+  exit 1
+fi
+
+if ! [[ "$TARGET_ROWS" =~ ^[0-9]+$ ]]; then
+  echo "Error: target row count must be a positive integer"
+  exit 1
+fi
+
+echo "Waiting for PostgreSQL to be ready..."
+until docker exec ore-benches-postgres pg_isready -U postgres > /dev/null 2>&1; do
+  sleep 1
+done
+
+echo "Counting rows in string_encrypted table..."
+CURRENT_ROWS=$(docker exec ore-benches-postgres psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM string_encrypted;" | tr -d ' ')
+
+echo "Current rows: $CURRENT_ROWS"
+echo "Target rows: $TARGET_ROWS"
+
+echo "Dropping indexes..."
+docker exec -i ore-benches-postgres psql -U postgres -d postgres < sql/indexes/string_encrypted_down.sql
+
+if [ "$CURRENT_ROWS" -lt "$TARGET_ROWS" ]; then
+  ROWS_TO_INSERT=$((TARGET_ROWS - CURRENT_ROWS))
+  echo "Inserting $ROWS_TO_INSERT additional rows..."
+  NUM_RECORDS=$ROWS_TO_INSERT ./target/release/encrypt_string
+else
+  echo "Truncating table and inserting $TARGET_ROWS rows..."
+  docker exec ore-benches-postgres psql -U postgres -d postgres -c "TRUNCATE TABLE string_encrypted;"
+  NUM_RECORDS=$TARGET_ROWS ./target/release/encrypt_string
+fi
+
+echo "Creating indexes..."
+docker exec -i ore-benches-postgres psql -U postgres -d postgres < sql/indexes/string_encrypted_up.sql
+
+FINAL_ROWS=$(docker exec ore-benches-postgres psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM string_encrypted;" | tr -d ' ')
+echo "Preparation complete! Final row count: $FINAL_ROWS"
+"""
