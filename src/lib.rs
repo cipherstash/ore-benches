@@ -1,9 +1,10 @@
 use anyhow::{Context, Result};
 use cipherstash_client::{
     config::EnvSource,
-    encryption::{Plaintext, ScopedCipher},
-    eql::{encrypt_eql, EqlOperation, Identifier, PreparedPlaintext},
-    schema::ColumnConfig,
+    credentials::ServiceCredentials,
+    encryption::{Plaintext, QueryOp, ScopedCipher},
+    eql::{decrypt_eql, encrypt_eql, EqlCiphertext, EqlOperation, Identifier, PreparedPlaintext},
+    schema::{column::IndexType, ColumnConfig},
     ZeroKMSConfig,
 };
 use fake::{Dummy, Fake};
@@ -13,6 +14,17 @@ use std::borrow::Cow;
 use std::env;
 use std::fmt::Debug;
 use std::sync::Arc;
+
+pub async fn init_scoped_cipher() -> Result<Arc<ScopedCipher<ServiceCredentials>>> {
+    let client = ZeroKMSConfig::builder()
+        .add_source(EnvSource::new())
+        .build_with_client_key()
+        .context("failed to build config")?
+        .create_client();
+
+    let scoped_cipher = ScopedCipher::init_default(Arc::new(client)).await?;
+    Ok(Arc::new(scoped_cipher))
+}
 
 pub struct IngestOptions {
     pub bench_name: String,
@@ -137,13 +149,15 @@ impl IngestOptions {
                 .build()
                 .execute(&pool)
                 .await?;
-
         }
 
         let result = json!({
             "inserted": num_records
         });
-        let filename = format!("target/{}-{num_records}_{hf_iteration}.json", self.bench_name);
+        let filename = format!(
+            "target/{}-{num_records}_{hf_iteration}.json",
+            self.bench_name
+        );
         std::fs::write(&filename, serde_json::to_string(&result)?)?;
 
         Ok(())
@@ -156,5 +170,98 @@ pub struct WrappedJson(pub serde_json::Value);
 impl From<WrappedJson> for Plaintext {
     fn from(WrappedJson(value): WrappedJson) -> Self {
         Plaintext::JsonB(Some(value))
+    }
+}
+
+pub struct EncryptedQueryBuilder {
+    pub column_config: ColumnConfig,
+    pub identifier: Identifier,
+    pub index_type: Option<IndexType>,
+    pub statement: Option<String>,
+}
+
+impl EncryptedQueryBuilder {
+    pub fn new(column_config: ColumnConfig, identifier: Identifier) -> Self {
+        Self {
+            column_config,
+            identifier,
+            index_type: None,
+            statement: None,
+        }
+    }
+
+    pub fn index_type(mut self, index_type: IndexType) -> Self {
+        self.index_type = Some(index_type);
+        self
+    }
+
+    pub fn statement(mut self, statement: impl Into<String>) -> Self {
+        self.statement = Some(statement.into());
+        self
+    }
+
+    pub async fn build_query<T>(
+        self,
+        plaintext: T,
+        cipher: Arc<ScopedCipher<ServiceCredentials>>,
+    ) -> Result<EncryptedQuery>
+    where
+        T: Into<Plaintext> + Send + Debug,
+    {
+        let index_type = self
+            .index_type
+            .context("index_type must be set to build query")?;
+
+        let prepared = PreparedPlaintext::new(
+            Cow::Owned(self.column_config),
+            self.identifier.clone(),
+            plaintext.into(),
+            EqlOperation::Query(&index_type, QueryOp::Default),
+        );
+
+        let mut out = encrypt_eql(Arc::clone(&cipher), vec![prepared], &Default::default()).await?;
+
+        Ok(EncryptedQuery {
+            eql: out.remove(0),
+            statement: self.statement.context("statement must be set")?,
+            scoped_cipher: cipher,
+        })
+    }
+}
+
+pub struct EncryptedQuery {
+    pub eql: EqlCiphertext,
+    pub statement: String,
+    scoped_cipher: Arc<ScopedCipher<ServiceCredentials>>,
+}
+
+impl EncryptedQuery {
+    pub async fn execute(&self, pool: &sqlx::PgPool) -> Result<Vec<(i32, Json<EqlCiphertext>)>> {
+        let results: Vec<(i32, Json<EqlCiphertext>)> = sqlx::query_as(&self.statement)
+            .bind(Json(&self.eql))
+            .fetch_all(pool)
+            .await?;
+
+        Ok(results)
+    }
+
+    pub async fn execute_and_decrypt<T>(&self, pool: &sqlx::PgPool) -> Result<Vec<T>>
+    where
+        T: TryFrom<Plaintext>,
+        <T as TryFrom<Plaintext>>::Error: Debug,
+    {
+        let results: Vec<(i32, Json<EqlCiphertext>)> = self.execute(pool).await?;
+
+        let decrypted = decrypt_eql(
+            Arc::clone(&self.scoped_cipher),
+            results.into_iter().map(|(_, value)| value.0),
+            &Default::default(),
+        )
+        .await?
+        .into_iter()
+        .map(|pt| T::try_from(pt).expect("failed to convert plaintext"))
+        .collect();
+
+        Ok(decrypted)
     }
 }

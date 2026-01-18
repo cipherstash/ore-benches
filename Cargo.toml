@@ -38,5 +38,13 @@ name = "combine_benchmark"
 path = "src/bin/combine_benchmark.rs"
 
 [[bench]]
-name = "exact_lookup"
+name = "ore"
+harness = false
+
+[[bench]]
+name = "match"
+harness = false
+
+[[bench]]
+name = "exact"
 harness = false

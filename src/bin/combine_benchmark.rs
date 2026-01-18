@@ -73,8 +73,7 @@ fn get_command_output(cmd: &str, args: &[&str]) -> Option<String> {
 }
 
 fn get_rust_version() -> String {
-    get_command_output("rustc", &["--version"])
-        .unwrap_or_else(|| "unknown".to_string())
+    get_command_output("rustc", &["--version"]).unwrap_or_else(|| "unknown".to_string())
 }
 
 fn get_postgres_version() -> Option<String> {
@@ -99,18 +98,20 @@ fn get_host_info() -> HostInfo {
     let cpu_model = if cfg!(target_os = "macos") {
         get_command_output("sysctl", &["-n", "machdep.cpu.brand_string"])
     } else if cfg!(target_os = "linux") {
-        get_command_output("grep", &["-m", "1", "model name", "/proc/cpuinfo"])
-            .map(|s| s.split(':').nth(1).map(|s| s.trim().to_string()).unwrap_or(s))
+        get_command_output("grep", &["-m", "1", "model name", "/proc/cpuinfo"]).map(|s| {
+            s.split(':')
+                .nth(1)
+                .map(|s| s.trim().to_string())
+                .unwrap_or(s)
+        })
     } else {
         None
     };
 
     let cpu_cores = if cfg!(target_os = "macos") {
-        get_command_output("sysctl", &["-n", "hw.ncpu"])
-            .and_then(|s| s.parse().ok())
+        get_command_output("sysctl", &["-n", "hw.ncpu"]).and_then(|s| s.parse().ok())
     } else if cfg!(target_os = "linux") {
-        get_command_output("nproc", &[])
-            .and_then(|s| s.parse().ok())
+        get_command_output("nproc", &[]).and_then(|s| s.parse().ok())
     } else {
         None
     };
@@ -120,13 +121,12 @@ fn get_host_info() -> HostInfo {
             .and_then(|s| s.parse::<u64>().ok())
             .map(|bytes| bytes as f64 / (1024.0 * 1024.0 * 1024.0))
     } else if cfg!(target_os = "linux") {
-        get_command_output("grep", &["MemTotal", "/proc/meminfo"])
-            .and_then(|s| {
-                s.split_whitespace()
-                    .nth(1)
-                    .and_then(|kb| kb.parse::<u64>().ok())
-                    .map(|kb| kb as f64 / (1024.0 * 1024.0))
-            })
+        get_command_output("grep", &["MemTotal", "/proc/meminfo"]).and_then(|s| {
+            s.split_whitespace()
+                .nth(1)
+                .and_then(|kb| kb.parse::<u64>().ok())
+                .map(|kb| kb as f64 / (1024.0 * 1024.0))
+        })
     } else {
         None
     };
@@ -142,17 +142,24 @@ fn get_host_info() -> HostInfo {
 fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        anyhow::bail!("Usage: {} <benchmark_name>", args.get(0).map(|s| s.as_str()).unwrap_or("combine_benchmark"));
+        anyhow::bail!(
+            "Usage: {} <benchmark_name>",
+            args.get(0)
+                .map(|s| s.as_str())
+                .unwrap_or("combine_benchmark")
+        );
     }
-    
+
     let benchmark_name = &args[1];
     let hyperfine_file = format!("target/{}_hyperfine.json", benchmark_name);
-    
+
     // Read hyperfine results
-    let hyperfine_data = fs::read_to_string(&hyperfine_file)
-        .context(format!("Failed to read hyperfine results from {}", hyperfine_file))?;
-    let hyperfine: HyperfineResult = serde_json::from_str(&hyperfine_data)
-        .context("Failed to parse hyperfine JSON")?;
+    let hyperfine_data = fs::read_to_string(&hyperfine_file).context(format!(
+        "Failed to read hyperfine results from {}",
+        hyperfine_file
+    ))?;
+    let hyperfine: HyperfineResult =
+        serde_json::from_str(&hyperfine_data).context("Failed to parse hyperfine JSON")?;
 
     let mut combined_results = Vec::new();
 
@@ -165,20 +172,20 @@ fn main() -> Result<()> {
             .context("Failed to parse num_records as u64")?;
 
         let num_runs = result.times.len();
-        
+
         // Validate output files exist and contain correct data
         for run_idx in 0..num_runs {
             let output_file = format!("target/{}-{}_{}.json", benchmark_name, num_records, run_idx);
-            
+
             if !Path::new(&output_file).exists() {
                 bail!("Expected output file {} does not exist", output_file);
             }
-            
+
             let output_data = fs::read_to_string(&output_file)
                 .context(format!("Failed to read output file {}", output_file))?;
             let output: OutputFile = serde_json::from_str(&output_data)
                 .context(format!("Failed to parse output file {}", output_file))?;
-            
+
             if output.inserted != num_records {
                 bail!(
                     "Mismatch in {}: expected {} records but file contains {}",
@@ -226,11 +233,10 @@ fn main() -> Result<()> {
     };
 
     let json = serde_json::to_string_pretty(&output)?;
-    
+
     let output_file = format!("results/ingest/{}_combined.json", benchmark_name);
-    fs::write(&output_file, json)
-        .context(format!("Failed to write output to {}", output_file))?;
-    
+    fs::write(&output_file, json).context(format!("Failed to write output to {}", output_file))?;
+
     println!("Results written to {}", output_file);
 
     Ok(())
