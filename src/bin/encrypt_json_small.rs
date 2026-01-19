@@ -10,6 +10,7 @@
 //! Environment variables:
 //! - DATABASE_URL: PostgreSQL connection string
 //! - NUM_RECORDS: Number of records to generate (default: 10000)
+//! - BATCH_SIZE: Number of records per batch insert (default: 1000)
 //! - CS_CLIENT_ID: CipherStash client ID
 //! - CS_CLIENT_KEY: CipherStash client key  
 //! - CS_WORKSPACE_CRN: CipherStash workspace CRN
@@ -52,9 +53,14 @@ async fn main() -> Result<()> {
         .parse()
         .expect("NUM_RECORDS must be a valid integer");
 
+    let batch_size: usize = env::var("BATCH_SIZE")
+        .unwrap_or_else(|_| "1000".to_string())
+        .parse()
+        .expect("BATCH_SIZE must be a valid integer");
+
     IngestOptionsBuilder::new("encrypt_json_small")
         .num_records(num_records)
-        .batch_size(1000)
+        .batch_size(batch_size)
         .identifier(Identifier::new("json_small_encrypted", "value"))
         .column_config(
             ColumnConfig::build("value")
