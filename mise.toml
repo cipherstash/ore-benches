@@ -1,4 +1,5 @@
 [tools]
+python = "latest"
 rust = "latest"
 
 [tasks.postgres]
@@ -326,4 +327,19 @@ echo "All benchmarks complete!"
 echo "Total time: ${HOURS}h ${MINUTES}m ${SECONDS}s"
 echo "Results saved in results/query/"
 echo "========================================"
+"""
+
+[tasks.report]
+description = "Generate benchmark report from results"
+run = """
+#!/usr/bin/env bash
+set -e
+
+OUTPUT_FILE="${1:-report/BENCHMARK_REPORT.md}"
+
+echo "Generating benchmark report..."
+python3 report_benchmarks.py --output "$OUTPUT_FILE"
+
+echo ""
+echo "Report saved to: $OUTPUT_FILE"
 """

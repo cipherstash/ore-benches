@@ -1,3 +1,26 @@
+//! Combine benchmark results from hyperfine into a single summary file
+//!
+//! This binary processes hyperfine benchmark results and combines them with
+//! system metadata (CPU, memory, OS) and validation data from individual runs
+//! to produce a comprehensive benchmark summary.
+//!
+//! The output includes:
+//! - Metadata: timestamp, Rust version, PostgreSQL version, host information
+//! - Results: throughput, timing, and memory usage for each benchmark run
+//!
+//! Usage:
+//!   combine_benchmark <benchmark_name>
+//!
+//! Example:
+//!   combine_benchmark encrypt_int
+//!
+//! This reads:
+//! - target/{benchmark_name}_hyperfine.json (hyperfine results)
+//! - target/{benchmark_name}-{num_records}_{run_idx}.json (validation files)
+//!
+//! And outputs to:
+//! - results/ingest/{benchmark_name}_combined.json
+
 use anyhow::{bail, Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

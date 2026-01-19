@@ -1,3 +1,16 @@
+//! Generate random plaintext data for benchmarking
+//!
+//! This binary generates random integer values and inserts them into the
+//! integer_plaintext table. This is used for testing and development purposes.
+//!
+//! Note: This binary is not currently used in the main benchmark workflow.
+//! The ingest benchmarks (encrypt_int, encrypt_string, etc.) generate and
+//! encrypt data directly rather than reading from plaintext tables.
+//!
+//! Environment variables:
+//! - DATABASE_URL: PostgreSQL connection string
+//! - NUM_RECORDS: Number of records to generate (default: 10000)
+
 use anyhow::{Context, Result};
 use rand::Rng;
 use sqlx::postgres::PgPoolOptions;

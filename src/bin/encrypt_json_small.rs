@@ -1,19 +1,18 @@
-//! Encrypt data binary - encrypts integers from integer_plaintext table using CipherStash
+//! Encrypt small JSON data binary - encrypts generated JSON objects using CipherStash
 //!
-//! This binary reads plaintext integers from the integer_plaintext table and encrypts
-//! them using the cipherstash-client library's `encrypt_eql` function, storing the
-//! encrypted values in the integer_encrypted table.
+//! This binary generates small JSON objects (first_name, last_name, age, email) using
+//! the fake crate and encrypts them using the cipherstash-client library with SteVec
+//! indexing, storing the encrypted values in the json_small_encrypted table.
 //!
-//! Environment variables required:
+//! The encrypted JSON objects support:
+//! - Searchable encrypted vectors (SteVec) for term-based searches
+//!
+//! Environment variables:
 //! - DATABASE_URL: PostgreSQL connection string
+//! - NUM_RECORDS: Number of records to generate (default: 10000)
 //! - CS_CLIENT_ID: CipherStash client ID
 //! - CS_CLIENT_KEY: CipherStash client key  
 //! - CS_WORKSPACE_CRN: CipherStash workspace CRN
-//!
-//! TODO: The CipherStash client API needs to be properly configured based on the
-//! actual cipherstash-client crate API. This is a placeholder implementation that
-//! outlines the structure. Refer to cipherstash-client documentation at:
-//! https://docs.rs/cipherstash-client
 
 use anyhow::Result;
 use cipherstash_client::{

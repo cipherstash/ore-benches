@@ -1,19 +1,19 @@
-//! Encrypt data binary - encrypts large JSON objects from json_large_plaintext table using CipherStash
+//! Encrypt large JSON data binary - encrypts generated complex JSON objects using CipherStash
 //!
-//! This binary reads plaintext large JSON objects from the json_large_plaintext table and encrypts
-//! them using the cipherstash-client library's `encrypt_eql` function, storing the
-//! encrypted values in the json_large_encrypted table.
+//! This binary generates large, complex JSON objects containing user information, company
+//! details, addresses, and order history using the fake crate. The objects are encrypted
+//! using the cipherstash-client library with SteVec indexing and stored in the
+//! json_large_encrypted table.
 //!
-//! Environment variables required:
+//! The encrypted JSON objects support:
+//! - Searchable encrypted vectors (SteVec) for term-based searches
+//!
+//! Environment variables:
 //! - DATABASE_URL: PostgreSQL connection string
+//! - NUM_RECORDS: Number of records to generate (default: 10000)
 //! - CS_CLIENT_ID: CipherStash client ID
 //! - CS_CLIENT_KEY: CipherStash client key  
 //! - CS_WORKSPACE_CRN: CipherStash workspace CRN
-//!
-//! TODO: The CipherStash client API needs to be properly configured based on the
-//! actual cipherstash-client crate API. This is a placeholder implementation that
-//! outlines the structure. Refer to cipherstash-client documentation at:
-//! https://docs.rs/cipherstash-client
 
 use anyhow::Result;
 use cipherstash_client::{

@@ -1,19 +1,22 @@
-//! Encrypt data binary - encrypts integers from integer_plaintext table using CipherStash
+//! Encrypt integer data binary - encrypts generated integers using CipherStash
 //!
-//! This binary reads plaintext integers from the integer_plaintext table and encrypts
-//! them using the cipherstash-client library's `encrypt_eql` function, storing the
-//! encrypted values in the integer_encrypted table.
+//! This binary generates random integers using the fake crate and encrypts them
+//! using the cipherstash-client library with ORE (Order-Revealing Encryption),
+//! storing the encrypted values in the integer_encrypted table (or a suffixed
+//! variant based on TABLE_SUFFIX).
 //!
-//! Environment variables required:
+//! The encrypted integers support:
+//! - Exact match queries
+//! - Range queries (>, <, >=, <=)
+//! - Ordered queries (ORDER BY)
+//!
+//! Environment variables:
 //! - DATABASE_URL: PostgreSQL connection string
+//! - NUM_RECORDS: Number of records to generate (default: 10000)
+//! - TABLE_SUFFIX: Optional suffix for table name (e.g., _10000)
 //! - CS_CLIENT_ID: CipherStash client ID
 //! - CS_CLIENT_KEY: CipherStash client key  
 //! - CS_WORKSPACE_CRN: CipherStash workspace CRN
-//!
-//! TODO: The CipherStash client API needs to be properly configured based on the
-//! actual cipherstash-client crate API. This is a placeholder implementation that
-//! outlines the structure. Refer to cipherstash-client documentation at:
-//! https://docs.rs/cipherstash-client
 
 use anyhow::Result;
 use cipherstash_client::{
