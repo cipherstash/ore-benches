@@ -10,21 +10,22 @@ use sqlx::postgres::PgPoolOptions;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
 
-static QUERIES: &[(&str, &str, &str)] = &[
-    ("SELECT value FROM string_encrypted WHERE value = $1 LIMIT 1", "Bob Johnson", "eql_cast"),
-    ("SELECT value FROM string_encrypted WHERE eql_v2.hmac_256(value) = eql_v2.hmac_256($1::jsonb) LIMIT 1", "Bob Johnson", "eql_hash"),
+static QUERY_TEMPLATES: &[(&str, &str, &str)] = &[
+    ("SELECT value FROM {TABLE} WHERE value = $1 LIMIT 1", "Bob Johnson", "eql_cast"),
+    ("SELECT value FROM {TABLE} WHERE eql_v2.hmac_256(value) = eql_v2.hmac_256($1::jsonb) LIMIT 1", "Bob Johnson", "eql_hash"),
 ];
 
 async fn build_query(
     cipher: Arc<ScopedCipher<ServiceCredentials>>,
     query: &str,
     x: &str,
+    table_name: &str,
 ) -> EncryptedQuery {
     let column_config = ColumnConfig::build("value")
         .casts_as(ColumnType::Utf8Str)
         .add_index(Index::new_unique());
 
-    let identifier = Identifier::new("string_encrypted", "value");
+    let identifier = Identifier::new(table_name, "value");
 
     EncryptedQueryBuilder::new(column_config, identifier)
         .index_type(Index::new_unique().index_type)
@@ -39,6 +40,13 @@ fn criterion_benchmark(c: &mut Criterion) {
 
     let target_rows = std::env::var("TARGET_ROWS")
         .unwrap_or_else(|_| "unknown".to_string());
+
+    // Determine table suffix based on TARGET_ROWS
+    let table_suffix = match target_rows.as_str() {
+        "10000" | "100000" | "1000000" | "10000000" => format!("_{}", target_rows),
+        _ => String::new(), // fallback to base table for unknown values
+    };
+    let table_name = format!("string_encrypted{}", table_suffix);
 
     let (pool, cipher) = rt.block_on(async {
         let database_url =
@@ -58,9 +66,10 @@ fn criterion_benchmark(c: &mut Criterion) {
     });
 
     let queries = rt.block_on(async {
-        let mut queries = Vec::with_capacity(QUERIES.len());
-        for (query_str, x, _) in QUERIES {
-            let query = build_query(Arc::clone(&cipher), query_str, *x).await;
+        let mut queries = Vec::with_capacity(QUERY_TEMPLATES.len());
+        for (query_template, x, _) in QUERY_TEMPLATES {
+            let query_str = query_template.replace("{TABLE}", &table_name);
+            let query = build_query(Arc::clone(&cipher), &query_str, *x, &table_name).await;
             queries.push(query);
         }
         queries
@@ -70,7 +79,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     group.sample_size(10);
 
     for (i, query) in queries.into_iter().enumerate() {
-        let (_, _, scenario) = QUERIES[i];
+        let (_, _, scenario) = QUERY_TEMPLATES[i];
         
         group.bench_function(format!("exact/{}/{}", scenario, target_rows), |b| {
             b.to_async(&rt).iter(|| async {

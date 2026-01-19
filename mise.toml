@@ -116,20 +116,28 @@ run = """
 #!/usr/bin/env bash
 set -e
 
-TABLE_NAME="$1"
+BASE_TABLE="$1"
 BINARY_NAME="$2"
 TARGET_ROWS="$3"
 
-if [ -z "$TABLE_NAME" ] || [ -z "$BINARY_NAME" ] || [ -z "$TARGET_ROWS" ]; then
-  echo "Error: TABLE_NAME, BINARY_NAME, and TARGET_ROWS arguments required"
-  echo "Usage: mise run prepare:_table <table_name> <binary_name> <target_rows>"
+if [ -z "$BASE_TABLE" ] || [ -z "$BINARY_NAME" ] || [ -z "$TARGET_ROWS" ]; then
+  echo "Error: BASE_TABLE, BINARY_NAME, and TARGET_ROWS arguments required"
+  echo "Usage: mise run prepare:_table <base_table> <binary_name> <target_rows>"
   exit 1
 fi
 
-if ! [[ "$TARGET_ROWS" =~ ^[0-9]+$ ]]; then
-  echo "Error: target row count must be a positive integer"
-  exit 1
-fi
+# Validate TARGET_ROWS is one of the allowed values
+case "$TARGET_ROWS" in
+  10000|100000|1000000|10000000)
+    ;;
+  *)
+    echo "Error: TARGET_ROWS must be one of: 10000, 100000, 1000000, 10000000"
+    exit 1
+    ;;
+esac
+
+# Construct table name with suffix
+TABLE_NAME="${BASE_TABLE}_${TARGET_ROWS}"
 
 echo "Waiting for PostgreSQL to be ready..."
 until docker exec ore-benches-postgres pg_isready -U postgres > /dev/null 2>&1; do
@@ -142,18 +150,17 @@ CURRENT_ROWS=$(docker exec ore-benches-postgres psql -U postgres -d postgres -t 
 echo "Current rows: $CURRENT_ROWS"
 echo "Target rows: $TARGET_ROWS"
 
+if [ "$CURRENT_ROWS" -ge "$TARGET_ROWS" ]; then
+  echo "Table already has $CURRENT_ROWS rows (>= $TARGET_ROWS). No action needed."
+  exit 0
+fi
+
 echo "Dropping indexes..."
 docker exec -i ore-benches-postgres psql -U postgres -d postgres < sql/indexes/${TABLE_NAME}_down.sql
 
-if [ "$CURRENT_ROWS" -lt "$TARGET_ROWS" ]; then
-  ROWS_TO_INSERT=$((TARGET_ROWS - CURRENT_ROWS))
-  echo "Inserting $ROWS_TO_INSERT additional rows..."
-  NUM_RECORDS=$ROWS_TO_INSERT ./target/release/$BINARY_NAME
-else
-  echo "Truncating table and inserting $TARGET_ROWS rows..."
-  docker exec ore-benches-postgres psql -U postgres -d postgres -c "TRUNCATE TABLE $TABLE_NAME;"
-  NUM_RECORDS=$TARGET_ROWS ./target/release/$BINARY_NAME
-fi
+ROWS_TO_INSERT=$((TARGET_ROWS - CURRENT_ROWS))
+echo "Inserting $ROWS_TO_INSERT additional rows..."
+NUM_RECORDS=$ROWS_TO_INSERT TABLE_SUFFIX="_${TARGET_ROWS}" ./target/release/$BINARY_NAME
 
 echo "Creating indexes..."
 docker exec -i ore-benches-postgres psql -U postgres -d postgres < sql/indexes/${TABLE_NAME}_up.sql

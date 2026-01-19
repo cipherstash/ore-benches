@@ -8,12 +8,52 @@ CREATE TABLE IF NOT EXISTS integer_encrypted (
     value eql_v2_encrypted NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS integer_encrypted_10000 (
+    id SERIAL PRIMARY KEY,
+    value eql_v2_encrypted NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS integer_encrypted_100000 (
+    id SERIAL PRIMARY KEY,
+    value eql_v2_encrypted NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS integer_encrypted_1000000 (
+    id SERIAL PRIMARY KEY,
+    value eql_v2_encrypted NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS integer_encrypted_10000000 (
+    id SERIAL PRIMARY KEY,
+    value eql_v2_encrypted NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS string_plaintext (
     id SERIAL PRIMARY KEY,
     value TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS string_encrypted (
+    id SERIAL PRIMARY KEY,
+    value eql_v2_encrypted NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS string_encrypted_10000 (
+    id SERIAL PRIMARY KEY,
+    value eql_v2_encrypted NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS string_encrypted_100000 (
+    id SERIAL PRIMARY KEY,
+    value eql_v2_encrypted NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS string_encrypted_1000000 (
+    id SERIAL PRIMARY KEY,
+    value eql_v2_encrypted NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS string_encrypted_10000000 (
     id SERIAL PRIMARY KEY,
     value eql_v2_encrypted NOT NULL
 );

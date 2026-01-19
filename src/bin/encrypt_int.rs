@@ -31,10 +31,13 @@ async fn main() -> Result<()> {
         .parse()
         .expect("NUM_RECORDS must be a valid integer");
 
+    let table_suffix = env::var("TABLE_SUFFIX").unwrap_or_default();
+    let table_name = format!("integer_encrypted{}", table_suffix);
+
     IngestOptionsBuilder::new("encrypt_int")
         .num_records(num_records)
         .batch_size(1000)
-        .identifier(Identifier::new("integer_encrypted", "value"))
+        .identifier(Identifier::new(&table_name, "value"))
         .column_config(
             ColumnConfig::build("value")
                 .casts_as(ColumnType::Int)
