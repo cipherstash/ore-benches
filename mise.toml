@@ -86,7 +86,7 @@ if [ -z "$BENCH_NAME" ]; then
 fi
 
 echo "Running $BENCH_NAME ingest benchmark..."
-mise x -- hyperfine --export-json target/${BENCH_NAME}_hyperfine.json -L num_records 500,1000,10000 --runs 2 "NUM_RECORDS={num_records} ./target/release/$BENCH_NAME"
+hyperfine --export-json target/${BENCH_NAME}_hyperfine.json -L num_records 500,1000,10000 --runs 2 "NUM_RECORDS={num_records} ./target/release/$BENCH_NAME"
 
 echo "Combining results..."
 ./target/release/combine_benchmark "$BENCH_NAME"
@@ -102,14 +102,25 @@ run = "mise run bench:ingest:_run encrypt_int"
 description = "Run encrypt_string ingest benchmark and combine results"
 run = "mise run bench:ingest:_run encrypt_string"
 
-[tasks."bench:ingest:encrypt_json_small"]
+[tasks."bench:ingest:json-small"]
 description = "Run encrypt_json_small ingest benchmark and combine results"
 run = "mise run bench:ingest:_run encrypt_json_small"
 
+[tasks."bench:ingest:json-large"]
+description = "Run encrypt_json_large ingest benchmark and combine results"
+run = "mise run bench:ingest:_run encrypt_json_large"
+
+[tasks."bench:ingest:json-ste-vec-small"]
+description = "Run encrypt_ste_vec_small ingest benchmark and combine results"
+run = "mise run bench:ingest:_run encrypt_ste_vec_small"
+
+[tasks."bench:ingest:json-ste-vec-large"]
+description = "Run encrypt_ste_vec_large ingest benchmark and combine results"
+run = "mise run bench:ingest:_run encrypt_ste_vec_large"
+
 [tasks."bench:ingest"]
 description = "Run all ingest benchmarks sequentially"
-depends = ["bench:ingest:encrypt_int", "bench:ingest:encrypt_string", "bench:ingest:encrypt_json_small"]
-
+depends = ["bench:ingest:encrypt_int", "bench:ingest:encrypt_string", "bench:ingest:json-small", "bench:ingest:json-large"]
 [tasks."prepare:_table"]
 description = "Internal: Prepare a table with target row count"
 depends = ["postgres", "bench:build"]
@@ -177,6 +188,10 @@ run = "mise run prepare:_table string_encrypted encrypt_string $1"
 [tasks."prepare:integer_encrypted"]
 description = "Prepare integer_encrypted table with target row count"
 run = "mise run prepare:_table integer_encrypted encrypt_int $1"
+
+[tasks."prepare:json_small_encrypted"]
+description = "Prepare json_small_encrypted table with target row count"
+run = "mise run prepare:_table json_small_encrypted encrypt_json_small $1"
 
 [tasks."bench:query:ore"]
 description = "Run ORE query benchmark"
@@ -273,6 +288,39 @@ echo "Running EXACT query benchmark..."
 mkdir -p results/query
 OUTPUT_FILE="results/query/exact_rows_${TARGET_ROWS}.json"
 TARGET_ROWS="$TARGET_ROWS" cargo criterion --bench exact --message-format json > "$OUTPUT_FILE"
+
+echo "Benchmark complete! Results written to $OUTPUT_FILE"
+"""
+
+[tasks."bench:query:json"]
+description = "Run JSON query benchmark"
+run = """
+#!/usr/bin/env bash
+set -e
+
+TARGET_ROWS="$1"
+
+if [ -z "$TARGET_ROWS" ]; then
+  echo "Error: target row count argument required"
+  echo "Usage: mise run bench:query:json <target_rows>"
+  exit 1
+fi
+
+if ! [[ "$TARGET_ROWS" =~ ^[0-9]+$ ]]; then
+  echo "Error: target row count must be a positive integer"
+  exit 1
+fi
+
+echo "Preparing json_small_encrypted table with $TARGET_ROWS rows..."
+mise run prepare:json_small_encrypted "$TARGET_ROWS"
+
+echo "Cleaning old benchmark data..."
+rm -rf target/criterion/JSON
+
+echo "Running JSON query benchmark..."
+mkdir -p results/query
+OUTPUT_FILE="results/query/json_rows_${TARGET_ROWS}.json"
+TARGET_ROWS="$TARGET_ROWS" cargo criterion --bench json --message-format json > "$OUTPUT_FILE"
 
 echo "Benchmark complete! Results written to $OUTPUT_FILE"
 """

@@ -2,9 +2,11 @@
 //!
 //! This binary generates large, complex JSON objects containing user information, company
 //! details, addresses, and order history using the fake crate. The objects are encrypted
-//! using the cipherstash-client library and stored in the json_large_encrypted table.
+//! using the cipherstash-client library with SteVec indexing and stored in the
+//! json_large_encrypted table.
 //!
-//! Note: This table does not use any additional indexes (only the primary key on id).
+//! The encrypted JSON objects support:
+//! - Searchable encrypted vectors (SteVec) for term-based searches
 //!
 //! Environment variables:
 //! - DATABASE_URL: PostgreSQL connection string
@@ -17,7 +19,10 @@
 use anyhow::Result;
 use cipherstash_client::{
     eql::Identifier,
-    schema::{ColumnConfig, ColumnType},
+    schema::{
+        column::{Index, IndexType},
+        ColumnConfig, ColumnType,
+    },
 };
 use dbbenches::{FakeJsonLarge, IngestOptionsBuilder, WrappedJson};
 use std::env;
@@ -34,14 +39,18 @@ async fn main() -> Result<()> {
         .parse()
         .expect("BATCH_SIZE must be a valid integer");
 
-    IngestOptionsBuilder::new("encrypt_json_large")
+    IngestOptionsBuilder::new("encrypt_ste_vec_large")
         .num_records(num_records)
         .batch_size(batch_size)
         .identifier(Identifier::new("json_large_encrypted", "value"))
         .column_config(
             ColumnConfig::build("value")
                 .casts_as(ColumnType::JsonB)
-                // No additional indexes - only primary key on id
+                // FIXME: There is no convenience method for SteVec yet on Index
+                .add_index(Index::new(IndexType::SteVec {
+                    prefix: "value".to_string(),
+                    term_filters: Default::default(),
+                })),
         )
         .build()?
         .ingest::<WrappedJson, _>(FakeJsonLarge)
