@@ -68,6 +68,26 @@ CREATE TABLE IF NOT EXISTS json_ste_vec_small_encrypted (
     value eql_v2_encrypted NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS json_ste_vec_small_encrypted_10000 (
+    id SERIAL PRIMARY KEY,
+    value eql_v2_encrypted NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS json_ste_vec_small_encrypted_100000 (
+    id SERIAL PRIMARY KEY,
+    value eql_v2_encrypted NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS json_ste_vec_small_encrypted_1000000 (
+    id SERIAL PRIMARY KEY,
+    value eql_v2_encrypted NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS json_ste_vec_small_encrypted_10000000 (
+    id SERIAL PRIMARY KEY,
+    value eql_v2_encrypted NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS json_small_encrypted (
     id SERIAL PRIMARY KEY,
     value eql_v2_encrypted NOT NULL
