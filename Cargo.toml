@@ -37,6 +37,10 @@ path = "src/bin/encrypt_string.rs"
 name = "combine_benchmark"
 path = "src/bin/combine_benchmark.rs"
 
+[[bin]]
+name = "encrypt_json_small"
+path = "src/bin/encrypt_json_small.rs"
+
 [[bench]]
 name = "ore"
 harness = false

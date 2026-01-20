@@ -102,13 +102,13 @@ run = "mise run bench:ingest:_run encrypt_int"
 description = "Run encrypt_string ingest benchmark and combine results"
 run = "mise run bench:ingest:_run encrypt_string"
 
-[tasks."bench:ingest:encrypt_ste_vec_small"]
-description = "Run encrypt_ste_vec_small ingest benchmark and combine results"
-run = "mise run bench:ingest:_run encrypt_ste_vec_small"
+[tasks."bench:ingest:json-small"]
+description = "Run encrypt_json_small ingest benchmark and combine results"
+run = "mise run bench:ingest:_run encrypt_json_small"
 
 [tasks."bench:ingest"]
 description = "Run all ingest benchmarks sequentially"
-depends = ["bench:ingest:encrypt_int", "bench:ingest:encrypt_string", "bench:ingest:encrypt_ste_vec_small"]
+depends = ["bench:ingest:encrypt_int", "bench:ingest:encrypt_string", "bench:ingest:json-small"]
 [tasks."prepare:_table"]
 description = "Internal: Prepare a table with target row count"
 depends = ["postgres", "bench:build"]

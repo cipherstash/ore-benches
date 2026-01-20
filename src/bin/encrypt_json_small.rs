@@ -59,7 +59,7 @@ async fn main() -> Result<()> {
         .expect("BATCH_SIZE must be a valid integer");
 
     let table_suffix = env::var("TABLE_SUFFIX").unwrap_or_default();
-    let table_name = format!("json_json_small_encrypted{}", table_suffix);
+    let table_name = format!("json_small_encrypted{}", table_suffix);
 
     IngestOptionsBuilder::new("encrypt_json_small")
         .num_records(num_records)
