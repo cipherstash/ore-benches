@@ -20,6 +20,7 @@ use anyhow::Result;
 use cipherstash_client::{
     eql::Identifier,
     schema::{
+        column::{Index, IndexType},
         ColumnConfig, ColumnType,
     },
 };
@@ -59,15 +60,20 @@ async fn main() -> Result<()> {
         .expect("BATCH_SIZE must be a valid integer");
 
     let table_suffix = env::var("TABLE_SUFFIX").unwrap_or_default();
-    let table_name = format!("json_json_small_encrypted{}", table_suffix);
+    let table_name = format!("json_ste_vec_small_encrypted{}", table_suffix);
 
-    IngestOptionsBuilder::new("encrypt_json_small")
+    IngestOptionsBuilder::new("encrypt_ste_vec_small")
         .num_records(num_records)
         .batch_size(batch_size)
         .identifier(Identifier::new(&table_name, "value"))
         .column_config(
-            // No indexes
-            ColumnConfig::build("value").casts_as(ColumnType::JsonB),
+            ColumnConfig::build("value")
+                .casts_as(ColumnType::JsonB)
+                // FIXME: There is no convenience method for SteVec yet on Index
+                .add_index(Index::new(IndexType::SteVec {
+                    prefix: "value".to_string(),
+                    term_filters: Default::default(),
+                })),
         )
         .build()?
         .ingest::<WrappedJson, _>(FakeJsonSmall)

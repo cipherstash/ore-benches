@@ -48,3 +48,7 @@ harness = false
 [[bench]]
 name = "exact"
 harness = false
+
+[[bench]]
+name = "json"
+harness = false
