@@ -23,28 +23,8 @@ use cipherstash_client::{
         ColumnConfig, ColumnType,
     },
 };
-use dbbenches::{IngestOptionsBuilder, WrappedJson};
-use fake::{
-    faker::{internet, name},
-    Dummy, Fake, Rng,
-};
-use serde_json::json;
+use dbbenches::{FakeJsonSmall, IngestOptionsBuilder, WrappedJson};
 use std::env;
-
-struct FakeJsonSmall;
-
-// FIXME: cipherstash-client doesn't have a From<serde_json::Value> for Plaintext impl yet, so we use String here
-impl Dummy<FakeJsonSmall> for WrappedJson {
-    fn dummy_with_rng<R: Rng + ?Sized>(_config: &FakeJsonSmall, _: &mut R) -> Self {
-        let value = json!({
-            "first_name": name::en::FirstName().fake::<String>(),
-            "last_name": name::en::LastName().fake::<String>(),
-            "age": (18..=99).fake::<i32>(),
-            "email": internet::en::FreeEmail().fake::<String>(),
-        });
-        WrappedJson(value)
-    }
-}
 
 #[tokio::main]
 async fn main() -> Result<()> {

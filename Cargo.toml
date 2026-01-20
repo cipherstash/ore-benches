@@ -41,6 +41,18 @@ path = "src/bin/combine_benchmark.rs"
 name = "encrypt_json_small"
 path = "src/bin/encrypt_json_small.rs"
 
+[[bin]]
+name = "encrypt_json_large"
+path = "src/bin/encrypt_json_large.rs"
+
+[[bin]]
+name = "encrypt_ste_vec_small"
+path = "src/bin/encrypt_ste_vec_small.rs"
+
+[[bin]]
+name = "encrypt_ste_vec_large"
+path = "src/bin/encrypt_ste_vec_large.rs"
+
 [[bench]]
 name = "ore"
 harness = false

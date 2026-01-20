@@ -86,7 +86,7 @@ if [ -z "$BENCH_NAME" ]; then
 fi
 
 echo "Running $BENCH_NAME ingest benchmark..."
-mise x -- hyperfine --export-json target/${BENCH_NAME}_hyperfine.json -L num_records 500,1000,10000 --runs 2 "NUM_RECORDS={num_records} ./target/release/$BENCH_NAME"
+hyperfine --export-json target/${BENCH_NAME}_hyperfine.json -L num_records 500,1000,10000 --runs 2 "NUM_RECORDS={num_records} ./target/release/$BENCH_NAME"
 
 echo "Combining results..."
 ./target/release/combine_benchmark "$BENCH_NAME"
@@ -106,9 +106,21 @@ run = "mise run bench:ingest:_run encrypt_string"
 description = "Run encrypt_json_small ingest benchmark and combine results"
 run = "mise run bench:ingest:_run encrypt_json_small"
 
+[tasks."bench:ingest:json-large"]
+description = "Run encrypt_json_large ingest benchmark and combine results"
+run = "mise run bench:ingest:_run encrypt_json_large"
+
+[tasks."bench:ingest:json-ste-vec-small"]
+description = "Run encrypt_ste_vec_small ingest benchmark and combine results"
+run = "mise run bench:ingest:_run encrypt_ste_vec_small"
+
+[tasks."bench:ingest:json-ste-vec-large"]
+description = "Run encrypt_ste_vec_large ingest benchmark and combine results"
+run = "mise run bench:ingest:_run encrypt_ste_vec_large"
+
 [tasks."bench:ingest"]
 description = "Run all ingest benchmarks sequentially"
-depends = ["bench:ingest:encrypt_int", "bench:ingest:encrypt_string", "bench:ingest:json-small"]
+depends = ["bench:ingest:encrypt_int", "bench:ingest:encrypt_string", "bench:ingest:json-small", "bench:ingest:json-large"]
 [tasks."prepare:_table"]
 description = "Internal: Prepare a table with target row count"
 depends = ["postgres", "bench:build"]

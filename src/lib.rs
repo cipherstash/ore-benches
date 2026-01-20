@@ -173,6 +173,123 @@ impl From<WrappedJson> for Plaintext {
     }
 }
 
+pub struct FakeJsonSmall;
+
+impl Dummy<FakeJsonSmall> for WrappedJson {
+    fn dummy_with_rng<R: fake::Rng + ?Sized>(_config: &FakeJsonSmall, _: &mut R) -> Self {
+        use fake::faker::{internet, name};
+        
+        let value = json!({
+            "first_name": name::en::FirstName().fake::<String>(),
+            "last_name": name::en::LastName().fake::<String>(),
+            "age": (18..=99).fake::<i32>(),
+            "email": internet::en::FreeEmail().fake::<String>(),
+        });
+        WrappedJson(value)
+    }
+}
+
+pub struct FakeJsonLarge;
+
+impl Dummy<FakeJsonLarge> for WrappedJson {
+    fn dummy_with_rng<R: fake::Rng + ?Sized>(_config: &FakeJsonLarge, _: &mut R) -> Self {
+        use fake::faker::{address, chrono, company, internet, name, phone_number};
+        
+        let department = [
+            "Engineering",
+            "Sales",
+            "Marketing",
+            "HR",
+            "Finance",
+            "Operations",
+        ]
+        .iter()
+        .take((1..6).fake())
+        .last()
+        .unwrap()
+        .to_string();
+        let type_ = ["Home", "Work", "Billing", "Shipping"]
+            .iter()
+            .take((1..4).fake())
+            .last()
+            .unwrap()
+            .to_string();
+        let status = [
+            "Pending",
+            "Processing",
+            "Shipped",
+            "Delivered",
+            "Cancelled",
+            "Returned",
+        ]
+        .iter()
+        .take((1..6).fake())
+        .last()
+        .unwrap()
+        .to_string();
+        let relationship = ["Spouse", "Parent", "Sibling", "Friend", "Other"]
+            .iter()
+            .take((1..5).fake())
+            .last()
+            .unwrap()
+            .to_string();
+
+        let value = json!({
+            "user": {
+                "first_name": name::en::FirstName().fake::<String>(),
+                "last_name": name::en::LastName().fake::<String>(),
+                "age": (18..=99).fake::<i32>(),
+                "email": internet::en::FreeEmail().fake::<String>(),
+                "username": internet::en::Username().fake::<String>(),
+                "contact": {
+                    "phone": phone_number::en::PhoneNumber().fake::<String>(),
+                    "mobile": phone_number::en::CellNumber().fake::<String>(),
+                    "emergency_contact": {
+                        "name": name::en::Name().fake::<String>(),
+                        "phone": phone_number::en::PhoneNumber().fake::<String>(),
+                        "relationship": relationship
+                    }
+                }
+            },
+            "company": {
+                "name": company::en::CompanyName().fake::<String>(),
+                "industry": company::en::Industry().fake::<String>(),
+                "position": company::en::Profession().fake::<String>(),
+                "department": department,
+                "salary": (40000..=300000).fake::<i32>(),
+                "start_date": chrono::en::Date().fake::<String>()
+            },
+            "addresses": (0..(1..4).fake::<i32>()).map(|_| {
+                json!({
+                    "type": type_,
+                    "street": address::en::StreetName().fake::<String>(),
+                    "city": address::en::CityName().fake::<String>(),
+                    "state": address::en::StateName().fake::<String>(),
+                    "zip": address::en::ZipCode().fake::<String>(),
+                    "country": "United States"
+                })
+            }).collect::<Vec<_>>(),
+            "orders": (0..(5..=20).fake::<i32>()).map(|_| {
+                json!({
+                    "order_id": format!("ORD-{}", (100000..=999999).fake::<i32>()),
+                    "date": chrono::en::Date().fake::<String>(),
+                    "total": (10.0..=5000.0).fake::<f64>(),
+                    "status": status,
+                    "items": (0..(1..=8).fake::<i32>()).map(|_| {
+                        json!({
+                            "product": company::en::Buzzword().fake::<String>(),
+                            "quantity": (1..=10).fake::<i32>(),
+                            "price": (5.0..=500.0).fake::<f64>()
+                        })
+                    }).collect::<Vec<_>>()
+                })
+            }).collect::<Vec<_>>()
+        });
+
+        WrappedJson(value)
+    }
+}
+
 pub struct EncryptedQueryBuilder {
     pub column_config: ColumnConfig,
     pub identifier: Identifier,
