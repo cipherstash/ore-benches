@@ -6,14 +6,45 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-sqlx = { version = "0.6", features = [ "runtime-tokio-native-tls" , "postgres" ] }
-tokio = { version = "1", features = ["full"] }
+sqlx = { version = "0.8", features = [ "runtime-tokio-native-tls" , "postgres", "json" ] }
+tokio = { version = "1.47.1", features = ["full"] }
 criterion = { version = "0.4.0", features = [ "async_tokio" ]}
 criterion-table = "0.4.2"
-ore-rs = "0.4.0"
+ore-rs = "0.7.0"
 hex = "0.4.3"
 hex-literal = "0.3.4"
+rand = "0.8.5"
+cipherstash-client = { version = "0.32.2", features = ["tokio"] }
+anyhow = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = "0.4"
+fake = { version = "4.4.0", features = ["chrono"] }
+
+[[bin]]
+name = "generate_data"
+path = "src/bin/generate_data.rs"
+
+[[bin]]
+name = "encrypt_int"
+path = "src/bin/encrypt_int.rs"
+
+[[bin]]
+name = "encrypt_string"
+path = "src/bin/encrypt_string.rs"
+
+[[bin]]
+name = "combine_benchmark"
+path = "src/bin/combine_benchmark.rs"
 
 [[bench]]
-name = "exact_lookup"
+name = "ore"
+harness = false
+
+[[bench]]
+name = "match"
+harness = false
+
+[[bench]]
+name = "exact"
 harness = false

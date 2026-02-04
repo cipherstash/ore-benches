@@ -1,0 +1,345 @@
+[tools]
+python = "latest"
+rust = "latest"
+
+[tasks.postgres]
+description = "Start PostgreSQL via Docker Compose"
+run = "docker compose up -d postgres"
+
+[tasks.postgres-stop]
+description = "Stop PostgreSQL Docker container"
+run = "docker compose down"
+
+[tasks.postgres-logs]
+description = "View PostgreSQL logs"
+run = "docker compose logs -f postgres"
+
+[tasks.psql]
+description = "Connect to PostgreSQL via psql"
+run = "docker exec -it ore-benches-postgres psql -U postgres -d postgres"
+
+[tasks.reset-db]
+description = "Reset the database (drop and recreate)"
+depends = ["postgres"]
+run = """
+#!/usr/bin/env bash
+set -e
+
+echo "Waiting for PostgreSQL to be ready..."
+until docker exec ore-benches-postgres pg_isready -U postgres > /dev/null 2>&1; do
+  sleep 1
+done
+
+echo "Dropping and recreating database..."
+docker exec -i ore-benches-postgres psql -U postgres -d template1 -c "DROP DATABASE IF EXISTS postgres WITH (FORCE);"
+docker exec -i ore-benches-postgres psql -U postgres -d template1 -c "CREATE DATABASE postgres;"
+
+echo "Database reset complete. Run 'mise run setup-db' to set up tables and data."
+"""
+
+[tasks.setup-db]
+description = "Set up the test database (create tables and load data)"
+depends = ["postgres"]
+run = """
+#!/usr/bin/env bash
+set -e
+
+echo "Waiting for PostgreSQL to be ready..."
+until docker exec ore-benches-postgres pg_isready -U postgres > /dev/null 2>&1; do
+  sleep 1
+done
+
+echo "Downloading EQL..."
+curl -sLo /tmp/cipherstash-encrypt.sql https://github.com/cipherstash/encrypt-query-language/releases/latest/download/cipherstash-encrypt.sql
+
+echo "Installing EQL..."
+docker exec -i ore-benches-postgres psql -v ON_ERROR_STOP=1 -U postgres -d postgres < /tmp/cipherstash-encrypt.sql
+
+echo "Creating tables..."
+docker exec -i ore-benches-postgres psql -v ON_ERROR_STOP=1 -U postgres -d postgres < sql/schema.sql
+
+echo "Database setup complete!"
+"""
+
+[tasks."bench:build"]
+description = "Build all binaries in release mode"
+run = """
+#!/usr/bin/env bash
+set -e
+
+echo "Building binaries in release mode..."
+cargo build --release
+"""
+
+[tasks."bench:ingest:_run"]
+description = "Internal: Run a generic ingest benchmark"
+depends = ["bench:build"]
+run = """
+#!/usr/bin/env bash
+set -e
+
+BENCH_NAME="$1"
+
+if [ -z "$BENCH_NAME" ]; then
+  echo "Error: BENCH_NAME argument must be provided"
+  exit 1
+fi
+
+echo "Running $BENCH_NAME ingest benchmark..."
+mise x -- hyperfine --export-json target/${BENCH_NAME}_hyperfine.json -L num_records 500,1000,10000 --runs 2 "NUM_RECORDS={num_records} ./target/release/$BENCH_NAME"
+
+echo "Combining results..."
+./target/release/combine_benchmark "$BENCH_NAME"
+
+echo "Benchmark complete! Results written to results/ingest/${BENCH_NAME}_combined.json"
+"""
+
+[tasks."bench:ingest:encrypt_int"]
+description = "Run encrypt_int ingest benchmark and combine results"
+run = "mise run bench:ingest:_run encrypt_int"
+
+[tasks."bench:ingest:encrypt_string"]
+description = "Run encrypt_string ingest benchmark and combine results"
+run = "mise run bench:ingest:_run encrypt_string"
+
+[tasks."bench:ingest:encrypt_json_small"]
+description = "Run encrypt_json_small ingest benchmark and combine results"
+run = "mise run bench:ingest:_run encrypt_json_small"
+
+[tasks."bench:ingest"]
+description = "Run all ingest benchmarks sequentially"
+depends = ["bench:ingest:encrypt_int", "bench:ingest:encrypt_string", "bench:ingest:encrypt_json_small"]
+
+[tasks."prepare:_table"]
+description = "Internal: Prepare a table with target row count"
+depends = ["postgres", "bench:build"]
+run = """
+#!/usr/bin/env bash
+set -e
+
+BASE_TABLE="$1"
+BINARY_NAME="$2"
+TARGET_ROWS="$3"
+
+if [ -z "$BASE_TABLE" ] || [ -z "$BINARY_NAME" ] || [ -z "$TARGET_ROWS" ]; then
+  echo "Error: BASE_TABLE, BINARY_NAME, and TARGET_ROWS arguments required"
+  echo "Usage: mise run prepare:_table <base_table> <binary_name> <target_rows>"
+  exit 1
+fi
+
+# Validate TARGET_ROWS is one of the allowed values
+case "$TARGET_ROWS" in
+  10000|100000|1000000|10000000)
+    ;;
+  *)
+    echo "Error: TARGET_ROWS must be one of: 10000, 100000, 1000000, 10000000"
+    exit 1
+    ;;
+esac
+
+# Construct table name with suffix
+TABLE_NAME="${BASE_TABLE}_${TARGET_ROWS}"
+
+echo "Waiting for PostgreSQL to be ready..."
+until docker exec ore-benches-postgres pg_isready -U postgres > /dev/null 2>&1; do
+  sleep 1
+done
+
+echo "Counting rows in $TABLE_NAME table..."
+CURRENT_ROWS=$(docker exec ore-benches-postgres psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM $TABLE_NAME;" | tr -d ' ')
+
+echo "Current rows: $CURRENT_ROWS"
+echo "Target rows: $TARGET_ROWS"
+
+if [ "$CURRENT_ROWS" -ge "$TARGET_ROWS" ]; then
+  echo "Table already has $CURRENT_ROWS rows (>= $TARGET_ROWS). No action needed."
+  exit 0
+fi
+
+echo "Dropping indexes..."
+docker exec -i ore-benches-postgres psql -U postgres -d postgres < sql/indexes/${TABLE_NAME}_down.sql
+
+ROWS_TO_INSERT=$((TARGET_ROWS - CURRENT_ROWS))
+echo "Inserting $ROWS_TO_INSERT additional rows..."
+NUM_RECORDS=$ROWS_TO_INSERT TABLE_SUFFIX="_${TARGET_ROWS}" ./target/release/$BINARY_NAME
+
+echo "Creating indexes..."
+docker exec -i ore-benches-postgres psql -U postgres -d postgres < sql/indexes/${TABLE_NAME}_up.sql
+
+FINAL_ROWS=$(docker exec ore-benches-postgres psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM $TABLE_NAME;" | tr -d ' ')
+echo "Preparation complete! Final row count: $FINAL_ROWS"
+"""
+
+[tasks."prepare:string_encrypted"]
+description = "Prepare string_encrypted table with target row count"
+run = "mise run prepare:_table string_encrypted encrypt_string $1"
+
+[tasks."prepare:integer_encrypted"]
+description = "Prepare integer_encrypted table with target row count"
+run = "mise run prepare:_table integer_encrypted encrypt_int $1"
+
+[tasks."bench:query:ore"]
+description = "Run ORE query benchmark"
+run = """
+#!/usr/bin/env bash
+set -e
+
+TARGET_ROWS="$1"
+
+if [ -z "$TARGET_ROWS" ]; then
+  echo "Error: target row count argument required"
+  echo "Usage: mise run bench:query:ore <target_rows>"
+  exit 1
+fi
+
+if ! [[ "$TARGET_ROWS" =~ ^[0-9]+$ ]]; then
+  echo "Error: target row count must be a positive integer"
+  exit 1
+fi
+
+echo "Preparing integer_encrypted table with $TARGET_ROWS rows..."
+mise run prepare:integer_encrypted "$TARGET_ROWS"
+
+echo "Cleaning old benchmark data..."
+rm -rf target/criterion/ORE
+
+echo "Running ORE query benchmark..."
+mkdir -p results/query
+OUTPUT_FILE="results/query/ore_rows_${TARGET_ROWS}.json"
+TARGET_ROWS="$TARGET_ROWS" cargo criterion --bench ore --message-format json > "$OUTPUT_FILE"
+
+echo "Benchmark complete! Results written to $OUTPUT_FILE"
+"""
+
+[tasks."bench:query:match"]
+description = "Run MATCH query benchmark"
+run = """
+#!/usr/bin/env bash
+set -e
+
+TARGET_ROWS="$1"
+
+if [ -z "$TARGET_ROWS" ]; then
+  echo "Error: target row count argument required"
+  echo "Usage: mise run bench:query:match <target_rows>"
+  exit 1
+fi
+
+if ! [[ "$TARGET_ROWS" =~ ^[0-9]+$ ]]; then
+  echo "Error: target row count must be a positive integer"
+  exit 1
+fi
+
+echo "Preparing string_encrypted table with $TARGET_ROWS rows..."
+mise run prepare:string_encrypted "$TARGET_ROWS"
+
+echo "Cleaning old benchmark data..."
+rm -rf target/criterion/MATCH
+
+echo "Running MATCH query benchmark..."
+mkdir -p results/query
+OUTPUT_FILE="results/query/match_rows_${TARGET_ROWS}.json"
+TARGET_ROWS="$TARGET_ROWS" cargo criterion --bench match --message-format json > "$OUTPUT_FILE"
+
+echo "Benchmark complete! Results written to $OUTPUT_FILE"
+"""
+
+[tasks."bench:query:exact"]
+description = "Run EXACT query benchmark"
+run = """
+#!/usr/bin/env bash
+set -e
+
+TARGET_ROWS="$1"
+
+if [ -z "$TARGET_ROWS" ]; then
+  echo "Error: target row count argument required"
+  echo "Usage: mise run bench:query:exact <target_rows>"
+  exit 1
+fi
+
+if ! [[ "$TARGET_ROWS" =~ ^[0-9]+$ ]]; then
+  echo "Error: target row count must be a positive integer"
+  exit 1
+fi
+
+echo "Preparing string_encrypted table with $TARGET_ROWS rows..."
+mise run prepare:string_encrypted "$TARGET_ROWS"
+
+echo "Cleaning old benchmark data..."
+rm -rf target/criterion/EXACT
+
+echo "Running EXACT query benchmark..."
+mkdir -p results/query
+OUTPUT_FILE="results/query/exact_rows_${TARGET_ROWS}.json"
+TARGET_ROWS="$TARGET_ROWS" cargo criterion --bench exact --message-format json > "$OUTPUT_FILE"
+
+echo "Benchmark complete! Results written to $OUTPUT_FILE"
+"""
+
+[tasks."bench:query:all"]
+description = "Run all query benchmarks with multiple row counts (10k, 100k, 1M, 10M)"
+run = """
+#!/usr/bin/env bash
+set -e
+
+ROW_COUNTS=(10000 100000 1000000 10000000)
+
+echo "========================================"
+echo "Starting comprehensive benchmark suite"
+echo "Row counts: ${ROW_COUNTS[*]}"
+echo "Benchmarks: exact, match, ore"
+echo "========================================"
+echo ""
+
+START_TIME=$(date +%s)
+
+for ROWS in "${ROW_COUNTS[@]}"; do
+  echo "========================================"
+  echo "Running benchmarks with $ROWS rows"
+  echo "========================================"
+  echo ""
+  
+  echo "[1/3] Running EXACT benchmark with $ROWS rows..."
+  mise run bench:query:exact "$ROWS"
+  echo ""
+  
+  echo "[2/3] Running MATCH benchmark with $ROWS rows..."
+  mise run bench:query:match "$ROWS"
+  echo ""
+  
+  echo "[3/3] Running ORE benchmark with $ROWS rows..."
+  mise run bench:query:ore "$ROWS"
+  echo ""
+  
+  echo "Completed benchmarks for $ROWS rows"
+  echo ""
+done
+
+END_TIME=$(date +%s)
+ELAPSED=$((END_TIME - START_TIME))
+HOURS=$((ELAPSED / 3600))
+MINUTES=$(((ELAPSED % 3600) / 60))
+SECONDS=$((ELAPSED % 60))
+
+echo "========================================"
+echo "All benchmarks complete!"
+echo "Total time: ${HOURS}h ${MINUTES}m ${SECONDS}s"
+echo "Results saved in results/query/"
+echo "========================================"
+"""
+
+[tasks.report]
+description = "Generate benchmark report from results"
+run = """
+#!/usr/bin/env bash
+set -e
+
+OUTPUT_FILE="${1:-report/BENCHMARK_REPORT.md}"
+
+echo "Generating benchmark report..."
+python3 report_benchmarks.py --output "$OUTPUT_FILE"
+
+echo ""
+echo "Report saved to: $OUTPUT_FILE"
+"""
