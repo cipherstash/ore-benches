@@ -1,0 +1,79 @@
+{
+  "results": [
+    {
+      "command": "NUM_RECORDS=500 ./target/release/encrypt_ste_vec_small",
+      "mean": 0.8005732774400001,
+      "stddev": 0.2270941486808287,
+      "median": 0.8005732774400001,
+      "user": 0.04821644,
+      "system": 0.008974959999999999,
+      "min": 0.63999346494,
+      "max": 0.96115308994,
+      "times": [
+        0.96115308994,
+        0.63999346494
+      ],
+      "memory_usage_byte": [
+        30162944,
+        30162944
+      ],
+      "exit_codes": [
+        0,
+        0
+      ],
+      "parameters": {
+        "num_records": "500"
+      }
+    },
+    {
+      "command": "NUM_RECORDS=1000 ./target/release/encrypt_ste_vec_small",
+      "mean": 0.82009171494,
+      "stddev": 0.029918748572174567,
+      "median": 0.82009171494,
+      "user": 0.09222393999999999,
+      "system": 0.009728959999999998,
+      "min": 0.7989359649400001,
+      "max": 0.84124746494,
+      "times": [
+        0.7989359649400001,
+        0.84124746494
+      ],
+      "memory_usage_byte": [
+        30162944,
+        30310400
+      ],
+      "exit_codes": [
+        0,
+        0
+      ],
+      "parameters": {
+        "num_records": "1000"
+      }
+    },
+    {
+      "command": "NUM_RECORDS=10000 ./target/release/encrypt_ste_vec_small",
+      "mean": 21.358338048439997,
+      "stddev": 1.4282518119898526,
+      "median": 21.358338048439997,
+      "user": 0.81243844,
+      "system": 0.03195146,
+      "min": 20.34841150694,
+      "max": 22.368264589939997,
+      "times": [
+        22.368264589939997,
+        20.34841150694
+      ],
+      "memory_usage_byte": [
+        48381952,
+        48381952
+      ],
+      "exit_codes": [
+        0,
+        0
+      ],
+      "parameters": {
+        "num_records": "10000"
+      }
+    }
+  ]
+}
