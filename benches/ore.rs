@@ -13,19 +13,32 @@ use sqlx::postgres::PgPoolOptions;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
 
-// Two flavours per scenario:
+// Post-EQL-2.3 (with the `<` / `<=` / `>` / `>=` operator inlining), bare-form
+// range predicates on `eql_v2_encrypted` reduce to
+// `eql_v2.ore_block_u64_8_256(a) <op> eql_v2.ore_block_u64_8_256(b)` and
+// structurally match a functional btree index on
+// `eql_v2.ore_block_u64_8_256(value)` — so the natural-form scenarios below
+// engage the index without rewriting.
 //
-// 1. "eql_cast" — natural form: `WHERE value > $1`. Under EQL 2.3 the `<`/`>`
-//    operators on `eql_v2_encrypted` are plpgsql wrappers around `eql_v2.compare`
-//    and are not inlinable, so the planner cannot structurally match the
-//    functional ORE index built on `eql_v2.ore_block_u64_8_256(value)`. This
-//    path falls through to a sequential scan — useful as a baseline for what
-//    a caller pays if they write the query in the most natural form.
+// The ordered scenarios show three plan shapes side-by-side:
 //
-// 2. "ore_term" — explicit form: the ORE term extractor appears on both sides,
-//    so the predicate matches the functional ORE index by expression identity.
-//    `ORDER BY eql_v2.ore_block_u64_8_256(value)` similarly engages the index
-//    for ordering.
+//   range_lt_ordered_10        — natural form: WHERE val < $1 ORDER BY val LIMIT 10
+//                                 → Bitmap Index Scan via the inlined `<`, plus
+//                                   a Top-N sort by `val` (the natural-form sort
+//                                   key doesn't match the index expression
+//                                   syntactically). Each comparison in the Sort
+//                                   step uses the inlined ORE-term path, so the
+//                                   Top-N is fast.
+//
+//   range_lt_hybrid_ordered_10 — natural WHERE, extractor ORDER BY:
+//                                 ORDER BY eql_v2.ore_block_u64_8_256(val).
+//                                 The sort key matches the index expression →
+//                                 plain ordered Index Scan, no Sort node.
+//
+//   range_lt_ore_ordered_10    — fully extractor on both clauses. After the `<`
+//                                 inlining the WHERE reduces to the same shape
+//                                 as the hybrid, so the plan is identical to
+//                                 hybrid. Kept for contrast / regression.
 //
 // The equality scenario from the previous bench (`WHERE value = $1`) is gone:
 // the integer column carries only `ob`, not `hm`, so post-2.3 equality returns
@@ -58,31 +71,10 @@ static QUERY_TEMPLATES: &[(&str, i32, &str)] = &[
     ),
     (
         "SELECT id,value::jsonb FROM {TABLE} \
-         WHERE eql_v2.ore_block_u64_8_256(value) > eql_v2.ore_block_u64_8_256($1::jsonb) \
-         LIMIT 10",
+         WHERE value < $1 \
+         ORDER BY eql_v2.ore_block_u64_8_256(value) LIMIT 10",
         5000,
-        "range_gt_ore_10",
-    ),
-    (
-        "SELECT id,value::jsonb FROM {TABLE} \
-         WHERE eql_v2.ore_block_u64_8_256(value) > eql_v2.ore_block_u64_8_256($1::jsonb) \
-         LIMIT 100",
-        5000,
-        "range_gt_ore_100",
-    ),
-    (
-        "SELECT id,value::jsonb FROM {TABLE} \
-         WHERE eql_v2.ore_block_u64_8_256(value) < eql_v2.ore_block_u64_8_256($1::jsonb) \
-         LIMIT 10",
-        5000,
-        "range_lt_ore_10",
-    ),
-    (
-        "SELECT id,value::jsonb FROM {TABLE} \
-         WHERE eql_v2.ore_block_u64_8_256(value) < eql_v2.ore_block_u64_8_256($1::jsonb) \
-         LIMIT 100",
-        5000,
-        "range_lt_ore_100",
+        "range_lt_hybrid_ordered_10",
     ),
     (
         "SELECT id,value::jsonb FROM {TABLE} \
