@@ -147,6 +147,17 @@ fn criterion_benchmark(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("ORE");
     group.sample_size(10);
+    // Some scenarios — notably the natural-form `WHERE val < $1 ORDER BY val
+    // LIMIT 10` — finish a single iteration in several hundred milliseconds
+    // because the Top-N sort runs over the post-WHERE bitmap rather than
+    // streaming from an ordered index (see U-005 in EQL's v2.3 upgrade
+    // notes). Criterion's default 5 s `measurement_time` only fits a few
+    // such samples, yielding very wide confidence intervals and false
+    // "regressed" alerts against any stored baseline. 30 s gives the slow
+    // scenarios room to settle while leaving fast ones (sub-ms to single
+    // ms) plenty of headroom.
+    group.warm_up_time(std::time::Duration::from_secs(5));
+    group.measurement_time(std::time::Duration::from_secs(30));
 
     for (i, query) in queries.into_iter().enumerate() {
         let (_, _, scenario) = QUERY_TEMPLATES[i];

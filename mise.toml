@@ -204,7 +204,7 @@ echo "Preparing integer_encrypted table with $TARGET_ROWS rows..."
 mise run prepare:integer_encrypted "$TARGET_ROWS"
 
 echo "Cleaning old benchmark data..."
-rm -rf target/criterion/ORE
+rm -rf target/criterion/data/main/ORE target/criterion/reports/ORE
 
 echo "Running ORE query benchmark..."
 mkdir -p results/query
@@ -237,7 +237,7 @@ echo "Preparing string_encrypted table with $TARGET_ROWS rows..."
 mise run prepare:string_encrypted "$TARGET_ROWS"
 
 echo "Cleaning old benchmark data..."
-rm -rf target/criterion/MATCH
+rm -rf target/criterion/data/main/MATCH target/criterion/reports/MATCH
 
 echo "Running MATCH query benchmark..."
 mkdir -p results/query
@@ -270,7 +270,7 @@ echo "Preparing string_encrypted table with $TARGET_ROWS rows..."
 mise run prepare:string_encrypted "$TARGET_ROWS"
 
 echo "Cleaning old benchmark data..."
-rm -rf target/criterion/EXACT
+rm -rf target/criterion/data/main/EXACT target/criterion/reports/EXACT
 
 echo "Running EXACT query benchmark..."
 mkdir -p results/query
@@ -303,7 +303,7 @@ echo "Preparing string_encrypted table with $TARGET_ROWS rows..."
 mise run prepare:string_encrypted "$TARGET_ROWS"
 
 echo "Cleaning old benchmark data..."
-rm -rf target/criterion/GROUP_BY
+rm -rf target/criterion/data/main/GROUP_BY target/criterion/reports/GROUP_BY
 
 echo "Running GROUP BY query benchmark..."
 mkdir -p results/query

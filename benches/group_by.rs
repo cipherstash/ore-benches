@@ -53,6 +53,15 @@ fn criterion_benchmark(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("GROUP_BY");
     group.sample_size(10);
+    // The natural-form `GROUP BY value` scenario calls `eql_v2.hash_encrypted`
+    // (plpgsql, per row) for the hash discriminator. At 10k rows that's
+    // ~3.5 s per iteration; at 100k+ it scales roughly linearly. Criterion's
+    // default 5 s `measurement_time` can't fit a single sample. Extend so
+    // even the slow scenarios get the criterion-minimum 10 samples without
+    // a "Unable to complete 10 samples" warning. Inflated for headroom at
+    // 1M rows.
+    group.warm_up_time(std::time::Duration::from_secs(5));
+    group.measurement_time(std::time::Duration::from_secs(60));
 
     for (query_template, scenario) in QUERY_TEMPLATES {
         let query_str = query_template.replace("{TABLE}", &table_name);
