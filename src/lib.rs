@@ -1,28 +1,32 @@
 use anyhow::{Context, Result};
 use cipherstash_client::{
-    config::EnvSource,
-    credentials::ServiceCredentials,
     encryption::{Plaintext, QueryOp, ScopedCipher},
     eql::{decrypt_eql, encrypt_eql, EqlCiphertext, EqlOperation, Identifier, PreparedPlaintext},
     schema::{column::IndexType, ColumnConfig},
-    ZeroKMSConfig,
+    zerokms::{EnvKeyProvider, FallbackKeyProvider, ZeroKMSBuilder},
+    AutoStrategy,
 };
 use fake::{Dummy, Fake};
 use serde_json::json;
 use sqlx::{postgres::PgPoolOptions, types::Json, QueryBuilder};
+use stack_profile::ProfileStore;
 use std::borrow::Cow;
 use std::env;
 use std::fmt::Debug;
 use std::sync::Arc;
 
-pub async fn init_scoped_cipher() -> Result<Arc<ScopedCipher<ServiceCredentials>>> {
-    let client = ZeroKMSConfig::builder()
-        .add_source(EnvSource::new())
-        .build_with_client_key()
-        .context("failed to build config")?
-        .create_client();
+pub async fn init_scoped_cipher() -> Result<Arc<ScopedCipher<AutoStrategy>>> {
+    let zerokms = ZeroKMSBuilder::auto()
+        .context("failed to build ZeroKMS client")?
+        .with_key_provider(FallbackKeyProvider::new(
+            EnvKeyProvider,
+            ProfileStore::default(),
+        ))
+        .build()
+        .await
+        .context("failed to load client key")?;
 
-    let scoped_cipher = ScopedCipher::init_default(Arc::new(client)).await?;
+    let scoped_cipher = ScopedCipher::init_default(Arc::new(zerokms)).await?;
     Ok(Arc::new(scoped_cipher))
 }
 
@@ -110,14 +114,7 @@ impl IngestOptions {
             .connect(&database_url)
             .await?;
 
-        let client = ZeroKMSConfig::builder()
-            .add_source(EnvSource::new())
-            .build_with_client_key()
-            .expect("failed to build config")
-            .create_client();
-
-        let scoped_cipher = ScopedCipher::init_default(Arc::new(client)).await?;
-        let scoped_cipher = Arc::new(scoped_cipher);
+        let scoped_cipher = init_scoped_cipher().await?;
 
         let column_config = Cow::Borrowed(&self.column_config);
 
@@ -169,7 +166,7 @@ pub struct WrappedJson(pub serde_json::Value);
 
 impl From<WrappedJson> for Plaintext {
     fn from(WrappedJson(value): WrappedJson) -> Self {
-        Plaintext::JsonB(Some(value))
+        Plaintext::Json(Some(value))
     }
 }
 
@@ -203,7 +200,7 @@ impl EncryptedQueryBuilder {
     pub async fn build_query<T>(
         self,
         plaintext: T,
-        cipher: Arc<ScopedCipher<ServiceCredentials>>,
+        cipher: Arc<ScopedCipher<AutoStrategy>>,
     ) -> Result<EncryptedQuery>
     where
         T: Into<Plaintext> + Send + Debug,
@@ -232,7 +229,7 @@ impl EncryptedQueryBuilder {
 pub struct EncryptedQuery {
     pub eql: EqlCiphertext,
     pub statement: String,
-    scoped_cipher: Arc<ScopedCipher<ServiceCredentials>>,
+    scoped_cipher: Arc<ScopedCipher<AutoStrategy>>,
 }
 
 impl EncryptedQuery {

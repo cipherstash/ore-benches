@@ -1,8 +1,8 @@
 use cipherstash_client::{
-    credentials::ServiceCredentials,
     encryption::ScopedCipher,
     eql::Identifier,
     schema::{column::Index, ColumnConfig, ColumnType},
+    AutoStrategy,
 };
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use dbbenches::{init_scoped_cipher, EncryptedQuery, EncryptedQueryBuilder};
@@ -17,13 +17,13 @@ static QUERY_TEMPLATES: &[(&str, &str, &str)] = &[
 ];
 
 async fn build_query(
-    cipher: Arc<ScopedCipher<ServiceCredentials>>,
+    cipher: Arc<ScopedCipher<AutoStrategy>>,
     query: &str,
     x: &str,
     table_name: &str,
 ) -> EncryptedQuery {
     let column_config = ColumnConfig::build("value")
-        .casts_as(ColumnType::Utf8Str)
+        .casts_as(ColumnType::Text)
         .add_index(Index::new_match());
 
     let identifier = Identifier::new(table_name, "value");
