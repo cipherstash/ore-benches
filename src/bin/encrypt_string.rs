@@ -41,7 +41,7 @@ async fn main() -> Result<()> {
         .identifier(Identifier::new(&table_name, "value"))
         .column_config(
             ColumnConfig::build("value")
-                .casts_as(ColumnType::Utf8Str)
+                .casts_as(ColumnType::Text)
                 .add_index(Index::new_unique())
                 .add_index(Index::new_match()),
         )

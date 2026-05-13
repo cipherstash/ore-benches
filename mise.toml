@@ -2,6 +2,9 @@
 python = "latest"
 rust = "latest"
 
+[env]
+DATABASE_URL = "postgres://postgres:postgres@localhost:5400/postgres"
+
 [tasks.postgres]
 description = "Start PostgreSQL via Docker Compose"
 run = "docker compose up -d postgres"
@@ -201,7 +204,7 @@ echo "Preparing integer_encrypted table with $TARGET_ROWS rows..."
 mise run prepare:integer_encrypted "$TARGET_ROWS"
 
 echo "Cleaning old benchmark data..."
-rm -rf target/criterion/ORE
+rm -rf target/criterion/data/main/ORE target/criterion/reports/ORE
 
 echo "Running ORE query benchmark..."
 mkdir -p results/query
@@ -234,7 +237,7 @@ echo "Preparing string_encrypted table with $TARGET_ROWS rows..."
 mise run prepare:string_encrypted "$TARGET_ROWS"
 
 echo "Cleaning old benchmark data..."
-rm -rf target/criterion/MATCH
+rm -rf target/criterion/data/main/MATCH target/criterion/reports/MATCH
 
 echo "Running MATCH query benchmark..."
 mkdir -p results/query
@@ -267,12 +270,45 @@ echo "Preparing string_encrypted table with $TARGET_ROWS rows..."
 mise run prepare:string_encrypted "$TARGET_ROWS"
 
 echo "Cleaning old benchmark data..."
-rm -rf target/criterion/EXACT
+rm -rf target/criterion/data/main/EXACT target/criterion/reports/EXACT
 
 echo "Running EXACT query benchmark..."
 mkdir -p results/query
 OUTPUT_FILE="results/query/exact_rows_${TARGET_ROWS}.json"
 TARGET_ROWS="$TARGET_ROWS" cargo criterion --bench exact --message-format json > "$OUTPUT_FILE"
+
+echo "Benchmark complete! Results written to $OUTPUT_FILE"
+"""
+
+[tasks."bench:query:group_by"]
+description = "Run GROUP BY query benchmark"
+run = """
+#!/usr/bin/env bash
+set -e
+
+TARGET_ROWS="$1"
+
+if [ -z "$TARGET_ROWS" ]; then
+  echo "Error: target row count argument required"
+  echo "Usage: mise run bench:query:group_by <target_rows>"
+  exit 1
+fi
+
+if ! [[ "$TARGET_ROWS" =~ ^[0-9]+$ ]]; then
+  echo "Error: target row count must be a positive integer"
+  exit 1
+fi
+
+echo "Preparing string_encrypted table with $TARGET_ROWS rows..."
+mise run prepare:string_encrypted "$TARGET_ROWS"
+
+echo "Cleaning old benchmark data..."
+rm -rf target/criterion/data/main/GROUP_BY target/criterion/reports/GROUP_BY
+
+echo "Running GROUP BY query benchmark..."
+mkdir -p results/query
+OUTPUT_FILE="results/query/group_by_rows_${TARGET_ROWS}.json"
+TARGET_ROWS="$TARGET_ROWS" cargo criterion --bench group_by --message-format json > "$OUTPUT_FILE"
 
 echo "Benchmark complete! Results written to $OUTPUT_FILE"
 """
@@ -288,7 +324,7 @@ ROW_COUNTS=(10000 100000 1000000 10000000)
 echo "========================================"
 echo "Starting comprehensive benchmark suite"
 echo "Row counts: ${ROW_COUNTS[*]}"
-echo "Benchmarks: exact, match, ore"
+echo "Benchmarks: exact, match, ore, group_by"
 echo "========================================"
 echo ""
 
@@ -299,19 +335,23 @@ for ROWS in "${ROW_COUNTS[@]}"; do
   echo "Running benchmarks with $ROWS rows"
   echo "========================================"
   echo ""
-  
-  echo "[1/3] Running EXACT benchmark with $ROWS rows..."
+
+  echo "[1/4] Running EXACT benchmark with $ROWS rows..."
   mise run bench:query:exact "$ROWS"
   echo ""
-  
-  echo "[2/3] Running MATCH benchmark with $ROWS rows..."
+
+  echo "[2/4] Running MATCH benchmark with $ROWS rows..."
   mise run bench:query:match "$ROWS"
   echo ""
-  
-  echo "[3/3] Running ORE benchmark with $ROWS rows..."
+
+  echo "[3/4] Running ORE benchmark with $ROWS rows..."
   mise run bench:query:ore "$ROWS"
   echo ""
-  
+
+  echo "[4/4] Running GROUP BY benchmark with $ROWS rows..."
+  mise run bench:query:group_by "$ROWS"
+  echo ""
+
   echo "Completed benchmarks for $ROWS rows"
   echo ""
 done

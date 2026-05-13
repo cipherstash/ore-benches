@@ -96,9 +96,9 @@ ON string_encrypted_10000 (
 
 | Data Set Size | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|-------------------------|---------------------------|
-| 10,000 | ⚠️ 119.93ms | ⚠️ 122.15ms |
-| 100,000 | ⚠️ 1.669s | ⚠️ 787.01ms |
-| 1,000,000 | ⚠️ 7.827s | ⚠️ 7.836s |
+| 10,000 | 422.00μs | 415.23μs |
+| 100,000 | 400.64μs | 427.65μs |
+| 1,000,000 | ⚠️ 8.012s | ⚠️ 8.012s |
 
 ![Query Performance - EXACT/eql_cast](query_exact_eql_cast_chart.png)
 
@@ -138,9 +138,9 @@ ON string_encrypted_10000 (
 
 | Data Set Size | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|-------------------------|---------------------------|
-| 10,000 | 410.44μs | 414.48μs |
-| 100,000 | 395.17μs | 395.38μs |
-| 1,000,000 | 399.96μs | 404.21μs |
+| 10,000 | 393.98μs | 397.50μs |
+| 100,000 | 392.83μs | 404.50μs |
+| 1,000,000 | 401.06μs | 408.97μs |
 
 ![Query Performance - EXACT/eql_hash](query_exact_eql_hash_chart.png)
 
@@ -182,9 +182,8 @@ ON string_encrypted_10000 (
 
 | Data Set Size | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|-------------------------|---------------------------|
-| 10,000 | 930.90μs | 63.38ms |
-| 100,000 | 3.35ms | 68.21ms |
-| 1,000,000 | 21.23ms | 83.97ms |
+| 10,000 | 1.07ms | 28.26ms |
+| 1,000,000 | 17.53ms | 42.35ms |
 
 ![Query Performance - MATCH/eql_bloom](query_match_eql_bloom_chart.png)
 
@@ -226,9 +225,8 @@ ON string_encrypted_10000 (
 
 | Data Set Size | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|-------------------------|---------------------------|
-| 10,000 | ⚠️ 263.49ms | ⚠️ 321.93ms |
-| 100,000 | ⚠️ 341.72ms | ⚠️ 401.96ms |
-| 1,000,000 | ⚠️ 399.14ms | ⚠️ 450.21ms |
+| 10,000 | 751.37μs | 27.53ms |
+| 1,000,000 | ⚠️ 386.64ms | ⚠️ 418.49ms |
 
 ![Query Performance - MATCH/eql_cast_firstname](query_match_eql_cast_firstname_chart.png)
 
@@ -270,9 +268,8 @@ ON string_encrypted_10000 (
 
 | Data Set Size | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|-------------------------|---------------------------|
-| 10,000 | ⚠️ 146.33ms | ⚠️ 205.98ms |
-| 100,000 | ⚠️ 119.51ms | ⚠️ 177.16ms |
-| 1,000,000 | ⚠️ 127.20ms | ⚠️ 190.63ms |
+| 10,000 | 1.25ms | 30.30ms |
+| 1,000,000 | ⚠️ 132.59ms | ⚠️ 157.06ms |
 
 ![Query Performance - MATCH/eql_cast_lastname](query_match_eql_cast_lastname_chart.png)
 
@@ -304,9 +301,8 @@ ON integer_encrypted_10000 (
 
 | Data Set Size | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|-------------------------|---------------------------|
-| 10,000 | ⚠️ 276.65ms | ⚠️ 276.72ms |
-| 100,000 | ⚠️ 1.858s | ⚠️ 1.868s |
-| 1,000,000 | ⚠️ 18.466s | ⚠️ 18.618s |
+| 10,000 | 464.23μs | 495.74μs |
+| 100,000 | ⚠️ 1.905s | ⚠️ 1.901s |
 
 ![Query Performance - ORE/exact](query_ore_exact_chart.png)
 
@@ -334,9 +330,8 @@ ON integer_encrypted_10000 (
 
 | Data Set Size | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|-------------------------|---------------------------|
-| 10,000 | 2.23ms | 60.19ms |
-| 100,000 | 1.78ms | 63.88ms |
-| 1,000,000 | 1.88ms | 66.87ms |
+| 10,000 | 2.39ms | 29.57ms |
+| 100,000 | 1.53ms | 27.97ms |
 
 ![Query Performance - ORE/range_gt_10](query_ore_range_gt_10_chart.png)
 
@@ -362,13 +357,10 @@ ON integer_encrypted_10000 (
 );
 ```
 
-*⚠️ = Query time exceeds 100ms*
-
 | Data Set Size | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|-------------------------|---------------------------|
-| 10,000 | 13.67ms | ⚠️ 115.66ms |
-| 100,000 | 12.56ms | ⚠️ 124.67ms |
-| 1,000,000 | 13.08ms | ⚠️ 110.90ms |
+| 10,000 | 14.33ms | 51.92ms |
+| 100,000 | 12.35ms | 52.45ms |
 
 ![Query Performance - ORE/range_gt_100](query_ore_range_gt_100_chart.png)
 
@@ -396,9 +388,8 @@ ON integer_encrypted_10000 (
 
 | Data Set Size | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|-------------------------|---------------------------|
-| 10,000 | 1.92ms | 61.12ms |
-| 100,000 | 1.93ms | 70.41ms |
-| 1,000,000 | 2.56ms | 61.29ms |
+| 10,000 | 2.71ms | 27.30ms |
+| 100,000 | 1.66ms | 28.69ms |
 
 ![Query Performance - ORE/range_lt_10](query_ore_range_lt_10_chart.png)
 
@@ -424,13 +415,10 @@ ON integer_encrypted_10000 (
 );
 ```
 
-*⚠️ = Query time exceeds 100ms*
-
 | Data Set Size | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|-------------------------|---------------------------|
-| 10,000 | 10.82ms | ⚠️ 114.77ms |
-| 100,000 | 12.85ms | ⚠️ 133.00ms |
-| 1,000,000 | 12.27ms | ⚠️ 118.33ms |
+| 10,000 | 14.85ms | 53.07ms |
+| 100,000 | 12.49ms | 52.96ms |
 
 ![Query Performance - ORE/range_lt_100](query_ore_range_lt_100_chart.png)
 
@@ -460,9 +448,8 @@ ON integer_encrypted_10000 (
 
 | Data Set Size | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|-------------------------|---------------------------|
-| 10,000 | ⚠️ 542.65ms | ⚠️ 597.87ms |
-| 100,000 | ⚠️ 5.422s | ⚠️ 5.483s |
-| 1,000,000 | ⚠️ 62.364s | ⚠️ 66.031s |
+| 10,000 | ⚠️ 633.49ms | ⚠️ 655.54ms |
+| 100,000 | ⚠️ 5.453s | ⚠️ 5.495s |
 
 ![Query Performance - ORE/range_lt_ordered_10](query_ore_range_lt_ordered_10_chart.png)
 
