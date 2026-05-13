@@ -60,7 +60,7 @@ class BenchmarkReporter:
         """Load ingest benchmark results"""
         ingest_dir = self.results_dir / "ingest"
         
-        for bench_type in ["int", "json_small", "string"]:
+        for bench_type in ["int", "json_small", "json_large", "string", "ste_vec_small", "ste_vec_large"]:
             file_path = ingest_dir / f"encrypt_{bench_type}_combined.json"
             
             if not file_path.exists():
@@ -342,6 +342,14 @@ class BenchmarkReporter:
         f.write("This report summarizes the performance benchmarks for encrypted database operations.\n\n")
         f.write("## Table of Contents\n\n")
         f.write("1. [Ingest Throughput](#ingest-throughput)\n")
+        
+        # Add subsections for each ingest type
+        ingest_types = sorted(set(r.bench_type for r in self.ingest_results))
+        for it in ingest_types:
+            title = it.replace('_', ' ').title()
+            anchor = it.replace('_', '-')
+            f.write(f"   - [{title}](#{anchor})\n")
+        
         f.write("2. [Query Performance](#query-performance)\n")
         
         # Add subsections for each query type
@@ -355,10 +363,14 @@ class BenchmarkReporter:
         f.write("## Ingest Throughput\n\n")
         f.write("This section measures the throughput of inserting encrypted records into the database.\n\n")
         
-        # Group by bench_type
-        types = ["int", "json_small", "string"]
+        # Add comparison charts at the top if matplotlib is available
+        if HAS_MATPLOTLIB:
+            self._write_comparison_charts(f)
         
-        for bench_type in types:
+        # Group by bench_type - use all types found in results
+        ingest_types = sorted(set(r.bench_type for r in self.ingest_results))
+        
+        for bench_type in ingest_types:
             results = [r for r in self.ingest_results if r.bench_type == bench_type]
             if not results:
                 continue
@@ -368,12 +380,18 @@ class BenchmarkReporter:
             
             f.write(f"### {bench_type.replace('_', ' ').title()}\n\n")
             
-            if bench_type == "int":
-                f.write("Tests insertion of encrypted integer values.\n\n")
-            elif bench_type == "json_small":
-                f.write("Tests insertion of small encrypted JSON objects.\n\n")
-            elif bench_type == "string":
-                f.write("Tests insertion of encrypted string values.\n\n")
+            # Add descriptions for each type
+            descriptions = {
+                "int": "Tests insertion of encrypted integer values.",
+                "json_small": "Tests insertion of small encrypted JSON objects (first_name, last_name, age, email).",
+                "json_large": "Tests insertion of large encrypted JSON objects with complex nested structures (user info, company, addresses, orders).",
+                "string": "Tests insertion of encrypted string values.",
+                "ste_vec_small": "Tests insertion of small JSON objects with SteVec (searchable encrypted vector) indexing.",
+                "ste_vec_large": "Tests insertion of large JSON objects with SteVec (searchable encrypted vector) indexing.",
+            }
+            
+            if bench_type in descriptions:
+                f.write(f"{descriptions[bench_type]}\n\n")
             
             # Table
             f.write("| Records | Throughput (records/sec) | Total Time | Avg Memory |\n")
@@ -385,13 +403,19 @@ class BenchmarkReporter:
             
             f.write("\n")
             
-            # Generate chart if matplotlib is available
+            # Generate charts if matplotlib is available
             if HAS_MATPLOTLIB:
-                chart_path = self.output_file.parent / f"ingest_{bench_type}_chart.png"
-                self._create_ingest_chart(results, bench_type, chart_path)
-                f.write(f"![Ingest Throughput - {bench_type}]({chart_path.name})\n\n")
+                # Throughput chart
+                throughput_chart_path = self.output_file.parent / f"ingest_{bench_type}_throughput_chart.png"
+                self._create_ingest_throughput_chart(results, bench_type, throughput_chart_path)
+                f.write(f"![Ingest Throughput - {bench_type}]({throughput_chart_path.name})\n\n")
+                
+                # Total time chart
+                time_chart_path = self.output_file.parent / f"ingest_{bench_type}_time_chart.png"
+                self._create_ingest_time_chart(results, bench_type, time_chart_path)
+                f.write(f"![Ingest Total Time - {bench_type}]({time_chart_path.name})\n\n")
 
-    def _create_ingest_chart(self, results: List[IngestResult], bench_type: str, output_path: Path):
+    def _create_ingest_throughput_chart(self, results: List[IngestResult], bench_type: str, output_path: Path):
         """Create a bar chart for ingest throughput"""
         fig, ax = plt.subplots(figsize=(10, 6))
         
@@ -405,6 +429,134 @@ class BenchmarkReporter:
         ax.set_xticks(range(len(records)))
         ax.set_xticklabels([f"{r:,}" for r in records])
         ax.grid(axis='y', alpha=0.3)
+        
+        # Add "larger is better" annotation
+        ax.text(0.98, 0.98, 'larger is better ↑', transform=ax.transAxes,
+                fontsize=11, verticalalignment='top', horizontalalignment='right',
+                bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
+        
+        plt.tight_layout()
+        plt.savefig(output_path, dpi=100, bbox_inches='tight')
+        plt.close()
+    
+    def _create_ingest_time_chart(self, results: List[IngestResult], bench_type: str, output_path: Path):
+        """Create a bar chart for total ingest time"""
+        fig, ax = plt.subplots(figsize=(10, 6))
+        
+        records = [r.num_records for r in results]
+        times = [r.total_time for r in results]
+        
+        ax.bar(range(len(records)), times, color='coral')
+        ax.set_xlabel('Number of Records')
+        ax.set_ylabel('Total Time (seconds)')
+        ax.set_title(f'Ingest Total Time - {bench_type.replace("_", " ").title()}')
+        ax.set_xticks(range(len(records)))
+        ax.set_xticklabels([f"{r:,}" for r in records])
+        ax.grid(axis='y', alpha=0.3)
+        
+        # Add "smaller is better" annotation
+        ax.text(0.98, 0.98, 'smaller is better ↓', transform=ax.transAxes,
+                fontsize=11, verticalalignment='top', horizontalalignment='right',
+                bbox=dict(boxstyle='round', facecolor='lightblue', alpha=0.5))
+        
+        plt.tight_layout()
+        plt.savefig(output_path, dpi=100, bbox_inches='tight')
+        plt.close()
+    
+    def _write_comparison_charts(self, f):
+        """Write comparison charts for all benchmark types at 10000 rows"""
+        target_row_count = 10000
+        
+        # Get results for each bench type at target row count
+        comparison_data = {}
+        for result in self.ingest_results:
+            if result.num_records == target_row_count:
+                comparison_data[result.bench_type] = result
+        
+        if len(comparison_data) < 2:
+            # Not enough data for comparison
+            return
+        
+        f.write(f"### Comparison at {target_row_count:,} Records\n\n")
+        f.write(f"Comparing all benchmark types at {target_row_count:,} records.\n\n")
+        
+        # Create throughput comparison chart
+        throughput_chart_path = self.output_file.parent / f"ingest_comparison_throughput_{target_row_count}.png"
+        self._create_comparison_throughput_chart(comparison_data, target_row_count, throughput_chart_path)
+        f.write(f"![Throughput Comparison at {target_row_count:,} records]({throughput_chart_path.name})\n\n")
+        
+        # Create time comparison chart
+        time_chart_path = self.output_file.parent / f"ingest_comparison_time_{target_row_count}.png"
+        self._create_comparison_time_chart(comparison_data, target_row_count, time_chart_path)
+        f.write(f"![Total Time Comparison at {target_row_count:,} records]({time_chart_path.name})\n\n")
+        
+        # Create time comparison chart without ste_vec_large
+        filtered_data = {k: v for k, v in comparison_data.items() if k != 'ste_vec_large'}
+        if len(filtered_data) >= 2:
+            time_chart_path_filtered = self.output_file.parent / f"ingest_comparison_time_{target_row_count}_filtered.png"
+            self._create_comparison_time_chart(filtered_data, target_row_count, time_chart_path_filtered, exclude_label='ste_vec_large')
+            f.write(f"![Total Time Comparison at {target_row_count:,} records (excluding ste_vec_large)]({time_chart_path_filtered.name})\n\n")
+    
+    def _create_comparison_throughput_chart(self, comparison_data: Dict[str, IngestResult], 
+                                           row_count: int, output_path: Path):
+        """Create a bar chart comparing throughput across all benchmark types"""
+        fig, ax = plt.subplots(figsize=(12, 6))
+        
+        # Sort by throughput descending (highest on left)
+        sorted_items = sorted(comparison_data.items(), key=lambda x: x[1].throughput, reverse=True)
+        bench_types = [item[0] for item in sorted_items]
+        labels = [bt.replace('_', ' ').title() for bt in bench_types]
+        throughputs = [comparison_data[bt].throughput for bt in bench_types]
+        
+        # Use different colors for each bar
+        colors = plt.cm.Set3(range(len(bench_types)))
+        
+        ax.bar(range(len(bench_types)), throughputs, color=colors)
+        ax.set_xlabel('Benchmark Type', fontsize=12)
+        ax.set_ylabel('Throughput (records/sec)', fontsize=12)
+        ax.set_title(f'Ingest Throughput Comparison at {row_count:,} Records', fontsize=14, fontweight='bold')
+        ax.set_xticks(range(len(bench_types)))
+        ax.set_xticklabels(labels, rotation=45, ha='right')
+        ax.grid(axis='y', alpha=0.3)
+        
+        # Add "larger is better" annotation
+        ax.text(0.98, 0.98, 'larger is better ↑', transform=ax.transAxes,
+                fontsize=11, verticalalignment='top', horizontalalignment='right',
+                bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
+        
+        plt.tight_layout()
+        plt.savefig(output_path, dpi=100, bbox_inches='tight')
+        plt.close()
+    
+    def _create_comparison_time_chart(self, comparison_data: Dict[str, IngestResult], 
+                                     row_count: int, output_path: Path, exclude_label: str = None):
+        """Create a bar chart comparing total time across all benchmark types"""
+        fig, ax = plt.subplots(figsize=(12, 6))
+        
+        # Sort by throughput descending (highest on left) to match throughput chart order
+        sorted_items = sorted(comparison_data.items(), key=lambda x: x[1].throughput, reverse=True)
+        bench_types = [item[0] for item in sorted_items]
+        labels = [bt.replace('_', ' ').title() for bt in bench_types]
+        times = [comparison_data[bt].total_time for bt in bench_types]
+        
+        # Use different colors for each bar
+        colors = plt.cm.Set2(range(len(bench_types)))
+        
+        ax.bar(range(len(bench_types)), times, color=colors)
+        ax.set_xlabel('Benchmark Type', fontsize=12)
+        ax.set_ylabel('Total Time (seconds)', fontsize=12)
+        title = f'Total Ingest Time Comparison at {row_count:,} Records'
+        if exclude_label:
+            title += f' (excluding {exclude_label.replace("_", " ").title()})'
+        ax.set_title(title, fontsize=14, fontweight='bold')
+        ax.set_xticks(range(len(bench_types)))
+        ax.set_xticklabels(labels, rotation=45, ha='right')
+        ax.grid(axis='y', alpha=0.3)
+        
+        # Add "smaller is better" annotation
+        ax.text(0.98, 0.98, 'smaller is better ↓', transform=ax.transAxes,
+                fontsize=11, verticalalignment='top', horizontalalignment='right',
+                bbox=dict(boxstyle='round', facecolor='lightblue', alpha=0.5))
         
         plt.tight_layout()
         plt.savefig(output_path, dpi=100, bbox_inches='tight')
@@ -537,6 +689,11 @@ class BenchmarkReporter:
         # Format x-axis labels
         ax.set_xticks(row_counts)
         ax.set_xticklabels([f"{r:,}" for r in row_counts])
+        
+        # Add "smaller is better" annotation
+        ax.text(0.98, 0.98, 'smaller is better ↓', transform=ax.transAxes,
+                fontsize=11, verticalalignment='top', horizontalalignment='right',
+                bbox=dict(boxstyle='round', facecolor='lightblue', alpha=0.5))
         
         plt.tight_layout()
         plt.savefig(output_path, dpi=100, bbox_inches='tight')

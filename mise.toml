@@ -76,20 +76,27 @@ cargo build --release
 
 [tasks."bench:ingest:_run"]
 description = "Internal: Run a generic ingest benchmark"
-depends = ["bench:build"]
+depends = ["postgres", "bench:build"]
 run = """
 #!/usr/bin/env bash
 set -e
+[ -f .env ] && set -a && source .env && set +a
 
 BENCH_NAME="$1"
+TABLE_NAME="$2"
+NUM_RECORDS="${3:-500,1000,10000}"
 
-if [ -z "$BENCH_NAME" ]; then
-  echo "Error: BENCH_NAME argument must be provided"
+if [ -z "$BENCH_NAME" ] || [ -z "$TABLE_NAME" ]; then
+  echo "Error: BENCH_NAME and TABLE_NAME arguments must be provided"
+  echo "Usage: mise run bench:ingest:_run <bench_name> <table_name> [num_records]"
   exit 1
 fi
 
 echo "Running $BENCH_NAME ingest benchmark..."
-mise x -- hyperfine --export-json target/${BENCH_NAME}_hyperfine.json -L num_records 500,1000,10000 --runs 2 "NUM_RECORDS={num_records} ./target/release/$BENCH_NAME"
+mise x -- hyperfine --export-json target/${BENCH_NAME}_hyperfine.json \
+  -L num_records "${NUM_RECORDS}" --runs 2 \
+  --prepare "docker exec ore-benches-postgres psql -U postgres -d postgres -c 'TRUNCATE TABLE ${TABLE_NAME};'" \
+  "NUM_RECORDS={num_records} ./target/release/$BENCH_NAME"
 
 echo "Combining results..."
 ./target/release/combine_benchmark "$BENCH_NAME"
@@ -99,19 +106,68 @@ echo "Benchmark complete! Results written to results/ingest/${BENCH_NAME}_combin
 
 [tasks."bench:ingest:encrypt_int"]
 description = "Run encrypt_int ingest benchmark and combine results"
-run = "mise run bench:ingest:_run encrypt_int"
+run = "mise run bench:ingest:_run encrypt_int integer_encrypted"
 
 [tasks."bench:ingest:encrypt_string"]
 description = "Run encrypt_string ingest benchmark and combine results"
-run = "mise run bench:ingest:_run encrypt_string"
+run = "mise run bench:ingest:_run encrypt_string string_encrypted"
 
-[tasks."bench:ingest:encrypt_json_small"]
-description = "Run encrypt_json_small ingest benchmark and combine results"
-run = "mise run bench:ingest:_run encrypt_json_small"
+[tasks."bench:ingest:json-small"]
+description = "Run encrypt_json_small (no-index baseline) ingest benchmark"
+run = "mise run bench:ingest:_run encrypt_json_small json_small_encrypted"
+
+[tasks."bench:ingest:json-large"]
+description = "Run encrypt_json_large (no-index baseline) ingest benchmark"
+run = "mise run bench:ingest:_run encrypt_json_large json_large_encrypted"
+
+[tasks."bench:ingest:json-ste-vec-small"]
+description = "Run encrypt_ste_vec_small (SteVec-indexed) ingest benchmark"
+run = "mise run bench:ingest:_run encrypt_ste_vec_small json_ste_vec_small_encrypted $1"
+
+[tasks."bench:ingest:json-ste-vec-small-gin"]
+description = "Run encrypt_ste_vec_small ingest benchmark with the GIN index pre-created (measures index-write cost amortised over insert path)"
+depends = ["postgres", "bench:build"]
+run = """
+#!/usr/bin/env bash
+set -e
+[ -f .env ] && set -a && source .env && set +a
+
+BENCH_NAME="encrypt_ste_vec_small"
+TABLE_NAME="json_ste_vec_small_encrypted"
+NUM_RECORDS="${1:-500,1000,10000}"
+
+echo "Waiting for PostgreSQL to be ready..."
+until docker exec ore-benches-postgres pg_isready -U postgres > /dev/null 2>&1; do
+  sleep 1
+done
+
+echo "Truncating table and creating GIN index before ingest..."
+docker exec -i ore-benches-postgres psql -v ON_ERROR_STOP=1 -U postgres -d postgres -c "TRUNCATE TABLE ${TABLE_NAME};"
+docker exec -i ore-benches-postgres psql -v ON_ERROR_STOP=1 -U postgres -d postgres < sql/indexes/${TABLE_NAME}_down.sql
+docker exec -i ore-benches-postgres psql -v ON_ERROR_STOP=1 -U postgres -d postgres < sql/indexes/${TABLE_NAME}_up.sql
+
+echo "Running $BENCH_NAME ingest benchmark (with GIN index)..."
+mkdir -p results/ingest
+hyperfine --export-json results/ingest/${BENCH_NAME}_gin_hyperfine.json \
+  -L num_records "${NUM_RECORDS}" --runs 2 \
+  --prepare "docker exec ore-benches-postgres psql -U postgres -d postgres -c 'TRUNCATE TABLE ${TABLE_NAME};'" \
+  "NUM_RECORDS={num_records} ./target/release/$BENCH_NAME"
+
+echo "Benchmark complete! Results written to results/ingest/${BENCH_NAME}_gin_hyperfine.json"
+"""
+
+[tasks."bench:ingest:json-ste-vec-large"]
+description = "Run encrypt_ste_vec_large (SteVec-indexed) ingest benchmark"
+run = "mise run bench:ingest:_run encrypt_ste_vec_large json_large_encrypted"
 
 [tasks."bench:ingest"]
 description = "Run all ingest benchmarks sequentially"
-depends = ["bench:ingest:encrypt_int", "bench:ingest:encrypt_string", "bench:ingest:encrypt_json_small"]
+depends = [
+  "bench:ingest:encrypt_int",
+  "bench:ingest:encrypt_string",
+  "bench:ingest:json-small",
+  "bench:ingest:json-large",
+]
 
 [tasks."prepare:_table"]
 description = "Internal: Prepare a table with target row count"
