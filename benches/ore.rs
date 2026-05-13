@@ -1,11 +1,11 @@
 use cipherstash_client::{
-    credentials::ServiceCredentials,
     encryption::ScopedCipher,
     eql::Identifier,
     schema::{
         column::{Index, IndexType},
         ColumnConfig, ColumnType,
     },
+    AutoStrategy,
 };
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use dbbenches::{init_scoped_cipher, EncryptedQuery, EncryptedQueryBuilder};
@@ -13,12 +13,24 @@ use sqlx::postgres::PgPoolOptions;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
 
+// Two flavours per scenario:
+//
+// 1. "eql_cast" — natural form: `WHERE value > $1`. Under EQL 2.3 the `<`/`>`
+//    operators on `eql_v2_encrypted` are plpgsql wrappers around `eql_v2.compare`
+//    and are not inlinable, so the planner cannot structurally match the
+//    functional ORE index built on `eql_v2.ore_block_u64_8_256(value)`. This
+//    path falls through to a sequential scan — useful as a baseline for what
+//    a caller pays if they write the query in the most natural form.
+//
+// 2. "ore_term" — explicit form: the ORE term extractor appears on both sides,
+//    so the predicate matches the functional ORE index by expression identity.
+//    `ORDER BY eql_v2.ore_block_u64_8_256(value)` similarly engages the index
+//    for ordering.
+//
+// The equality scenario from the previous bench (`WHERE value = $1`) is gone:
+// the integer column carries only `ob`, not `hm`, so post-2.3 equality returns
+// NULL → zero rows. See exact.rs for the meaningful equality benches.
 static QUERY_TEMPLATES: &[(&str, i32, &str)] = &[
-    (
-        "SELECT value FROM {TABLE} WHERE value = $1 LIMIT 1",
-        5000,
-        "exact",
-    ),
     (
         "SELECT id,value::jsonb FROM {TABLE} WHERE value > $1 LIMIT 10",
         5000,
@@ -44,10 +56,45 @@ static QUERY_TEMPLATES: &[(&str, i32, &str)] = &[
         5000,
         "range_lt_ordered_10",
     ),
+    (
+        "SELECT id,value::jsonb FROM {TABLE} \
+         WHERE eql_v2.ore_block_u64_8_256(value) > eql_v2.ore_block_u64_8_256($1::jsonb) \
+         LIMIT 10",
+        5000,
+        "range_gt_ore_10",
+    ),
+    (
+        "SELECT id,value::jsonb FROM {TABLE} \
+         WHERE eql_v2.ore_block_u64_8_256(value) > eql_v2.ore_block_u64_8_256($1::jsonb) \
+         LIMIT 100",
+        5000,
+        "range_gt_ore_100",
+    ),
+    (
+        "SELECT id,value::jsonb FROM {TABLE} \
+         WHERE eql_v2.ore_block_u64_8_256(value) < eql_v2.ore_block_u64_8_256($1::jsonb) \
+         LIMIT 10",
+        5000,
+        "range_lt_ore_10",
+    ),
+    (
+        "SELECT id,value::jsonb FROM {TABLE} \
+         WHERE eql_v2.ore_block_u64_8_256(value) < eql_v2.ore_block_u64_8_256($1::jsonb) \
+         LIMIT 100",
+        5000,
+        "range_lt_ore_100",
+    ),
+    (
+        "SELECT id,value::jsonb FROM {TABLE} \
+         WHERE eql_v2.ore_block_u64_8_256(value) < eql_v2.ore_block_u64_8_256($1::jsonb) \
+         ORDER BY eql_v2.ore_block_u64_8_256(value) LIMIT 10",
+        5000,
+        "range_lt_ore_ordered_10",
+    ),
 ];
 
 async fn build_query(
-    cipher: Arc<ScopedCipher<ServiceCredentials>>,
+    cipher: Arc<ScopedCipher<AutoStrategy>>,
     query: &str,
     x: i32,
     table_name: &str,
@@ -111,7 +158,7 @@ fn criterion_benchmark(c: &mut Criterion) {
 
     for (i, query) in queries.into_iter().enumerate() {
         let (_, _, scenario) = QUERY_TEMPLATES[i];
-        
+
         group.bench_function(format!("ore/{}/{}", scenario, target_rows), |b| {
             b.to_async(&rt).iter(|| async {
                 let _: Vec<_> = query.execute(&pool).await.unwrap();

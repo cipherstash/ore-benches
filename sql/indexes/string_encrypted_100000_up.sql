@@ -9,9 +9,3 @@ string_encrypted_100000_gin_index
 ON string_encrypted_100000 USING GIN (
     eql_v2.bloom_filter(value)
 );
-
-CREATE INDEX
-string_encrypted_100000_eql_index
-ON string_encrypted_100000 (
-    value eql_v2.encrypted_operator_class
-);
