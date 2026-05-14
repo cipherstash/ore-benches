@@ -20,25 +20,25 @@ use tokio::runtime::Runtime;
 // `eql_v2.ore_block_u64_8_256(value)` — so the natural-form scenarios below
 // engage the index without rewriting.
 //
-// The ordered scenarios show three plan shapes side-by-side:
+// Ordered range queries use the **hybrid form**: natural-form WHERE, extractor
+// ORDER BY (`ORDER BY eql_v2.ore_block_u64_8_256(val)`). The sort key matches
+// the functional index expression, so the planner streams rows out of the
+// index in order — plain Index Scan, no Sort node. See §4 of the EQL
+// query-performance guide for the underlying rule.
 //
-//   range_lt_ordered_10        — natural form: WHERE val < $1 ORDER BY val LIMIT 10
-//                                 → Bitmap Index Scan via the inlined `<`, plus
-//                                   a Top-N sort by `val` (the natural-form sort
-//                                   key doesn't match the index expression
-//                                   syntactically). Each comparison in the Sort
-//                                   step uses the inlined ORE-term path, so the
-//                                   Top-N is fast.
+// Two ordered scenarios that previously sat alongside the hybrid one are no
+// longer benched:
 //
-//   range_lt_hybrid_ordered_10 — natural WHERE, extractor ORDER BY:
-//                                 ORDER BY eql_v2.ore_block_u64_8_256(val).
-//                                 The sort key matches the index expression →
-//                                 plain ordered Index Scan, no Sort node.
+//   * The natural-form variant (`ORDER BY value`) is the §4 sort-key trap —
+//     the planner can't satisfy the ORDER BY from the index, so it inserts a
+//     Top-N Sort over the full post-WHERE bitmap. The cost scales linearly
+//     with the number of rows passing WHERE: at 100k it's ~880 ms, at 1M
+//     it's ~8.8 s. Documented in the guide, so the bench doesn't need to
+//     keep proving it.
 //
-//   range_lt_ore_ordered_10    — fully extractor on both clauses. After the `<`
-//                                 inlining the WHERE reduces to the same shape
-//                                 as the hybrid, so the plan is identical to
-//                                 hybrid. Kept for contrast / regression.
+//   * The fully-extractor variant (`WHERE ore_block(val) < ore_block($1)
+//     ORDER BY ore_block(val)`) inlines to the same predicate shape as the
+//     hybrid, so its plan and timing are identical — pure redundancy.
 //
 // The equality scenario from the previous bench (`WHERE value = $1`) is gone:
 // the integer column carries only `ob`, not `hm`, so post-2.3 equality returns
@@ -65,23 +65,11 @@ static QUERY_TEMPLATES: &[(&str, i32, &str)] = &[
         "range_lt_100",
     ),
     (
-        "SELECT id,value::jsonb FROM {TABLE} WHERE value < $1 ORDER BY value LIMIT 10",
-        5000,
-        "range_lt_ordered_10",
-    ),
-    (
         "SELECT id,value::jsonb FROM {TABLE} \
          WHERE value < $1 \
          ORDER BY eql_v2.ore_block_u64_8_256(value) LIMIT 10",
         5000,
         "range_lt_hybrid_ordered_10",
-    ),
-    (
-        "SELECT id,value::jsonb FROM {TABLE} \
-         WHERE eql_v2.ore_block_u64_8_256(value) < eql_v2.ore_block_u64_8_256($1::jsonb) \
-         ORDER BY eql_v2.ore_block_u64_8_256(value) LIMIT 10",
-        5000,
-        "range_lt_ore_ordered_10",
     ),
 ];
 
@@ -147,17 +135,10 @@ fn criterion_benchmark(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("ORE");
     group.sample_size(10);
-    // Some scenarios — notably the natural-form `WHERE val < $1 ORDER BY val
-    // LIMIT 10` — finish a single iteration in several hundred milliseconds
-    // because the Top-N sort runs over the post-WHERE bitmap rather than
-    // streaming from an ordered index (see U-005 in EQL's v2.3 upgrade
-    // notes). Criterion's default 5 s `measurement_time` only fits a few
-    // such samples, yielding very wide confidence intervals and false
-    // "regressed" alerts against any stored baseline. 30 s gives the slow
-    // scenarios room to settle while leaving fast ones (sub-ms to single
-    // ms) plenty of headroom.
-    group.warm_up_time(std::time::Duration::from_secs(5));
-    group.measurement_time(std::time::Duration::from_secs(30));
+    // All remaining scenarios run sub-ms to single-digit-ms per iteration, so
+    // criterion's default measurement budget is plenty. (Earlier versions of
+    // this bench needed a 30 s budget for the natural-form ordered range
+    // scenario; that scenario is gone — see the comment on `QUERY_TEMPLATES`.)
 
     for (i, query) in queries.into_iter().enumerate() {
         let (_, _, scenario) = QUERY_TEMPLATES[i];
