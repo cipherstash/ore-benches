@@ -196,10 +196,6 @@ class BenchmarkReporter:
                 )
             },
             "ORE": {
-                "exact": (
-                    "SELECT value FROM {TABLE} WHERE value = $1 LIMIT 1",
-                    "5000"
-                ),
                 "range_gt_10": (
                     "SELECT id,value::jsonb FROM {TABLE} WHERE value > $1 LIMIT 10",
                     "5000"
@@ -216,13 +212,39 @@ class BenchmarkReporter:
                     "SELECT id,value::jsonb FROM {TABLE} WHERE value < $1 LIMIT 100",
                     "5000"
                 ),
-                "range_lt_ordered_10": (
-                    "SELECT id,value::jsonb FROM {TABLE} WHERE value < $1 ORDER BY value LIMIT 10",
+                "range_lt_hybrid_ordered_10": (
+                    "SELECT id,value::jsonb FROM {TABLE} "
+                    "WHERE value < $1 "
+                    "ORDER BY eql_v2.ore_block_u64_8_256(value) LIMIT 10",
                     "5000"
+                )
+            },
+            "GROUP_BY": {
+                "hmac_extractor": (
+                    "SELECT count(*) FROM {TABLE} GROUP BY eql_v2.hmac_256(value)",
+                    ""
+                )
+            },
+            "JSON": {
+                "field_eq": (
+                    "SELECT id FROM {TABLE} "
+                    "WHERE eql_v2.hmac_256_terms(value) @> $1::jsonb "
+                    "LIMIT 10",
+                    "[{\"s\":\"<selector-hash>\",\"hm\":\"<hmac>\"}]"
+                ),
+                "field_extract": (
+                    "SELECT eql_v2.jsonb_path_query(value, '<selector-hash>') "
+                    "FROM {TABLE} LIMIT 1000",
+                    ""
+                ),
+                "field_group_by": (
+                    "SELECT eql_v2.hmac_256(value, '<selector-hash>'), count(*) "
+                    "FROM {TABLE} GROUP BY 1",
+                    ""
                 )
             }
         }
-        
+
         return sql_map.get(query_type, {}).get(query_name, ("", ""))
 
     def get_query_description(self, query_type: str, query_name: str) -> Tuple[str, str]:
@@ -261,45 +283,91 @@ class BenchmarkReporter:
                 )
             },
             "ORE": {
-                "exact": (
-                    "Exact match query on encrypted integer",
-                    "Table: `integer_encrypted_{rows}` with ORE-encrypted integer values. "
-                    "Index: ORE index supporting equality and range queries. "
-                    "Query returns LIMIT 1 result."
-                ),
                 "range_gt_10": (
                     "Range query (greater than) returning 10 results",
-                    "Table: `integer_encrypted_{rows}` with ORE-encrypted integer values. "
-                    "Index: ORE index supporting equality and range queries. "
+                    "Table: `integer_encrypted_{rows}` with Block-ORE-encrypted integer values. "
+                    "Index: functional btree on `eql_v2.ore_block_u64_8_256(value)`. "
+                    "The bare-form `<` / `>` operators inline to "
+                    "`eql_v2.ore_block_u64_8_256(a) op eql_v2.ore_block_u64_8_256(b)` "
+                    "post-2.3, so the index engages without query rewriting. "
                     "Query: WHERE value > 5000 LIMIT 10."
                 ),
                 "range_gt_100": (
                     "Range query (greater than) returning 100 results",
-                    "Table: `integer_encrypted_{rows}` with ORE-encrypted integer values. "
-                    "Index: ORE index supporting equality and range queries. "
+                    "Table: `integer_encrypted_{rows}` with Block-ORE-encrypted integer values. "
+                    "Index: functional btree on `eql_v2.ore_block_u64_8_256(value)`. "
                     "Query: WHERE value > 5000 LIMIT 100."
                 ),
                 "range_lt_10": (
                     "Range query (less than) returning 10 results",
-                    "Table: `integer_encrypted_{rows}` with ORE-encrypted integer values. "
-                    "Index: ORE index supporting equality and range queries. "
+                    "Table: `integer_encrypted_{rows}` with Block-ORE-encrypted integer values. "
+                    "Index: functional btree on `eql_v2.ore_block_u64_8_256(value)`. "
                     "Query: WHERE value < 5000 LIMIT 10."
                 ),
                 "range_lt_100": (
                     "Range query (less than) returning 100 results",
-                    "Table: `integer_encrypted_{rows}` with ORE-encrypted integer values. "
-                    "Index: ORE index supporting equality and range queries. "
+                    "Table: `integer_encrypted_{rows}` with Block-ORE-encrypted integer values. "
+                    "Index: functional btree on `eql_v2.ore_block_u64_8_256(value)`. "
                     "Query: WHERE value < 5000 LIMIT 100."
                 ),
-                "range_lt_ordered_10": (
-                    "Ordered range query (less than) with ORDER BY",
-                    "Table: `integer_encrypted_{rows}` with ORE-encrypted integer values. "
-                    "Index: ORE index supporting equality and range queries. "
-                    "Query: WHERE value < 5000 ORDER BY value LIMIT 10."
+                "range_lt_hybrid_ordered_10": (
+                    "Ordered range query (hybrid form: natural WHERE, extractor ORDER BY)",
+                    "Table: `integer_encrypted_{rows}` with Block-ORE-encrypted integer values. "
+                    "Index: functional btree on `eql_v2.ore_block_u64_8_256(value)`. "
+                    "Query: WHERE value < 5000 ORDER BY eql_v2.ore_block_u64_8_256(value) LIMIT 10. "
+                    "The sort key matches the index expression syntactically, so rows stream "
+                    "out of the index already ordered — no Sort node. See §4 of the EQL "
+                    "query-performance guide for the natural-form sort-key trap that this "
+                    "shape avoids."
+                )
+            },
+            "GROUP_BY": {
+                "hmac_extractor": (
+                    "GROUP BY in extractor form on `eql_v2.hmac_256(value)`",
+                    "Table: `string_encrypted_{rows}` with encrypted string values "
+                    "(carrying an `hm` HMAC term, configured via the `unique` search index). "
+                    "Index: no index drives `GROUP BY` directly — hash aggregation is in-memory. "
+                    "Query: `GROUP BY eql_v2.hmac_256(value)`. The extractor's 32-byte HMAC "
+                    "group key fits in default `work_mem`, so the planner picks `HashAggregate` "
+                    "reliably across deployments. Natural-form `GROUP BY value` against an "
+                    "encrypted column has been removed from this bench because the planner "
+                    "estimates the hash table against the full ~1-2 KB ciphertext payload, "
+                    "exceeds default `work_mem`, and falls back to GroupAggregate + Sort — "
+                    "see §5 of the EQL query-performance guide."
+                )
+            },
+            "JSON": {
+                "field_eq": (
+                    "Field-level equality on an ste_vec document via `hmac_256_terms`",
+                    "Table: `json_ste_vec_small_encrypted_{rows}` with encrypted JSON "
+                    "documents (small four-field shape — first_name / last_name / age / email). "
+                    "Index: functional GIN on `eql_v2.hmac_256_terms(value)`. One index covers "
+                    "field-level equality across every selector that carries `hm`, vs the "
+                    "per-selector `hash (eql_v2.hmac_256(col, '<selector>'))` recipe which "
+                    "needs one index per hot path. The bench picks a (selector, hmac) pair "
+                    "from `sv[0]` of a sample row at startup; the query body matches the "
+                    "documented EQL recipe."
+                ),
+                "field_extract": (
+                    "Sequential field extraction via `eql_v2.jsonb_path_query`",
+                    "Table: `json_ste_vec_small_encrypted_{rows}`. No index — measures the "
+                    "per-row cost of the inlinable `jsonb_path_query` body "
+                    "(`jsonb_array_elements((val).data -> 'sv') WHERE elem ->> 's' = selector`). "
+                    "Inlining means the body folds into the calling query, so each row pays "
+                    "an array walk rather than a plpgsql function call. Query: "
+                    "`SELECT eql_v2.jsonb_path_query(value, '<selector>') FROM tbl LIMIT 1000`."
+                ),
+                "field_group_by": (
+                    "Field-level `GROUP BY` on an ste_vec document",
+                    "Table: `json_ste_vec_small_encrypted_{rows}`. No index — HashAggregate "
+                    "is in-memory. Query: "
+                    "`GROUP BY eql_v2.hmac_256(value, '<selector>')`. Same extractor-form "
+                    "recipe as the top-level GROUP_BY bench, scaled to a single field "
+                    "inside an ste_vec doc."
                 )
             }
         }
-        
+
         return descriptions.get(query_type, {}).get(query_name, ("Unknown query", ""))
 
     def get_table_indexes(self, table_name: str) -> Optional[str]:
@@ -604,21 +672,25 @@ class BenchmarkReporter:
         # Add SQL query and parameter
         if sql_query:
             f.write(f"**SQL Query:**\n```sql\n{sql_query}\n```\n\n")
-            f.write(f"**Parameter:** `{param}`\n\n")
-        
+            if param:
+                f.write(f"**Parameter:** `{param}`\n\n")
+
         f.write(f"**{table_info}**\n\n")
-        
+
         # Add index information for one of the row counts (they all use same indexes)
         if results:
             # Determine table name based on query type
             sample_row_count = results[0].row_count
-            if query_type in ["EXACT", "MATCH"]:
+            if query_type in ["EXACT", "MATCH", "GROUP_BY"]:
+                # String-encrypted scenarios all run against the same table family.
                 table_name = f"string_encrypted_{sample_row_count}"
             elif query_type == "ORE":
                 table_name = f"integer_encrypted_{sample_row_count}"
+            elif query_type == "JSON":
+                table_name = f"json_ste_vec_small_encrypted_{sample_row_count}"
             else:
                 table_name = ""
-            
+
             if table_name:
                 indexes_sql = self.get_table_indexes(table_name)
                 if indexes_sql:
