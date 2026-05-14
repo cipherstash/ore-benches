@@ -459,7 +459,9 @@ ROW_COUNTS=(10000 100000 1000000 10000000)
 echo "========================================"
 echo "Starting comprehensive benchmark suite"
 echo "Row counts: ${ROW_COUNTS[*]}"
-echo "Benchmarks: exact, match, ore, group_by, json"
+echo "Benchmarks: exact, match, ore, group_by"
+echo "(bench:query:json is parked until cipherstash-client emits the"
+echo " post-2.3 ste_vec shape — run it directly when ready.)"
 echo "========================================"
 echo ""
 
@@ -471,24 +473,20 @@ for ROWS in "${ROW_COUNTS[@]}"; do
   echo "========================================"
   echo ""
 
-  echo "[1/5] Running EXACT benchmark with $ROWS rows..."
+  echo "[1/4] Running EXACT benchmark with $ROWS rows..."
   mise run bench:query:exact "$ROWS"
   echo ""
 
-  echo "[2/5] Running MATCH benchmark with $ROWS rows..."
+  echo "[2/4] Running MATCH benchmark with $ROWS rows..."
   mise run bench:query:match "$ROWS"
   echo ""
 
-  echo "[3/5] Running ORE benchmark with $ROWS rows..."
+  echo "[3/4] Running ORE benchmark with $ROWS rows..."
   mise run bench:query:ore "$ROWS"
   echo ""
 
-  echo "[4/5] Running GROUP BY benchmark with $ROWS rows..."
+  echo "[4/4] Running GROUP BY benchmark with $ROWS rows..."
   mise run bench:query:group_by "$ROWS"
-  echo ""
-
-  echo "[5/5] Running JSON benchmark with $ROWS rows..."
-  mise run bench:query:json "$ROWS"
   echo ""
 
   echo "Completed benchmarks for $ROWS rows"
