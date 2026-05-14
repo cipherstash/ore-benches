@@ -59,8 +59,13 @@ async fn pick_selector(pool: &sqlx::PgPool, table: &str) -> Selector {
 
     let row = row.unwrap_or_else(|| {
         panic!(
-            "no rows with sv[0].hm found in `{table}` — ingest data first \
-             via `mise run prepare:json_ste_vec_small <rows>`"
+            "No sv elements carry `hm` in `{table}`. The bench's field-level scenarios \
+             depend on the post-2.3 ste_vec shape (sv elements emit `hm` rather than `b3`), \
+             but the cipherstash-client version pinned in this repo \
+             (currently 0.34.1-alpha.4) still emits the pre-2.3 shape. Resolve by bumping \
+             `cipherstash-client` to a version that emits the new ste_vec element shape, \
+             then re-ingest via `mise run prepare:json_ste_vec_small <rows>`. See \
+             U-004 in EQL's v2.3 upgrade notes for the payload change."
         )
     });
 
