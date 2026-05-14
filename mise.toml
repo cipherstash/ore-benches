@@ -279,6 +279,10 @@ run = "mise run prepare:_table string_encrypted encrypt_string $1"
 description = "Prepare integer_encrypted table with target row count"
 run = "mise run prepare:_table integer_encrypted encrypt_int $1"
 
+[tasks."prepare:json_ste_vec_small"]
+description = "Prepare json_ste_vec_small_encrypted table with target row count"
+run = "mise run prepare:_table json_ste_vec_small_encrypted encrypt_ste_vec_small $1"
+
 [tasks."bench:query:ore"]
 description = "Run ORE query benchmark"
 run = """
@@ -411,6 +415,39 @@ TARGET_ROWS="$TARGET_ROWS" cargo criterion --bench group_by --message-format jso
 echo "Benchmark complete! Results written to $OUTPUT_FILE"
 """
 
+[tasks."bench:query:json"]
+description = "Run JSON / ste_vec query benchmark (field equality / extraction / GROUP BY)"
+run = """
+#!/usr/bin/env bash
+set -e
+
+TARGET_ROWS="$1"
+
+if [ -z "$TARGET_ROWS" ]; then
+  echo "Error: target row count argument required"
+  echo "Usage: mise run bench:query:json <target_rows>"
+  exit 1
+fi
+
+if ! [[ "$TARGET_ROWS" =~ ^[0-9]+$ ]]; then
+  echo "Error: target row count must be a positive integer"
+  exit 1
+fi
+
+echo "Preparing json_ste_vec_small_encrypted table with $TARGET_ROWS rows..."
+mise run prepare:json_ste_vec_small "$TARGET_ROWS"
+
+echo "Cleaning old benchmark data..."
+rm -rf target/criterion/data/main/JSON target/criterion/reports/JSON
+
+echo "Running JSON query benchmark..."
+mkdir -p results/query
+OUTPUT_FILE="results/query/json_rows_${TARGET_ROWS}.json"
+TARGET_ROWS="$TARGET_ROWS" cargo criterion --bench json --message-format json > "$OUTPUT_FILE"
+
+echo "Benchmark complete! Results written to $OUTPUT_FILE"
+"""
+
 [tasks."bench:query:all"]
 description = "Run all query benchmarks with multiple row counts (10k, 100k, 1M, 10M)"
 run = """
@@ -422,7 +459,7 @@ ROW_COUNTS=(10000 100000 1000000 10000000)
 echo "========================================"
 echo "Starting comprehensive benchmark suite"
 echo "Row counts: ${ROW_COUNTS[*]}"
-echo "Benchmarks: exact, match, ore, group_by"
+echo "Benchmarks: exact, match, ore, group_by, json"
 echo "========================================"
 echo ""
 
@@ -434,20 +471,24 @@ for ROWS in "${ROW_COUNTS[@]}"; do
   echo "========================================"
   echo ""
 
-  echo "[1/4] Running EXACT benchmark with $ROWS rows..."
+  echo "[1/5] Running EXACT benchmark with $ROWS rows..."
   mise run bench:query:exact "$ROWS"
   echo ""
 
-  echo "[2/4] Running MATCH benchmark with $ROWS rows..."
+  echo "[2/5] Running MATCH benchmark with $ROWS rows..."
   mise run bench:query:match "$ROWS"
   echo ""
 
-  echo "[3/4] Running ORE benchmark with $ROWS rows..."
+  echo "[3/5] Running ORE benchmark with $ROWS rows..."
   mise run bench:query:ore "$ROWS"
   echo ""
 
-  echo "[4/4] Running GROUP BY benchmark with $ROWS rows..."
+  echo "[4/5] Running GROUP BY benchmark with $ROWS rows..."
   mise run bench:query:group_by "$ROWS"
+  echo ""
+
+  echo "[5/5] Running JSON benchmark with $ROWS rows..."
+  mise run bench:query:json "$ROWS"
   echo ""
 
   echo "Completed benchmarks for $ROWS rows"

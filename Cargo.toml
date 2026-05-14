@@ -69,3 +69,7 @@ harness = false
 [[bench]]
 name = "group_by"
 harness = false
+
+[[bench]]
+name = "json"
+harness = false
