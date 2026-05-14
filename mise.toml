@@ -40,6 +40,48 @@ docker exec -i ore-benches-postgres psql -U postgres -d template1 -c "CREATE DAT
 echo "Database reset complete. Run 'mise run setup-db' to set up tables and data."
 """
 
+[tasks.truncate]
+description = "Truncate all bench tables (keeps EQL install + schema; just wipes rows)"
+depends = ["postgres"]
+run = """
+#!/usr/bin/env bash
+set -e
+
+echo "Waiting for PostgreSQL to be ready..."
+until docker exec ore-benches-postgres pg_isready -U postgres > /dev/null 2>&1; do
+  sleep 1
+done
+
+echo "Truncating all bench tables in public schema..."
+docker exec -i ore-benches-postgres psql -v ON_ERROR_STOP=1 -U postgres -d postgres <<'SQL'
+DO $$
+DECLARE
+  r record;
+  table_list text := '';
+BEGIN
+  FOR r IN
+    SELECT tablename
+    FROM pg_tables
+    WHERE schemaname = 'public'
+      AND (tablename LIKE '%_encrypted%' OR tablename LIKE '%_plaintext%')
+    ORDER BY tablename
+  LOOP
+    table_list := table_list || 'public.' || quote_ident(r.tablename) || ', ';
+  END LOOP;
+
+  IF table_list = '' THEN
+    RAISE NOTICE 'No bench tables found to truncate.';
+  ELSE
+    table_list := rtrim(table_list, ', ');
+    RAISE NOTICE 'Truncating: %', table_list;
+    EXECUTE 'TRUNCATE TABLE ' || table_list || ' RESTART IDENTITY CASCADE';
+  END IF;
+END $$;
+SQL
+
+echo "Truncate complete. EQL version untouched."
+"""
+
 [tasks.setup-db]
 description = "Set up the test database (create tables and load data)"
 depends = ["postgres"]
