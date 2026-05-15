@@ -15,6 +15,23 @@ use std::env;
 use std::fmt::Debug;
 use std::sync::Arc;
 
+/// Generator for low-cardinality categorical strings of the form `CAT_001`
+/// .. `CAT_250`, uniform random over 250 distinct values. Used by the
+/// `category_encrypted_*` and `category_plaintext_*` tables that drive the
+/// realistic-GROUP-BY scenarios in `benches/group_by.rs`. 250 groups was
+/// chosen to roughly match the ISO 3166-1 country-code cardinality (~250) —
+/// large enough that the hash-aggregate table is interesting, small enough
+/// that the result-set emission cost is negligible compared with the
+/// per-row HMAC.
+pub struct FakeCategory;
+
+impl Dummy<FakeCategory> for String {
+    fn dummy_with_rng<R: fake::Rng + ?Sized>(_: &FakeCategory, rng: &mut R) -> String {
+        let n: u32 = (1u32..=250u32).fake_with_rng(rng);
+        format!("CAT_{:03}", n)
+    }
+}
+
 pub async fn init_scoped_cipher() -> Result<Arc<ScopedCipher<AutoStrategy>>> {
     let zerokms = ZeroKMSBuilder::auto()
         .context("failed to build ZeroKMS client")?
@@ -91,6 +108,13 @@ impl IngestOptionsBuilder {
     }
 }
 
+/// Re-initialise the scoped cipher after this many rows. The ZeroKMS scoped
+/// cipher has a ~10-15 minute TTL bound to one `init_default` call; a single
+/// 10M-row ingest run reliably outlives that. Re-binding at a row-count
+/// cadence (cheap call vs. the slow encrypt path) keeps the cipher fresh
+/// without requiring callers to chunk their invocations.
+const REINIT_EVERY_ROWS: i32 = 200_000;
+
 impl IngestOptions {
     pub async fn ingest<T, F>(self, f: F) -> Result<()>
     where
@@ -114,11 +138,21 @@ impl IngestOptions {
             .connect(&database_url)
             .await?;
 
-        let scoped_cipher = init_scoped_cipher().await?;
+        let mut scoped_cipher = init_scoped_cipher().await?;
+        let mut rows_since_reinit: i32 = 0;
 
         let column_config = Cow::Borrowed(&self.column_config);
 
         for batch_start in (0..self.num_records).step_by(self.batch_size) {
+            if rows_since_reinit >= REINIT_EVERY_ROWS {
+                eprintln!(
+                    "ingest: refreshing scoped cipher after {} rows ({}/{} total)",
+                    rows_since_reinit, batch_start, self.num_records
+                );
+                scoped_cipher = init_scoped_cipher().await?;
+                rows_since_reinit = 0;
+            }
+
             let batch_end = (batch_start + self.batch_size as i32).min(self.num_records);
             let batch_count = batch_end - batch_start;
 
@@ -146,6 +180,8 @@ impl IngestOptions {
                 .build()
                 .execute(&pool)
                 .await?;
+
+            rows_since_reinit += batch_count;
         }
 
         let result = json!({

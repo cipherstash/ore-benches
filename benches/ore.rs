@@ -20,33 +20,35 @@ use tokio::runtime::Runtime;
 // range predicates on `eql_v2_encrypted` reduce to
 // `eql_v2.ore_block_u64_8_256(a) <op> eql_v2.ore_block_u64_8_256(b)` and
 // structurally match a functional btree index on
-// `eql_v2.ore_block_u64_8_256(value)` — so the natural-form scenarios below
-// engage the index without rewriting.
+// `eql_v2.ore_block_u64_8_256(value)`. Whether the planner *uses* that index
+// depends on predicate selectivity — see the two scenario families below.
 //
-// Ordered range queries use the **hybrid form**: natural-form WHERE, extractor
-// ORDER BY (`ORDER BY eql_v2.ore_block_u64_8_256(val)`). The sort key matches
-// the functional index expression, so the planner streams rows out of the
-// index in order — plain Index Scan, no Sort node. See §4 of the EQL
-// query-performance guide for the underlying rule.
+// **Non-selective baselines** (threshold 5000 against `Faker.fake::<i32>()`
+// data — uniform across the full i32 range, so 5000 sits very close to the
+// median, giving ~50% selectivity). With a LIMIT, the planner correctly picks
+// `Seq Scan + LIMIT` over a bitmap index scan: at 50% selectivity it expects
+// to find LIMIT matches within the first handful of pages, cheaper than the
+// index-then-heap-fetch roundtrip. So these scenarios show empty
+// `indexes_used: []` in the metadata sidecar — which is the planner choosing
+// correctly, not the index failing to engage. The scenarios remain in the
+// suite because they're the natural form a caller would write, and the
+// timing tells us what that case actually costs.
 //
-// Two ordered scenarios that previously sat alongside the hybrid one are no
-// longer benched:
+// **Selective scenarios** (thresholds 2_140_000_000 / 2_147_000_000 — out at
+// the i32 tail). Selectivity drops to ~0.17% and ~0.011% respectively, so the
+// planner switches to Index Scan: walking from the top of the b-tree and
+// returning the first LIMIT rows is cheaper than scanning the whole table.
+// These demonstrate the same functional-btree path the perf guide §4 describes,
+// in a regime where the planner has reason to prefer it.
 //
-//   * The natural-form variant (`ORDER BY value`) is the §4 sort-key trap —
-//     the planner can't satisfy the ORDER BY from the index, so it inserts a
-//     Top-N Sort over the full post-WHERE bitmap. The cost scales linearly
-//     with the number of rows passing WHERE: at 100k it's ~880 ms, at 1M
-//     it's ~8.8 s. Documented in the guide, so the bench doesn't need to
-//     keep proving it.
-//
-//   * The fully-extractor variant (`WHERE ore_block(val) < ore_block($1)
-//     ORDER BY ore_block(val)`) inlines to the same predicate shape as the
-//     hybrid, so its plan and timing are identical — pure redundancy.
-//
-// The equality scenario from the previous bench (`WHERE value = $1`) is gone:
-// the integer column carries only `ob`, not `hm`, so post-2.3 equality returns
-// NULL → zero rows. See exact.rs for the meaningful equality benches.
+// **Hybrid ordered range** uses extractor ORDER BY (`ORDER BY
+// eql_v2.ore_block_u64_8_256(val)`) matching the functional index expression —
+// rows stream out of the index already sorted (Index Scan, no Sort node). The
+// natural-form variant (`ORDER BY value`) is the §4 sort-key trap and was
+// dropped from this bench in an earlier pass — its cost (Top-N Sort over the
+// full post-WHERE bitmap) is documented in the guide already.
 static QUERY_TEMPLATES: &[(&str, i32, &str)] = &[
+    // ── Non-selective baselines (≈50% selectivity → Seq Scan + LIMIT) ──
     (
         "SELECT id,value::jsonb FROM {TABLE} WHERE value > $1 LIMIT 10",
         5000,
@@ -67,6 +69,23 @@ static QUERY_TEMPLATES: &[(&str, i32, &str)] = &[
         5000,
         "range_lt_100",
     ),
+    // ── Selective predicates (~0.17% / ~0.011% selectivity → Index Scan) ──
+    // 2_140_000_000 sits 7.5M values short of i32::MAX — ~0.17% of the i32
+    // range matches `value > 2_140_000_000` on uniform random data.
+    (
+        "SELECT id,value::jsonb FROM {TABLE} WHERE value > $1 LIMIT 100",
+        2_140_000_000,
+        "range_selective_gt_100",
+    ),
+    // 2_147_000_000 sits 483k values short of i32::MAX — ~0.011% selectivity.
+    // Even at 10k rows this returns ~1 row, but the planner can decide that
+    // before scanning; index engages reliably across tiers.
+    (
+        "SELECT id,value::jsonb FROM {TABLE} WHERE value > $1 LIMIT 10",
+        2_147_000_000,
+        "range_highly_selective_gt_10",
+    ),
+    // ── Hybrid ordered range (extractor in ORDER BY) ──
     (
         "SELECT id,value::jsonb FROM {TABLE} \
          WHERE value < $1 \

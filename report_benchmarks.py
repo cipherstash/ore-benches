@@ -270,6 +270,14 @@ class BenchmarkReporter:
                     "SELECT id,value::jsonb FROM {TABLE} WHERE value < $1 LIMIT 100",
                     "5000"
                 ),
+                "range_selective_gt_100": (
+                    "SELECT id,value::jsonb FROM {TABLE} WHERE value > $1 LIMIT 100",
+                    "2140000000"
+                ),
+                "range_highly_selective_gt_10": (
+                    "SELECT id,value::jsonb FROM {TABLE} WHERE value > $1 LIMIT 10",
+                    "2147000000"
+                ),
                 "range_lt_hybrid_ordered_10": (
                     "SELECT id,value::jsonb FROM {TABLE} "
                     "WHERE value < $1 "
@@ -278,15 +286,45 @@ class BenchmarkReporter:
                 )
             },
             "GROUP_BY": {
-                "count_groups_encrypted": (
+                "low_cardinality_groups_encrypted": (
                     "SELECT count(*) FROM "
                     "(SELECT 1 FROM {TABLE} GROUP BY eql_v2.hmac_256(value)) g",
                     ""
                 ),
-                "count_groups_plaintext": (
+                "low_cardinality_groups_plaintext": (
                     "SELECT count(*) FROM "
                     "(SELECT 1 FROM {TABLE} GROUP BY value) g",
                     ""
+                ),
+                "top_n_groups_encrypted": (
+                    "SELECT eql_v2.hmac_256(value), count(*) FROM {TABLE} "
+                    "GROUP BY 1 ORDER BY count(*) DESC LIMIT 10",
+                    ""
+                ),
+                "top_n_groups_plaintext": (
+                    "SELECT value, count(*) FROM {TABLE} "
+                    "GROUP BY 1 ORDER BY count(*) DESC LIMIT 10",
+                    ""
+                )
+            },
+            "COMBO": {
+                "bloom_ore_order_limit": (
+                    "SELECT id FROM {TABLE} "
+                    "WHERE name LIKE $1 "
+                    "ORDER BY eql_v2.ore_block_u64_8_256(age) LIMIT 10",
+                    "Bob"
+                ),
+                "filtered_group_by": (
+                    "SELECT eql_v2.hmac_256(category), count(*) FROM {TABLE} "
+                    "WHERE name LIKE $1 "
+                    "GROUP BY 1",
+                    "Bob"
+                ),
+                "top_n_filtered_group_by": (
+                    "SELECT eql_v2.hmac_256(category), count(*) FROM {TABLE} "
+                    "WHERE name LIKE $1 "
+                    "GROUP BY 1 ORDER BY count(*) DESC LIMIT 10",
+                    "Bob"
                 )
             },
             "JSON": {
@@ -374,6 +412,32 @@ class BenchmarkReporter:
                     "Index: functional btree on `eql_v2.ore_block_u64_8_256(value)`. "
                     "Query: WHERE value < 5000 LIMIT 100."
                 ),
+                "range_selective_gt_100": (
+                    "Selective range query (~0.17% selectivity) returning up to 100 results",
+                    "Table: `integer_encrypted_{rows}` with Block-ORE-encrypted integer values. "
+                    "Index: functional btree on `eql_v2.ore_block_u64_8_256(value)`. "
+                    "Query: WHERE value > 2_140_000_000 LIMIT 100. The threshold sits 7.5M "
+                    "values below `i32::MAX`, so on `Faker.fake::<i32>()` uniform random data "
+                    "only ~0.17% of rows match. At this selectivity the planner switches from "
+                    "the Seq Scan + LIMIT shape it picked for the non-selective baselines "
+                    "(`range_gt_*` with threshold 5000) to Index Scan — walking the b-tree "
+                    "from the top and returning the first 100 matches is cheaper than "
+                    "scanning the whole table. This is the same functional-btree path the "
+                    "EQL query-performance guide §4 documents; the non-selective baselines "
+                    "demonstrate that the planner correctly *avoids* the index when "
+                    "selectivity is too low for the lookup to win."
+                ),
+                "range_highly_selective_gt_10": (
+                    "Highly selective range query (~0.011% selectivity) returning up to 10 results",
+                    "Table: `integer_encrypted_{rows}` with Block-ORE-encrypted integer values. "
+                    "Index: functional btree on `eql_v2.ore_block_u64_8_256(value)`. "
+                    "Query: WHERE value > 2_147_000_000 LIMIT 10. The threshold sits 483k "
+                    "values below `i32::MAX`. Even at 10k rows the planner picks Index Scan: "
+                    "with 0.011% selectivity it expects ~1 matching row, which it finds at "
+                    "the top of the b-tree in a single page read. Useful as the upper-bound "
+                    "demonstration of how cheap a selective range lookup becomes when the "
+                    "functional index engages."
+                ),
                 "range_lt_hybrid_ordered_10": (
                     "Ordered range query (hybrid form: natural WHERE, extractor ORDER BY)",
                     "Table: `integer_encrypted_{rows}` with Block-ORE-encrypted integer values. "
@@ -386,40 +450,85 @@ class BenchmarkReporter:
                 )
             },
             "GROUP_BY": {
-                "count_groups_encrypted": (
-                    "GROUP BY in extractor form on `eql_v2.hmac_256(value)`, "
+                "low_cardinality_groups_encrypted": (
+                    "Low-cardinality GROUP BY (~250 buckets) on `eql_v2.hmac_256(value)`, "
                     "wrapped in `count(*)` to isolate aggregation cost from emit cost",
-                    "Table: `string_encrypted_{rows}` with encrypted string values "
-                    "(carrying an `hm` HMAC term, configured via the `unique` search index). "
-                    "Index: no index drives `GROUP BY` directly — hash aggregation is "
-                    "in-memory. The extractor's 32-byte HMAC group key fits in default "
-                    "`work_mem`, so the planner picks `HashAggregate` reliably across "
-                    "deployments. **Why the subquery wrapper.** The bench data is "
-                    "`fake::name::Name<EN>` — effectively unique per row, so a bare "
-                    "`SELECT count(*) FROM tbl GROUP BY eql_v2.hmac_256(value)` emits ~one "
-                    "row per input row. Wall-clock time on that shape is dominated by result "
-                    "emission (server-side row construction, network round-trip, sqlx "
-                    "deserialisation, bench iter-and-sum), not by the aggregation work the "
-                    "recipe is actually about. Wrapping the GROUP BY in `count(*)` keeps the "
-                    "inner HashAggregate identical but emits a single row, so the bench "
-                    "measures aggregation cost. The companion `count_groups_plaintext` "
-                    "scenario runs the same query shape against an unencrypted column for "
-                    "comparison. Natural-form `GROUP BY value` against an encrypted column "
-                    "was removed from this bench in an earlier pass because the planner picks "
-                    "`GroupAggregate` + sort against the full ~1-2 KB ciphertext payload at "
-                    "scale — see §5 of the EQL query-performance guide."
+                    "Table: `category_encrypted_{rows}` with encrypted categorical values "
+                    "(`CAT_001`..`CAT_250`, uniform random — ~250 distinct buckets). The "
+                    "encrypted value carries an `hm` HMAC term via the `unique` search "
+                    "index. **Index: hash index on `eql_v2.hmac_256(value)`, but `GROUP BY` "
+                    "doesn't engage it directly** — the planner picks `HashAggregate`, "
+                    "building an in-memory hash table keyed on the 32-byte HMAC. With "
+                    "only 250 distinct keys the hash table fits comfortably in default "
+                    "`work_mem`. The outer `count(*)` keeps the result-set emission at "
+                    "exactly one row, so wall-clock time tracks aggregation cost. The "
+                    "companion `low_cardinality_groups_plaintext` scenario runs the same "
+                    "query shape against an unindexed TEXT column for a baseline."
                 ),
-                "count_groups_plaintext": (
-                    "Plaintext baseline: GROUP BY on a plain TEXT column, same query shape "
-                    "as the encrypted scenario",
-                    "Table: `string_plaintext_{rows}` with unencrypted high-cardinality "
-                    "random strings (`md5(random()::text || ordinal)`). Populated via SQL "
-                    "by `mise run prepare:string_plaintext` — no encryption-client "
-                    "dependency. Index: none. Same `SELECT count(*) FROM (SELECT 1 ... "
-                    "GROUP BY value) g` shape as the encrypted scenario, so the wall-clock "
-                    "delta between this and `count_groups_encrypted` is the EQL recipe's "
-                    "overhead relative to a bare-PG aggregate on a TEXT column at the same "
-                    "row count and cardinality."
+                "low_cardinality_groups_plaintext": (
+                    "Plaintext baseline: low-cardinality GROUP BY on a plain TEXT column, "
+                    "same query shape as the encrypted scenario",
+                    "Table: `category_plaintext_{rows}` with the same `CAT_001`..`CAT_250` "
+                    "distribution (uniform random, populated by SQL via "
+                    "`mise run prepare:category_plaintext` — no encryption-client "
+                    "dependency). Index: none. The wall-clock delta between this and "
+                    "`low_cardinality_groups_encrypted` is the EQL recipe's overhead "
+                    "relative to a bare-PG aggregate at the same row count and cardinality."
+                ),
+                "top_n_groups_encrypted": (
+                    "Dashboard analytic: top 10 categories by frequency, EQL recipe form",
+                    "Table: `category_encrypted_{rows}` (same data as the "
+                    "`low_cardinality_*` scenarios above). Query: "
+                    "`SELECT eql_v2.hmac_256(value), count(*) FROM tbl GROUP BY 1 "
+                    "ORDER BY count(*) DESC LIMIT 10`. The bench always emits 10 rows "
+                    "regardless of input size, so the cost is dominated by the inner "
+                    "HashAggregate (per-row HMAC + hash-table insert) plus a tiny "
+                    "sort over the 250 group entries. Realistic shape for analytics "
+                    "queries that surface the most common categories in an encrypted "
+                    "dataset."
+                ),
+                "top_n_groups_plaintext": (
+                    "Plaintext baseline: top 10 categories by frequency on a plain TEXT "
+                    "column",
+                    "Table: `category_plaintext_{rows}`. Same query shape as the "
+                    "encrypted top-N scenario; the delta is the EQL recipe's overhead "
+                    "for the same shape on the same cardinality data."
+                )
+            },
+            "COMBO": {
+                "bloom_ore_order_limit": (
+                    "Composite predicate: filter by name pattern (bloom), order by age "
+                    "(ORE), limit 10",
+                    "Table: `combo_encrypted_{rows}` with three encrypted columns — "
+                    "`name` (match + hmac), `age` (ORE), `category` (hmac). Indexes: "
+                    "functional GIN on `eql_v2.bloom_filter(name)`, functional btree on "
+                    "`eql_v2.ore_block_u64_8_256(age)`, functional hash on "
+                    "`eql_v2.hmac_256(category)`. **Two indexes engage on this scenario**: "
+                    "the GIN bloom filter for the `LIKE` predicate, and the ORE btree for "
+                    "the `ORDER BY` (sort-key matches the index expression syntactically — "
+                    "hybrid form per §4 of the perf guide). The planner streams rows out "
+                    "of the bloom-filtered set already sorted by age, takes the first 10, "
+                    "and stops."
+                ),
+                "filtered_group_by": (
+                    "Composite predicate: filter by name pattern, GROUP BY category",
+                    "Table: `combo_encrypted_{rows}`. Query: `SELECT eql_v2.hmac_256(category), "
+                    "count(*) FROM tbl WHERE name LIKE $1 GROUP BY 1`. Bloom filter on "
+                    "`name` filters the input set; HashAggregate then groups the small "
+                    "post-filter set by the 32-byte category HMAC. With ~0.01-0.1% of "
+                    "names matching a typical bloom pattern and 250 category buckets, the "
+                    "aggregate stage is essentially free — the cost is bloom filter scan "
+                    "plus per-matching-row HMAC."
+                ),
+                "top_n_filtered_group_by": (
+                    "Dashboard analytic: top 10 categories for customers matching a name "
+                    "pattern",
+                    "Table: `combo_encrypted_{rows}`. Query: `SELECT eql_v2.hmac_256(category), "
+                    "count(*) FROM tbl WHERE name LIKE $1 GROUP BY 1 ORDER BY count(*) "
+                    "DESC LIMIT 10`. Same shape as `filtered_group_by` with an outer "
+                    "Top-N sort + LIMIT 10. Realistic analytics shape for surfacing the "
+                    "categories that contain the most customers matching a filter, "
+                    "without revealing the underlying names or category labels."
                 )
             },
             "JSON": {
@@ -524,33 +633,47 @@ class BenchmarkReporter:
             return None
 
     def generate_report(self):
-        """Generate the full benchmark report"""
+        """Generate the report as an index page plus one per-query-type page.
+
+        Each per-type page lives at `report/<type>.md` (e.g. `exact.md`); the
+        top-level `BENCHMARK_REPORT.md` is the index and links into them.
+        """
+        query_types = sorted(set(r.query_type for r in self.query_results))
+
+        # Per-query-type pages first so the index can link to them.
+        scenario_pages: Dict[str, str] = {}
+        for query_type in query_types:
+            page_name = f"{query_type.lower()}.md"
+            page_path = self.output_file.parent / page_name
+            with open(page_path, 'w') as pf:
+                self._write_query_type_page_content(pf, query_type)
+            scenario_pages[query_type] = page_name
+
         with open(self.output_file, 'w') as f:
-            self._write_header(f)
+            self._write_header(f, scenario_pages)
             self._write_ingest_section(f)
-            self._write_query_sections(f)
+            self._write_query_overview(f, scenario_pages)
             self._write_footer(f)
 
-    def _write_header(self, f):
+    def _write_header(self, f, scenario_pages: Dict[str, str]):
         f.write("# Benchmark Report\n\n")
-        f.write("This report summarizes the performance benchmarks for encrypted database operations.\n\n")
+        f.write("This report summarises the performance benchmarks for encrypted database operations. "
+                "Per-query-type detail lives on its own page — click through from the "
+                "Query Performance section below.\n\n")
         f.write("## Table of Contents\n\n")
         f.write("1. [Ingest Throughput](#ingest-throughput)\n")
-        
+
         # Add subsections for each ingest type
         ingest_types = sorted(set(r.bench_type for r in self.ingest_results))
         for it in ingest_types:
             title = it.replace('_', ' ').title()
             anchor = it.replace('_', '-')
             f.write(f"   - [{title}](#{anchor})\n")
-        
+
         f.write("2. [Query Performance](#query-performance)\n")
-        
-        # Add subsections for each query type
-        query_types = set(r.query_type for r in self.query_results)
-        for qt in sorted(query_types):
-            f.write(f"   - [{qt} Queries](#{qt.lower()}-queries)\n")
-        
+        for qt in sorted(scenario_pages.keys()):
+            f.write(f"   - [{qt} Queries]({scenario_pages[qt]})\n")
+
         f.write("\n---\n\n")
 
     def _write_ingest_section(self, f):
@@ -623,16 +746,17 @@ class BenchmarkReporter:
         ax.set_xticks(range(len(records)))
         ax.set_xticklabels([f"{r:,}" for r in records])
         ax.grid(axis='y', alpha=0.3)
-        
+        ax.set_ylim(bottom=0)
+
         # Add "larger is better" annotation
         ax.text(0.98, 0.98, 'larger is better ↑', transform=ax.transAxes,
                 fontsize=11, verticalalignment='top', horizontalalignment='right',
                 bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
-        
+
         plt.tight_layout()
         plt.savefig(output_path, dpi=100, bbox_inches='tight')
         plt.close()
-    
+
     def _create_ingest_time_chart(self, results: List[IngestResult], bench_type: str, output_path: Path):
         """Create a bar chart for total ingest time"""
         fig, ax = plt.subplots(figsize=(10, 6))
@@ -647,7 +771,8 @@ class BenchmarkReporter:
         ax.set_xticks(range(len(records)))
         ax.set_xticklabels([f"{r:,}" for r in records])
         ax.grid(axis='y', alpha=0.3)
-        
+        ax.set_ylim(bottom=0)
+
         # Add "smaller is better" annotation
         ax.text(0.98, 0.98, 'smaller is better ↓', transform=ax.transAxes,
                 fontsize=11, verticalalignment='top', horizontalalignment='right',
@@ -712,7 +837,8 @@ class BenchmarkReporter:
         ax.set_xticks(range(len(bench_types)))
         ax.set_xticklabels(labels, rotation=45, ha='right')
         ax.grid(axis='y', alpha=0.3)
-        
+        ax.set_ylim(bottom=0)
+
         # Add "larger is better" annotation
         ax.text(0.98, 0.98, 'larger is better ↑', transform=ax.transAxes,
                 fontsize=11, verticalalignment='top', horizontalalignment='right',
@@ -746,7 +872,8 @@ class BenchmarkReporter:
         ax.set_xticks(range(len(bench_types)))
         ax.set_xticklabels(labels, rotation=45, ha='right')
         ax.grid(axis='y', alpha=0.3)
-        
+        ax.set_ylim(bottom=0)
+
         # Add "smaller is better" annotation
         ax.text(0.98, 0.98, 'smaller is better ↓', transform=ax.transAxes,
                 fontsize=11, verticalalignment='top', horizontalalignment='right',
@@ -756,43 +883,74 @@ class BenchmarkReporter:
         plt.savefig(output_path, dpi=100, bbox_inches='tight')
         plt.close()
 
-    def _write_query_sections(self, f):
-        f.write("## Query Performance\n\n")
-        f.write("This section measures query performance across different data set sizes. "
-               "Each query is tested with and without decryption of results.\n\n")
-        
-        # Group by query type (EXACT, MATCH, ORE)
-        query_types = sorted(set(r.query_type for r in self.query_results))
-        
-        for query_type in query_types:
-            self._write_query_type_section(f, query_type)
+    def _write_query_overview(self, f, scenario_pages: Dict[str, str]):
+        """Brief overview of the per-query-type pages on the index file.
 
-    def _write_query_type_section(self, f, query_type: str):
-        f.write(f"### {query_type} Queries\n\n")
-        
-        # Get all unique query names for this type
+        Picks the bits most useful for orienting a reader before they click
+        through: which scenarios live under each type, which row-count tiers
+        ran, and what the median timing looks like at the largest tier so the
+        index gives an immediate sense of where the costs live.
+        """
+        f.write("## Query Performance\n\n")
+        f.write("Per-query-type detail is broken out into separate pages — click into a "
+                "scenario family for the SQL, per-tier timings, the indexes the planner "
+                "picked, and the EXPLAIN plan tree.\n\n")
+        f.write("| Query Type | Scenarios | Tiers | Largest-tier median (no decrypt) | Detail |\n")
+        f.write("|-|-|-|-|-|\n")
+        for qt in sorted(scenario_pages.keys()):
+            type_results = [r for r in self.query_results if r.query_type == qt]
+            if not type_results:
+                continue
+            scenarios = sorted(set(r.query_name for r in type_results))
+            tiers = sorted(set(r.row_count for r in type_results))
+            tiers_str = ", ".join(f"{t:,}" for t in tiers)
+            scenarios_str = ", ".join(f"`{s}`" for s in scenarios)
+            # Median timing at the largest tier, averaged across scenarios for
+            # a single-number summary. Not a substitute for the detail page;
+            # just enough to flag "this family runs in seconds" vs "this one
+            # is sub-millisecond".
+            biggest = max(tiers)
+            biggest_results = [r for r in type_results
+                               if r.row_count == biggest and not r.decrypt]
+            if biggest_results:
+                med_ns = sum(r.median_ns for r in biggest_results) / len(biggest_results)
+                med_str = self.format_time(med_ns, include_indicator=False)
+            else:
+                med_str = "—"
+            page = scenario_pages[qt]
+            f.write(f"| {qt} | {scenarios_str} | {tiers_str} | {med_str} | [open]({page}) |\n")
+        f.write("\n")
+
+    def _write_query_type_page_content(self, f, query_type: str):
+        """Write a self-contained per-query-type page."""
+        f.write(f"# {query_type} Queries\n\n")
+        f.write(f"[← Back to overview](./{self.output_file.name})\n\n")
+        f.write("Per-tier query performance. Each scenario lists its SQL, the indexes "
+                "available on the target table, the indexes the planner actually picked "
+                "per tier, the timing table, and the full EXPLAIN plan in a collapsed "
+                "block.\n\n")
         type_results = [r for r in self.query_results if r.query_type == query_type]
         query_names = sorted(set(r.query_name for r in type_results))
-        
         for query_name in query_names:
-            self._write_query_subsection(f, query_type, query_name)
+            self._write_query_subsection(f, query_type, query_name, heading="##")
 
-    def _write_query_subsection(self, f, query_type: str, query_name: str):
+    def _write_query_subsection(self, f, query_type: str, query_name: str,
+                                heading: str = "##"):
         # Get results for this specific query
-        results = [r for r in self.query_results 
+        results = [r for r in self.query_results
                   if r.query_type == query_type and r.query_name == query_name]
-        
+
         if not results:
             return
-        
+
         # Sort by row count
         results.sort(key=lambda x: (x.row_count, x.decrypt))
-        
+
         # Get description
         description, table_info = self.get_query_description(query_type, query_name)
         sql_query, param = self.get_query_sql_and_param(query_type, query_name)
-        
-        f.write(f"#### {query_name}\n\n")
+
+        f.write(f"{heading} {query_name}\n\n")
         f.write(f"**Description:** {description}\n\n")
         
         # Add SQL query and parameter
@@ -807,18 +965,24 @@ class BenchmarkReporter:
         if results:
             # Determine table name based on query type / scenario.
             sample_row_count = results[0].row_count
-            if query_type == "GROUP_BY" and query_name == "count_groups_plaintext":
-                # Plaintext baseline runs against a plain TEXT column — no
+            if query_type == "GROUP_BY" and query_name.endswith("_plaintext"):
+                # Plaintext baselines run against a plain TEXT column — no
                 # functional EQL indexes; lookup will return None and the
                 # Indexes block will be skipped.
-                table_name = f"string_plaintext_{sample_row_count}"
-            elif query_type in ["EXACT", "MATCH", "GROUP_BY"]:
-                # String-encrypted scenarios all run against the same table family.
+                table_name = f"category_plaintext_{sample_row_count}"
+            elif query_type == "GROUP_BY":
+                # Encrypted GROUP BY scenarios run against the categorical
+                # 250-bucket table family.
+                table_name = f"category_encrypted_{sample_row_count}"
+            elif query_type in ["EXACT", "MATCH"]:
+                # String-encrypted scenarios.
                 table_name = f"string_encrypted_{sample_row_count}"
             elif query_type == "ORE":
                 table_name = f"integer_encrypted_{sample_row_count}"
             elif query_type == "JSON":
                 table_name = f"json_ste_vec_small_encrypted_{sample_row_count}"
+            elif query_type == "COMBO":
+                table_name = f"combo_encrypted_{sample_row_count}"
             else:
                 table_name = ""
 
@@ -958,9 +1122,10 @@ class BenchmarkReporter:
         ax.set_ylabel('Query Time (ms)', fontsize=12)
         ax.set_title(f'{query_type} - {query_name}', fontsize=14, fontweight='bold')
         ax.set_xscale('log')
+        ax.set_ylim(bottom=0)
         ax.grid(True, alpha=0.3)
         ax.legend(fontsize=10)
-        
+
         # Format x-axis labels
         ax.set_xticks(row_counts)
         ax.set_xticklabels([f"{r:,}" for r in row_counts])

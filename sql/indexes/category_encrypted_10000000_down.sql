@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS category_encrypted_10000000_hash_index;

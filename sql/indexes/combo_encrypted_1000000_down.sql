@@ -1,0 +1,3 @@
+DROP INDEX IF EXISTS combo_encrypted_1000000_name_gin_index;
+DROP INDEX IF EXISTS combo_encrypted_1000000_age_ore_index;
+DROP INDEX IF EXISTS combo_encrypted_1000000_category_hash_index;

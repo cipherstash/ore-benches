@@ -5,53 +5,64 @@ use sqlx::types::Json;
 use sqlx::Row;
 use tokio::runtime::Runtime;
 
-// Two scenarios, same query shape, side-by-side encrypted vs plaintext.
+// Realistic-cardinality GROUP BY scenarios. Each scenario runs against a
+// low-cardinality categorical column (`CAT_001`..`CAT_250`, uniform random,
+// ingested by `encrypt_category` / SQL `prepare:category_plaintext`). The
+// 250-bucket cardinality is roughly an ISO 3166-1 country code distribution —
+// large enough that the hash-aggregate table is interesting, small enough
+// that the result-set emission cost stays negligible relative to the per-row
+// HMAC work.
 //
-//   count_groups_encrypted — `GROUP BY eql_v2.hmac_256(value)` against
-//                            `string_encrypted_<N>` (encrypted column,
-//                            inlinable HMAC extractor).
+// Scenarios:
 //
-//   count_groups_plaintext — `GROUP BY value` against `string_plaintext_<N>`
-//                            (plain TEXT column, no encryption). The
-//                            baseline: "what would this cost without
-//                            encryption?" The plaintext data is
-//                            high-cardinality `md5(random()::text)` so the
-//                            cardinality matches the encrypted side (fake
-//                            random names give similar ~99% uniqueness).
+//   * `low_cardinality_groups_encrypted` — `SELECT count(*) FROM (SELECT 1
+//     FROM category_encrypted GROUP BY eql_v2.hmac_256(value)) g`. The
+//     extractor-form `GROUP BY` is the EQL recipe (cheap, in-memory
+//     HashAggregate); wrapping in `count(*)` emits exactly one row so the
+//     bench is unaffected by result-set marshalling. Companion plaintext
+//     scenario uses the same shape on an unindexed TEXT column to give the
+//     EQL overhead vs bare-PG aggregate baseline.
 //
-// Both queries wrap the GROUP BY in `count(*)`:
+//   * `top_n_groups_encrypted` — `SELECT eql_v2.hmac_256(value), count(*)
+//     FROM category_encrypted GROUP BY 1 ORDER BY count(*) DESC LIMIT 10`.
+//     The dashboard-style "top N categories by frequency" pattern. Returns
+//     10 rows always (one per top bucket), so the bench measures the
+//     HashAggregate + sort, not result emission. Plaintext companion runs
+//     the same shape on the TEXT column.
 //
-//   SELECT count(*) FROM (SELECT 1 FROM tbl GROUP BY <key>) g
-//
-// rather than the bare `SELECT count(*) FROM tbl GROUP BY <key>` form. With
-// effectively-unique rows the bare form emits ~one row per input row, so
-// wall-clock is bottlenecked by result emission (server-side row
-// construction, network round-trip, sqlx deserialisation, the bench's own
-// iter-and-sum), not by aggregation work. The subquery wrapper keeps the
-// inner HashAggregate identical but emits one row regardless of
-// cardinality — both scenarios measure aggregation cost cleanly.
-//
-// The natural form (`GROUP BY value` against `eql_v2_encrypted`) was dropped
-// from this bench earlier. The planner picks `GroupAggregate` + sort against
-// the full ~1-2 KB ciphertext payload at scale; the cost is the planner's
-// work_mem fallback, not anything EQL controls. See §5 of EQL's
-// `docs/reference/query-performance.md`.
+// Earlier versions of this bench grouped by the full ~1-2 KB ciphertext
+// payload of high-cardinality (`fake::Name<EN>`, ~99% unique) data; both the
+// time and the result-set shape were dominated by emit cost, which made the
+// bench look like "GROUP BY on encrypted data is slow" when really it was
+// "emitting millions of rows per query is slow". The current shapes isolate
+// what callers actually pay for the GROUP BY itself.
 //
 // QUERY_TEMPLATES entries: (sql_template, scenario_name, base_table_name).
-// The bench substitutes `{TABLE}` with `<base_table_name>_<TARGET_ROWS>` so
-// each scenario runs against its own table family.
+// `{TABLE}` is replaced with `<base_table_name>_<TARGET_ROWS>`.
 static QUERY_TEMPLATES: &[(&str, &str, &str)] = &[
     (
         "SELECT count(*) FROM \
          (SELECT 1 FROM {TABLE} GROUP BY eql_v2.hmac_256(value)) g",
-        "count_groups_encrypted",
-        "string_encrypted",
+        "low_cardinality_groups_encrypted",
+        "category_encrypted",
     ),
     (
         "SELECT count(*) FROM \
          (SELECT 1 FROM {TABLE} GROUP BY value) g",
-        "count_groups_plaintext",
-        "string_plaintext",
+        "low_cardinality_groups_plaintext",
+        "category_plaintext",
+    ),
+    (
+        "SELECT eql_v2.hmac_256(value), count(*) FROM {TABLE} \
+         GROUP BY 1 ORDER BY count(*) DESC LIMIT 10",
+        "top_n_groups_encrypted",
+        "category_encrypted",
+    ),
+    (
+        "SELECT value, count(*) FROM {TABLE} \
+         GROUP BY 1 ORDER BY count(*) DESC LIMIT 10",
+        "top_n_groups_plaintext",
+        "category_plaintext",
     ),
 ];
 
@@ -126,7 +137,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     group.sample_size(10);
 
     for (bench_id, query_str) in scenarios {
-        // bench_id is e.g. "GROUP_BY/group_by/count_groups_encrypted/100000".
+        // bench_id is e.g. "GROUP_BY/group_by/low_cardinality_groups_encrypted/100000".
         // criterion's group.bench_function joins the group name ("GROUP_BY")
         // with the function name we pass; strip the leading "GROUP_BY/" so
         // it doesn't get doubled.
@@ -141,8 +152,15 @@ fn criterion_benchmark(c: &mut Criterion) {
                     sqlx::query(&query_str).fetch_all(&pool).await,
                     &scenario_id,
                 );
-                // Drain the single-row result to force the aggregation to materialise.
-                black_box(rows.iter().map(|r| r.get::<i64, _>(0)).sum::<i64>())
+                // Drain results to force aggregation to materialise. The
+                // count-wrapped scenarios return a single i64; the top-N
+                // scenarios return up to 10 (group-key bytes, count) rows
+                // and we just sum the counts.
+                if rows.len() == 1 {
+                    black_box(rows[0].get::<i64, _>(0));
+                } else {
+                    black_box(rows.iter().map(|r| r.get::<i64, _>(1)).sum::<i64>());
+                }
             })
         });
     }
