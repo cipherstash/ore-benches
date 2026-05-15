@@ -1,0 +1,111 @@
+{
+  "scenarios": [
+    {
+      "explain": [
+        {
+          "Plan": {
+            "Async Capable": false,
+            "Node Type": "Aggregate",
+            "Parallel Aware": false,
+            "Partial Mode": "Simple",
+            "Plan Rows": 1,
+            "Plan Width": 8,
+            "Plans": [
+              {
+                "Async Capable": false,
+                "Group Key": [
+                  "(((string_encrypted_100000.value).data ->> 'hm'::text))::eql_v2.hmac_256"
+                ],
+                "Node Type": "Aggregate",
+                "Parallel Aware": false,
+                "Parent Relationship": "Outer",
+                "Partial Mode": "Simple",
+                "Plan Rows": 93989,
+                "Plan Width": 36,
+                "Planned Partitions": 0,
+                "Plans": [
+                  {
+                    "Alias": "string_encrypted_100000",
+                    "Async Capable": false,
+                    "Node Type": "Seq Scan",
+                    "Parallel Aware": false,
+                    "Parent Relationship": "Outer",
+                    "Plan Rows": 100000,
+                    "Plan Width": 32,
+                    "Relation Name": "string_encrypted_100000",
+                    "Startup Cost": 0.0,
+                    "Total Cost": 16759.0
+                  }
+                ],
+                "Startup Cost": 17009.0,
+                "Strategy": "Hashed",
+                "Total Cost": 18183.86
+              }
+            ],
+            "Startup Cost": 19358.72,
+            "Strategy": "Plain",
+            "Total Cost": 19358.73
+          }
+        }
+      ],
+      "id": "GROUP_BY/group_by/count_groups_encrypted/100000",
+      "indexes_used": [],
+      "parameters": [],
+      "query": "SELECT count(*) FROM (SELECT 1 FROM string_encrypted_100000 GROUP BY eql_v2.hmac_256(value)) g"
+    },
+    {
+      "explain": [
+        {
+          "Plan": {
+            "Async Capable": false,
+            "Node Type": "Aggregate",
+            "Parallel Aware": false,
+            "Partial Mode": "Simple",
+            "Plan Rows": 1,
+            "Plan Width": 8,
+            "Plans": [
+              {
+                "Async Capable": false,
+                "Group Key": [
+                  "string_plaintext_100000.value"
+                ],
+                "Node Type": "Aggregate",
+                "Parallel Aware": false,
+                "Parent Relationship": "Outer",
+                "Partial Mode": "Simple",
+                "Plan Rows": 100000,
+                "Plan Width": 37,
+                "Planned Partitions": 4,
+                "Plans": [
+                  {
+                    "Alias": "string_plaintext_100000",
+                    "Async Capable": false,
+                    "Node Type": "Seq Scan",
+                    "Parallel Aware": false,
+                    "Parent Relationship": "Outer",
+                    "Plan Rows": 100000,
+                    "Plan Width": 33,
+                    "Relation Name": "string_plaintext_100000",
+                    "Startup Cost": 0.0,
+                    "Total Cost": 1834.0
+                  }
+                ],
+                "Startup Cost": 10334.0,
+                "Strategy": "Hashed",
+                "Total Cost": 12896.5
+              }
+            ],
+            "Startup Cost": 14146.5,
+            "Strategy": "Plain",
+            "Total Cost": 14146.51
+          }
+        }
+      ],
+      "id": "GROUP_BY/group_by/count_groups_plaintext/100000",
+      "indexes_used": [],
+      "parameters": [],
+      "query": "SELECT count(*) FROM (SELECT 1 FROM string_plaintext_100000 GROUP BY value) g"
+    }
+  ],
+  "target_rows": "100000"
+}

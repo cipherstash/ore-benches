@@ -1,0 +1,169 @@
+{
+  "scenarios": [
+    {
+      "explain": [
+        {
+          "JIT": {
+            "Functions": 6,
+            "Options": {
+              "Deforming": true,
+              "Expressions": true,
+              "Inlining": true,
+              "Optimization": true
+            }
+          },
+          "Plan": {
+            "Async Capable": false,
+            "Node Type": "Aggregate",
+            "Parallel Aware": false,
+            "Partial Mode": "Simple",
+            "Plan Rows": 1,
+            "Plan Width": 8,
+            "Plans": [
+              {
+                "Async Capable": false,
+                "Group Key": [
+                  "(((string_encrypted_10000000.value).data ->> 'hm'::text))::eql_v2.hmac_256"
+                ],
+                "Node Type": "Aggregate",
+                "Parallel Aware": false,
+                "Parent Relationship": "Outer",
+                "Partial Mode": "Simple",
+                "Plan Rows": 4273344,
+                "Plan Width": 36,
+                "Planned Partitions": 128,
+                "Plans": [
+                  {
+                    "Alias": "string_encrypted_10000000",
+                    "Async Capable": false,
+                    "Node Type": "Seq Scan",
+                    "Parallel Aware": false,
+                    "Parent Relationship": "Outer",
+                    "Plan Rows": 10000000,
+                    "Plan Width": 32,
+                    "Relation Name": "string_encrypted_10000000",
+                    "Startup Cost": 0.0,
+                    "Total Cost": 1673105.0
+                  }
+                ],
+                "Startup Cost": 2444980.0,
+                "Strategy": "Hashed",
+                "Total Cost": 2635115.55
+              }
+            ],
+            "Startup Cost": 2688532.35,
+            "Strategy": "Plain",
+            "Total Cost": 2688532.36
+          }
+        }
+      ],
+      "id": "GROUP_BY/group_by/count_groups_encrypted/10000000",
+      "indexes_used": [],
+      "parameters": [],
+      "query": "SELECT count(*) FROM (SELECT 1 FROM string_encrypted_10000000 GROUP BY eql_v2.hmac_256(value)) g"
+    },
+    {
+      "explain": [
+        {
+          "JIT": {
+            "Functions": 9,
+            "Options": {
+              "Deforming": true,
+              "Expressions": true,
+              "Inlining": true,
+              "Optimization": true
+            }
+          },
+          "Plan": {
+            "Async Capable": false,
+            "Node Type": "Aggregate",
+            "Parallel Aware": false,
+            "Partial Mode": "Simple",
+            "Plan Rows": 1,
+            "Plan Width": 8,
+            "Plans": [
+              {
+                "Async Capable": false,
+                "Group Key": [
+                  "string_plaintext_10000000.value"
+                ],
+                "Node Type": "Group",
+                "Parallel Aware": false,
+                "Parent Relationship": "Outer",
+                "Plan Rows": 20000040,
+                "Plan Width": 37,
+                "Plans": [
+                  {
+                    "Async Capable": false,
+                    "Node Type": "Gather Merge",
+                    "Parallel Aware": false,
+                    "Parent Relationship": "Outer",
+                    "Plan Rows": 16666700,
+                    "Plan Width": 33,
+                    "Plans": [
+                      {
+                        "Async Capable": false,
+                        "Group Key": [
+                          "string_plaintext_10000000.value"
+                        ],
+                        "Node Type": "Group",
+                        "Parallel Aware": false,
+                        "Parent Relationship": "Outer",
+                        "Plan Rows": 8333350,
+                        "Plan Width": 33,
+                        "Plans": [
+                          {
+                            "Async Capable": false,
+                            "Node Type": "Sort",
+                            "Parallel Aware": false,
+                            "Parent Relationship": "Outer",
+                            "Plan Rows": 8333350,
+                            "Plan Width": 33,
+                            "Plans": [
+                              {
+                                "Alias": "string_plaintext_10000000",
+                                "Async Capable": false,
+                                "Node Type": "Seq Scan",
+                                "Parallel Aware": true,
+                                "Parent Relationship": "Outer",
+                                "Plan Rows": 8333350,
+                                "Plan Width": 33,
+                                "Relation Name": "string_plaintext_10000000",
+                                "Startup Cost": 0.0,
+                                "Total Cost": 250000.5
+                              }
+                            ],
+                            "Sort Key": [
+                              "string_plaintext_10000000.value"
+                            ],
+                            "Startup Cost": 1663673.46,
+                            "Total Cost": 1684506.84
+                          }
+                        ],
+                        "Startup Cost": 1663673.46,
+                        "Total Cost": 1705340.21
+                      }
+                    ],
+                    "Startup Cost": 1664673.49,
+                    "Total Cost": 3630090.96,
+                    "Workers Planned": 2
+                  }
+                ],
+                "Startup Cost": 1664673.49,
+                "Total Cost": 3671757.71
+              }
+            ],
+            "Startup Cost": 3921758.21,
+            "Strategy": "Plain",
+            "Total Cost": 3921758.22
+          }
+        }
+      ],
+      "id": "GROUP_BY/group_by/count_groups_plaintext/10000000",
+      "indexes_used": [],
+      "parameters": [],
+      "query": "SELECT count(*) FROM (SELECT 1 FROM string_plaintext_10000000 GROUP BY value) g"
+    }
+  ],
+  "target_rows": "10000000"
+}
