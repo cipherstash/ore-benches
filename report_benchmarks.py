@@ -503,12 +503,14 @@ class BenchmarkReporter:
                     "`name` (match + hmac), `age` (ORE), `category` (hmac). Indexes: "
                     "functional GIN on `eql_v2.bloom_filter(name)`, functional btree on "
                     "`eql_v2.ore_block_u64_8_256(age)`, functional hash on "
-                    "`eql_v2.hmac_256(category)`. **Two indexes engage on this scenario**: "
-                    "the GIN bloom filter for the `LIKE` predicate, and the ORE btree for "
-                    "the `ORDER BY` (sort-key matches the index expression syntactically — "
-                    "hybrid form per §4 of the perf guide). The planner streams rows out "
-                    "of the bloom-filtered set already sorted by age, takes the first 10, "
-                    "and stops."
+                    "`eql_v2.hmac_256(category)`. **The bloom GIN index engages for the "
+                    "LIKE predicate**, narrowing the input to ~0.01–0.1% of rows; the "
+                    "planner then sorts the small filtered set by `eql_v2.ore_block_u64_8_256(age)` "
+                    "and returns the top 10. The ORE btree doesn't engage here — PostgreSQL "
+                    "can't merge two unrelated indexes on different columns (bloom on `name`, "
+                    "btree on `age`), so the ORDER BY is satisfied by a Sort node above the "
+                    "Bitmap Heap Scan. With the bloom narrowing so aggressively, that Sort "
+                    "is cheap; the cost is dominated by the bloom + heap fetch."
                 ),
                 "filtered_group_by": (
                     "Composite predicate: filter by name pattern, GROUP BY category",
