@@ -202,7 +202,11 @@ pub struct WrappedJson(pub serde_json::Value);
 
 impl From<WrappedJson> for Plaintext {
     fn from(WrappedJson(value): WrappedJson) -> Self {
-        Plaintext::Json(Some(value))
+        // cipherstash-client renamed `Plaintext::Json` → `Plaintext::JsonB`
+        // between alpha.4 (crates.io) and the suite-1 main branch we're
+        // currently pinned to. Use the new name here; revert if/when we
+        // move back to a published cipherstash-client.
+        Plaintext::JsonB(Some(value))
     }
 }
 

@@ -36,6 +36,20 @@ const REINIT_EVERY_ROWS: i32 = 200_000;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Honour RUST_LOG for cipherstash-client / zerokms-protocol trace!
+    // emissions. The cipherstash-client traces the full ViturRequestError
+    // (kind + message + underlying transport error) at the failure point
+    // in vitur_client::generate_keys; without a subscriber that line is a
+    // no-op. The try_init is a no-op if a subscriber was already installed
+    // upstream — keeps it safe to leave in.
+    let _ = tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("warn")),
+        )
+        .with_writer(std::io::stderr)
+        .try_init();
+
     let database_url =
         env::var("DATABASE_URL").context("DATABASE_URL environment variable must be set")?;
     let num_records: i32 = env::var("NUM_RECORDS")
@@ -55,14 +69,14 @@ async fn main() -> Result<()> {
     let mut rows_since_reinit: i32 = 0;
 
     let name_config = ColumnConfig::build("name")
-        .casts_as(ColumnType::Text)
+        .casts_as(ColumnType::Utf8Str)
         .add_index(Index::new_unique())
         .add_index(Index::new_match());
     let age_config = ColumnConfig::build("age")
         .casts_as(ColumnType::Int)
         .add_index(Index::new_ore());
     let category_config = ColumnConfig::build("category")
-        .casts_as(ColumnType::Text)
+        .casts_as(ColumnType::Utf8Str)
         .add_index(Index::new_unique());
 
     let name_ident = Identifier::new(&table_name, "name");

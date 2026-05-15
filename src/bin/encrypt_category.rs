@@ -32,7 +32,7 @@ async fn main() -> Result<()> {
         .identifier(Identifier::new(&table_name, "value"))
         .column_config(
             ColumnConfig::build("value")
-                .casts_as(ColumnType::Text)
+                .casts_as(ColumnType::Utf8Str)
                 .add_index(Index::new_unique()),
         )
         .build()?

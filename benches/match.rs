@@ -26,7 +26,7 @@ async fn build_query(
     table_name: &str,
 ) -> EncryptedQuery {
     let column_config = ColumnConfig::build("value")
-        .casts_as(ColumnType::Text)
+        .casts_as(ColumnType::Utf8Str)
         .add_index(Index::new_match());
 
     let identifier = Identifier::new(table_name, "value");

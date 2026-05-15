@@ -619,9 +619,8 @@ dependencies = [
 
 [[package]]
 name = "cipherstash-client"
-version = "0.34.1-alpha.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9f3d67cc26d8422509d2c20644576124e7344a4bf14ded06c7affa8dc18aabca"
+version = "0.34.0"
+source = "git+ssh://git@github.com/cipherstash/cipherstash-suite.git?branch=dan%2Fzerokms-unexpected-error-context#e9c9bb57415ea5b4e5bdd2db559ae84880cde6b9"
 dependencies = [
  "aes-gcm-siv",
  "anyhow",
@@ -648,7 +647,6 @@ dependencies = [
  "miette",
  "opaque-debug",
  "open 3.2.0",
- "orderable-bytes",
  "ore-rs 0.8.3",
  "percent-encoding",
  "rand 0.8.6",
@@ -676,7 +674,6 @@ dependencies = [
  "url",
  "uuid",
  "vitaminc",
- "vitaminc-protected",
  "winnow 0.6.26",
  "zeroize",
  "zerokms-protocol",
@@ -684,21 +681,18 @@ dependencies = [
 
 [[package]]
 name = "cipherstash-config"
-version = "0.34.1-alpha.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "283fa04db19f9bf2cb2f09e8c1505a15560310bc50fdc066734072c616aa8ca9"
+version = "0.34.0"
+source = "git+ssh://git@github.com/cipherstash/cipherstash-suite.git?branch=dan%2Fzerokms-unexpected-error-context#e9c9bb57415ea5b4e5bdd2db559ae84880cde6b9"
 dependencies = [
  "bitflags 2.11.1",
  "serde",
- "serde_json",
  "thiserror 1.0.69",
 ]
 
 [[package]]
 name = "cipherstash-core"
-version = "0.34.1-alpha.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b5bb7181053c3fc35569e0800fa7510c85ee2bffee21abbd2a7aeb498f5f0972"
+version = "0.34.0"
+source = "git+ssh://git@github.com/cipherstash/cipherstash-suite.git?branch=dan%2Fzerokms-unexpected-error-context#e9c9bb57415ea5b4e5bdd2db559ae84880cde6b9"
 dependencies = [
  "hmac",
  "lazy_static",
@@ -732,16 +726,12 @@ dependencies = [
 
 [[package]]
 name = "cllw-ore"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5d007a5be83ae12adbd17543f9631d64090d761c029d2f8f7eb8f8ddb2a87caf"
+version = "0.34.0"
+source = "git+ssh://git@github.com/cipherstash/cipherstash-suite.git?branch=dan%2Fzerokms-unexpected-error-context#e9c9bb57415ea5b4e5bdd2db559ae84880cde6b9"
 dependencies = [
  "blake3",
- "chrono",
  "hex",
- "orderable-bytes",
  "postgres-types",
- "rust_decimal",
  "subtle",
  "thiserror 1.0.69",
  "unicode-normalization",
@@ -1038,9 +1028,8 @@ dependencies = [
 
 [[package]]
 name = "cts-common"
-version = "0.34.1-alpha.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3b26644e630f2e690194c6b61f5b613b768061750f2060cf4db73ddb8058d284"
+version = "0.34.0"
+source = "git+ssh://git@github.com/cipherstash/cipherstash-suite.git?branch=dan%2Fzerokms-unexpected-error-context#e9c9bb57415ea5b4e5bdd2db559ae84880cde6b9"
 dependencies = [
  "arrayvec",
  "base32",
@@ -1052,9 +1041,7 @@ dependencies = [
  "nom",
  "regex",
  "serde",
- "serde_json",
  "thiserror 1.0.69",
- "tracing",
  "url",
  "utoipa",
  "uuid",
@@ -1121,6 +1108,7 @@ dependencies = [
  "sqlx",
  "stack-profile",
  "tokio",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -2733,10 +2721,6 @@ name = "orderable-bytes"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "adba0469737879cabc3bdcaa6a7beb4ff7f5bb4aa5d624816c8bb9d425a7d5df"
-dependencies = [
- "chrono",
- "rust_decimal",
-]
 
 [[package]]
 name = "ore-rs"
@@ -2766,14 +2750,12 @@ dependencies = [
  "aes",
  "block-modes 0.9.1",
  "byteorder",
- "chrono",
  "hex",
  "lazy_static",
  "num",
  "orderable-bytes",
  "rand 0.8.6",
  "rand_chacha 0.3.1",
- "rust_decimal",
  "subtle-ng",
  "thiserror 1.0.69",
  "zeroize",
@@ -3038,7 +3020,6 @@ dependencies = [
  "proc-macro-error-attr2",
  "proc-macro2",
  "quote",
- "syn 2.0.114",
 ]
 
 [[package]]
@@ -3277,9 +3258,8 @@ dependencies = [
 
 [[package]]
 name = "recipher"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b3561e1082283a4c064635b7886aa4d24db57a43ac31c55930c10797ab5cdeb"
+version = "0.34.0"
+source = "git+ssh://git@github.com/cipherstash/cipherstash-suite.git?branch=dan%2Fzerokms-unexpected-error-context#e9c9bb57415ea5b4e5bdd2db559ae84880cde6b9"
 dependencies = [
  "aes",
  "async-trait",
@@ -4254,9 +4234,8 @@ checksum = "6ce2be8dc25455e1f91df71bfa12ad37d7af1092ae736f3a6cd0e37bc7810596"
 
 [[package]]
 name = "stack-auth"
-version = "0.34.1-alpha.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "072e420b2bb179e7627f2e9e5ee4080d1f939c6710ecf91524d52fc87e40cbd0"
+version = "0.34.0"
+source = "git+ssh://git@github.com/cipherstash/cipherstash-suite.git?branch=dan%2Fzerokms-unexpected-error-context#e9c9bb57415ea5b4e5bdd2db559ae84880cde6b9"
 dependencies = [
  "aquamarine",
  "cts-common",
@@ -4273,16 +4252,13 @@ dependencies = [
  "url",
  "uuid",
  "vitaminc",
- "vitaminc-protected",
  "zeroize",
- "zerokms-protocol",
 ]
 
 [[package]]
 name = "stack-profile"
-version = "0.34.1-alpha.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1dd61bc4129d2258ec1ba89d742558308560fc0f585f9c24d478685def8efd14"
+version = "0.34.0"
+source = "git+ssh://git@github.com/cipherstash/cipherstash-suite.git?branch=dan%2Fzerokms-unexpected-error-context#e9c9bb57415ea5b4e5bdd2db559ae84880cde6b9"
 dependencies = [
  "dirs",
  "gethostname",
@@ -4949,36 +4925,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "validator"
-version = "0.20.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43fb22e1a008ece370ce08a3e9e4447a910e92621bb49b85d6e48a45397e7cfa"
-dependencies = [
- "idna",
- "once_cell",
- "regex",
- "serde",
- "serde_derive",
- "serde_json",
- "url",
- "validator_derive",
-]
-
-[[package]]
-name = "validator_derive"
-version = "0.20.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b7df16e474ef958526d1205f6dda359fdfab79d9aa6d54bafcb92dcd07673dca"
-dependencies = [
- "darling",
- "once_cell",
- "proc-macro-error2",
- "proc-macro2",
- "quote",
- "syn 2.0.114",
-]
-
-[[package]]
 name = "valuable"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4998,11 +4944,9 @@ checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
 
 [[package]]
 name = "vitaminc"
-version = "0.1.0-pre4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7c8b739a2cb1e528e77a69267728532f52d2d5ce18ae2839e26c797859fe9015"
+version = "0.1.0-pre4"
+source = "git+https://github.com/cipherstash/vitaminc?rev=4327afd#4327afd37b2991508ed0e2e160aebe84538d234c"
 dependencies = [
- "vitaminc-aead",
  "vitaminc-encrypt",
  "vitaminc-protected",
  "vitaminc-random",
@@ -5011,9 +4955,8 @@ dependencies = [
 
 [[package]]
 name = "vitaminc-aead"
-version = "0.1.0-pre4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7c29cef4d4b0d018c4223d366017d2a9756012acf76e25011aaca877f3c74904"
+version = "0.1.0-pre4"
+source = "git+https://github.com/cipherstash/vitaminc?rev=4327afd#4327afd37b2991508ed0e2e160aebe84538d234c"
 dependencies = [
  "bytes",
  "serde",
@@ -5024,9 +4967,8 @@ dependencies = [
 
 [[package]]
 name = "vitaminc-encrypt"
-version = "0.1.0-pre4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c4e3869aaf60ebb95ccbdfcf003985132325b4d1ac6f5d945ad2fbb9149afd3a"
+version = "0.1.0-pre4"
+source = "git+https://github.com/cipherstash/vitaminc?rev=4327afd#4327afd37b2991508ed0e2e160aebe84538d234c"
 dependencies = [
  "aws-lc-rs",
  "vitaminc-aead",
@@ -5037,12 +4979,12 @@ dependencies = [
 
 [[package]]
 name = "vitaminc-protected"
-version = "0.1.0-pre4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "af693c39d3cd1c818ef6267539433c6ceca87840b12d24124adbc9c8ecba1709"
+version = "0.1.0-pre4"
+source = "git+https://github.com/cipherstash/vitaminc?rev=4327afd#4327afd37b2991508ed0e2e160aebe84538d234c"
 dependencies = [
  "bitvec",
  "digest",
+ "opaque-debug",
  "serde",
  "serde_bytes",
  "subtle",
@@ -5052,9 +4994,8 @@ dependencies = [
 
 [[package]]
 name = "vitaminc-protected-derive"
-version = "0.1.0-pre4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e74520596b66eec546ef18d5376f6f18cdaf874caca9fa39e03eb12f9abb76fa"
+version = "0.1.0-pre4"
+source = "git+https://github.com/cipherstash/vitaminc?rev=4327afd#4327afd37b2991508ed0e2e160aebe84538d234c"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -5063,11 +5004,11 @@ dependencies = [
 
 [[package]]
 name = "vitaminc-random"
-version = "0.1.0-pre4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ea9de431cb93359d293ec7e70d05d87117a57f34bfc5bc94f040b81d4dd1afd6"
+version = "0.1.0-pre4"
+source = "git+https://github.com/cipherstash/vitaminc?rev=4327afd#4327afd37b2991508ed0e2e160aebe84538d234c"
 dependencies = [
- "rand 0.10.1",
+ "rand 0.9.2",
+ "rand_chacha 0.9.0",
  "thiserror 2.0.18",
  "vitaminc-protected",
  "vitaminc-random-derives",
@@ -5076,9 +5017,8 @@ dependencies = [
 
 [[package]]
 name = "vitaminc-random-derives"
-version = "0.1.0-pre4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "49d33ac4682235551d25c874525c20e03d4c863b39f556391f52f7a2083bfbdf"
+version = "0.1.0-pre4"
+source = "git+https://github.com/cipherstash/vitaminc?rev=4327afd#4327afd37b2991508ed0e2e160aebe84538d234c"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -5087,9 +5027,8 @@ dependencies = [
 
 [[package]]
 name = "vitaminc-traits"
-version = "0.1.0-pre4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c25a9e51d24c3befddd71e907dd4ae9f21cfbaae065fb0ef5202e5d21cd198d0"
+version = "0.1.0-pre4"
+source = "git+https://github.com/cipherstash/vitaminc?rev=4327afd#4327afd37b2991508ed0e2e160aebe84538d234c"
 dependencies = [
  "anyhow",
  "bytes",
@@ -5926,9 +5865,8 @@ dependencies = [
 
 [[package]]
 name = "zerokms-protocol"
-version = "0.12.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a2f045e2ee975a3d448419245c4621ea8844d2a004c63a96277181dc7cf8483"
+version = "0.34.0"
+source = "git+ssh://git@github.com/cipherstash/cipherstash-suite.git?branch=dan%2Fzerokms-unexpected-error-context#e9c9bb57415ea5b4e5bdd2db559ae84880cde6b9"
 dependencies = [
  "base64",
  "cipherstash-config",
@@ -5940,9 +5878,7 @@ dependencies = [
  "serde",
  "static_assertions",
  "thiserror 1.0.69",
- "utoipa",
  "uuid",
- "validator",
  "zeroize",
 ]
 

@@ -48,7 +48,7 @@ async fn main() -> Result<()> {
         .identifier(Identifier::new(&table_name, "value"))
         .column_config(
             ColumnConfig::build("value")
-                .casts_as(ColumnType::Json)
+                .casts_as(ColumnType::JsonB)
                 // FIXME: There is no convenience method for SteVec yet on Index
                 .add_index(Index::new(IndexType::SteVec {
                     prefix: "value".to_string(),
