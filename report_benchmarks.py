@@ -220,8 +220,9 @@ class BenchmarkReporter:
                 )
             },
             "GROUP_BY": {
-                "hmac_extractor": (
-                    "SELECT count(*) FROM {TABLE} GROUP BY eql_v2.hmac_256(value)",
+                "count_groups": (
+                    "SELECT count(*) FROM "
+                    "(SELECT 1 FROM {TABLE} GROUP BY eql_v2.hmac_256(value)) g",
                     ""
                 )
             },
@@ -322,18 +323,27 @@ class BenchmarkReporter:
                 )
             },
             "GROUP_BY": {
-                "hmac_extractor": (
-                    "GROUP BY in extractor form on `eql_v2.hmac_256(value)`",
+                "count_groups": (
+                    "GROUP BY in extractor form on `eql_v2.hmac_256(value)`, "
+                    "wrapped in `count(*)` to isolate aggregation cost from emit cost",
                     "Table: `string_encrypted_{rows}` with encrypted string values "
                     "(carrying an `hm` HMAC term, configured via the `unique` search index). "
-                    "Index: no index drives `GROUP BY` directly — hash aggregation is in-memory. "
-                    "Query: `GROUP BY eql_v2.hmac_256(value)`. The extractor's 32-byte HMAC "
-                    "group key fits in default `work_mem`, so the planner picks `HashAggregate` "
-                    "reliably across deployments. Natural-form `GROUP BY value` against an "
-                    "encrypted column has been removed from this bench because the planner "
-                    "estimates the hash table against the full ~1-2 KB ciphertext payload, "
-                    "exceeds default `work_mem`, and falls back to GroupAggregate + Sort — "
-                    "see §5 of the EQL query-performance guide."
+                    "Index: no index drives `GROUP BY` directly — hash aggregation is "
+                    "in-memory. The extractor's 32-byte HMAC group key fits in default "
+                    "`work_mem`, so the planner picks `HashAggregate` reliably across "
+                    "deployments. **Why the subquery wrapper.** The bench data is "
+                    "`fake::name::Name<EN>` — effectively unique per row, so a bare "
+                    "`SELECT count(*) FROM tbl GROUP BY eql_v2.hmac_256(value)` emits ~one "
+                    "row per input row. Wall-clock time on that shape is dominated by result "
+                    "emission (server-side row construction, network round-trip, sqlx "
+                    "deserialisation, bench iter-and-sum), not by the aggregation work the "
+                    "recipe is actually about. Wrapping the GROUP BY in `count(*)` keeps the "
+                    "inner HashAggregate identical but emits a single row, so the bench "
+                    "measures aggregation cost. Natural-form `GROUP BY value` against an "
+                    "encrypted column was removed from this bench in an earlier pass "
+                    "because the planner picks `GroupAggregate` + sort against the full "
+                    "~1-2 KB ciphertext payload at scale — see §5 of the EQL "
+                    "query-performance guide."
                 )
             },
             "JSON": {

@@ -10,20 +10,34 @@ use tokio::runtime::Runtime;
 // fits comfortably in `work_mem`. `HashAggregate` engages on every
 // deployment without `work_mem` tuning.
 //
-// The natural form (`GROUP BY value`) was removed from this bench
-// deliberately. Its plan choice degrades pathologically with row count:
-// the planner estimates the hash table against the full ~1-2 KB encrypted
-// payload, decides it won't fit in the default `work_mem = 4 MB`, and
-// falls back to `GroupAggregate` + sort. At 100k rows that's ~29 s vs the
-// extractor's ~80 ms; at 1M rows the natural form's sort runs for
-// minutes regardless of how `hash_encrypted` is implemented. Benching the
-// natural form measured the planner's cost model, not anything EQL
-// controls — and recommended practice is the extractor form anyway. See
-// `docs/reference/query-performance.md` §5 in the EQL repo.
+// The bench wraps the GROUP BY in a `count(*)` subquery:
+//
+//   SELECT count(*) FROM (SELECT 1 FROM tbl GROUP BY eql_v2.hmac_256(value)) g
+//
+// rather than running the bare `SELECT count(*) FROM tbl GROUP BY ...` form.
+// The bench tables are populated by `encrypt_string` with `fake` random
+// English names — effectively unique per row at high cardinality — so the
+// bare-GROUP BY shape emitted ~as many rows as the table size. Wall-clock
+// time was then dominated by result emission (server-side row construction,
+// network round-trip, sqlx deserialisation, the bench's iter-and-sum loop),
+// not by the per-row hash extraction or HashAggregate insert that the
+// recipe is actually about. Wrapping in `count(*)` keeps the inner
+// HashAggregate work identical (scan + hash + group) but emits a single row,
+// so the bench measures aggregation cost rather than emission cost.
+//
+// The natural form (`GROUP BY value` directly on `eql_v2_encrypted`) was
+// dropped from this bench in an earlier pass. The planner estimates the
+// hash table against the full ~1-2 KB encrypted payload, decides it won't
+// fit in the default `work_mem = 4 MB`, and falls back to `GroupAggregate`
+// + sort. At 100k rows that's ~29 s vs the extractor's tens of ms. The
+// natural form measured the planner's cost model, not EQL — and recommended
+// practice is the extractor form anyway. See §5 of
+// `docs/reference/query-performance.md` in the EQL repo.
 static QUERY_TEMPLATES: &[(&str, &str)] = &[
     (
-        "SELECT count(*) FROM {TABLE} GROUP BY eql_v2.hmac_256(value)",
-        "hmac_extractor",
+        "SELECT count(*) FROM \
+         (SELECT 1 FROM {TABLE} GROUP BY eql_v2.hmac_256(value)) g",
+        "count_groups",
     ),
 ];
 
