@@ -380,4 +380,109 @@ impl EncryptedQuery {
 
         Ok(decrypted)
     }
+
+    /// Run `EXPLAIN (FORMAT JSON)` on the bound query and return the parsed
+    /// plan as `serde_json::Value`. Used by each bench's startup pass to
+    /// record what the planner did with the canonical scenario shape — see
+    /// `ScenarioMetadata` / `write_metadata_file` for the captured fields.
+    pub async fn explain(&self, pool: &sqlx::PgPool) -> Result<serde_json::Value> {
+        let explain_sql = format!("EXPLAIN (FORMAT JSON) {}", self.statement);
+        let row: (Json<serde_json::Value>,) = sqlx::query_as(&explain_sql)
+            .bind(Json(&self.eql))
+            .fetch_one(pool)
+            .await?;
+        Ok(row.0 .0)
+    }
+
+    /// Serialise the bound parameter as a JSON value for metadata logging.
+    pub fn parameter_json(&self) -> Result<serde_json::Value> {
+        Ok(serde_json::to_value(&self.eql)?)
+    }
+}
+
+// --- Bench metadata sidecar ----------------------------------------------
+//
+// Each query bench writes a `results/query/<prefix>_metadata_<rows>.json`
+// sidecar alongside the criterion-generated `*_rows_*.json` file. The
+// sidecar captures, per scenario:
+//
+//   * `id`             — same string as criterion's benchmark id, so the
+//                        two files can be joined by id.
+//   * `query`          — the exact SQL the bench ran (template with $1
+//                        placeholders intact; placeholders are filled by
+//                        sqlx at execute time).
+//   * `parameters`     — list of bound values, serialised as JSON. For
+//                        the encrypted benches the parameter is the
+//                        EqlCiphertext payload; for plaintext / json the
+//                        list is typically empty.
+//   * `explain`        — output of `EXPLAIN (FORMAT JSON)` against the
+//                        bound query, captured once at startup before
+//                        the criterion loop runs.
+//   * `indexes_used`   — flat sorted list of every `Index Name` value
+//                        found anywhere in the EXPLAIN tree. Useful for
+//                        downstream analysis without re-parsing the
+//                        whole plan.
+
+#[derive(serde::Serialize)]
+pub struct ScenarioMetadata {
+    pub id: String,
+    pub query: String,
+    pub parameters: Vec<serde_json::Value>,
+    pub explain: serde_json::Value,
+    pub indexes_used: Vec<String>,
+}
+
+/// Walk an `EXPLAIN (FORMAT JSON)` tree and collect every `Index Name`.
+///
+/// PG's plan emits `"Index Name": "<name>"` on Index Scan, Bitmap Index
+/// Scan, and Index Only Scan nodes. We don't need to interpret which kind
+/// of scan it is here — just surface the names so the report (and a human
+/// debugging a slow bench) can see what the planner picked. Deduplicated
+/// and sorted for stable output.
+pub fn extract_indexes_used(explain: &serde_json::Value) -> Vec<String> {
+    let mut out = Vec::new();
+    collect_index_names(explain, &mut out);
+    out.sort();
+    out.dedup();
+    out
+}
+
+fn collect_index_names(node: &serde_json::Value, out: &mut Vec<String>) {
+    match node {
+        serde_json::Value::Object(map) => {
+            if let Some(serde_json::Value::String(name)) = map.get("Index Name") {
+                out.push(name.clone());
+            }
+            for v in map.values() {
+                collect_index_names(v, out);
+            }
+        }
+        serde_json::Value::Array(arr) => {
+            for v in arr {
+                collect_index_names(v, out);
+            }
+        }
+        _ => {}
+    }
+}
+
+/// Write the scenario metadata sidecar to
+/// `results/query/<prefix>_metadata_<rows>.json` (path relative to the
+/// bench process's current working directory, which `cargo criterion`
+/// sets to the package root).
+pub fn write_metadata_file(
+    prefix: &str,
+    target_rows: &str,
+    scenarios: Vec<ScenarioMetadata>,
+) -> Result<()> {
+    let dir = std::path::PathBuf::from("results/query");
+    std::fs::create_dir_all(&dir)?;
+    let path = dir.join(format!("{}_metadata_{}.json", prefix, target_rows));
+    let payload = serde_json::json!({
+        "target_rows": target_rows,
+        "scenarios": scenarios,
+    });
+    std::fs::write(&path, serde_json::to_string_pretty(&payload)?)?;
+    eprintln!("bench metadata written to {}", path.display());
+    Ok(())
 }

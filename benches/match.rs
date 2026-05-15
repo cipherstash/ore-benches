@@ -5,7 +5,10 @@ use cipherstash_client::{
     AutoStrategy,
 };
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use dbbenches::{init_scoped_cipher, EncryptedQuery, EncryptedQueryBuilder};
+use dbbenches::{
+    extract_indexes_used, init_scoped_cipher, write_metadata_file, EncryptedQuery,
+    EncryptedQueryBuilder, ScenarioMetadata,
+};
 use sqlx::postgres::PgPoolOptions;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
@@ -75,6 +78,30 @@ fn criterion_benchmark(c: &mut Criterion) {
         }
         queries
     });
+
+    // Capture per-scenario metadata (exact SQL, bound parameter, EXPLAIN
+    // plan, indexes used) before the criterion loop. Writes
+    // `results/query/match_metadata_<rows>.json`.
+    let metadata = rt.block_on(async {
+        let mut out = Vec::with_capacity(queries.len());
+        for (i, query) in queries.iter().enumerate() {
+            let (_, _, scenario) = QUERY_TEMPLATES[i];
+            let bench_id = format!("MATCH/match/{}/{}", scenario, target_rows);
+            let explain = query.explain(&pool).await.expect("EXPLAIN failed");
+            let indexes_used = extract_indexes_used(&explain);
+            let parameters = vec![query.parameter_json().expect("serialise parameter")];
+            out.push(ScenarioMetadata {
+                id: bench_id,
+                query: query.statement.clone(),
+                parameters,
+                explain,
+                indexes_used,
+            });
+        }
+        out
+    });
+    write_metadata_file("match", &target_rows, metadata)
+        .expect("failed to write bench metadata sidecar");
 
     let mut group = c.benchmark_group("MATCH");
     group.sample_size(10);

@@ -1,5 +1,7 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use dbbenches::{extract_indexes_used, write_metadata_file, ScenarioMetadata};
 use sqlx::postgres::PgPoolOptions;
+use sqlx::types::Json;
 use sqlx::Row;
 use tokio::runtime::Runtime;
 
@@ -132,6 +134,67 @@ fn criterion_benchmark(c: &mut Criterion) {
         "SELECT eql_v2.hmac_256(value, '{}'), count(*) FROM {table_name} GROUP BY 1",
         selector.sel
     );
+
+    // Capture per-scenario metadata before the criterion loop. Writes
+    // `results/query/json_metadata_<rows>.json`.
+    let metadata_scenarios = rt.block_on(async {
+        let mut out: Vec<ScenarioMetadata> = Vec::with_capacity(3);
+
+        async fn explain_one(
+            pool: &sqlx::PgPool,
+            query: &str,
+            bind: Option<&str>,
+        ) -> serde_json::Value {
+            let explain_sql = format!("EXPLAIN (FORMAT JSON) {}", query);
+            let row: (Json<serde_json::Value>,) = if let Some(b) = bind {
+                sqlx::query_as(&explain_sql)
+                    .bind(b)
+                    .fetch_one(pool)
+                    .await
+                    .expect("EXPLAIN failed")
+            } else {
+                sqlx::query_as(&explain_sql)
+                    .fetch_one(pool)
+                    .await
+                    .expect("EXPLAIN failed")
+            };
+            row.0 .0
+        }
+
+        let explain = explain_one(&pool, &q_field_eq, Some(&needle)).await;
+        let indexes_used = extract_indexes_used(&explain);
+        out.push(ScenarioMetadata {
+            id: format!("JSON/json/field_eq/{}", target_rows),
+            query: q_field_eq.clone(),
+            parameters: vec![serde_json::Value::String(needle.clone())],
+            explain,
+            indexes_used,
+        });
+
+        let explain = explain_one(&pool, &q_field_extract, None).await;
+        let indexes_used = extract_indexes_used(&explain);
+        out.push(ScenarioMetadata {
+            id: format!("JSON/json/field_extract/{}", target_rows),
+            query: q_field_extract.clone(),
+            parameters: Vec::new(),
+            explain,
+            indexes_used,
+        });
+
+        let explain = explain_one(&pool, &q_field_group_by, None).await;
+        let indexes_used = extract_indexes_used(&explain);
+        out.push(ScenarioMetadata {
+            id: format!("JSON/json/field_group_by/{}", target_rows),
+            query: q_field_group_by.clone(),
+            parameters: Vec::new(),
+            explain,
+            indexes_used,
+        });
+
+        out
+    });
+    write_metadata_file("json", &target_rows, metadata_scenarios)
+        .expect("failed to write bench metadata sidecar");
 
     let mut group = c.benchmark_group("JSON");
     group.sample_size(10);

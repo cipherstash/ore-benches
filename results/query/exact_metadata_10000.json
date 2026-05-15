@@ -1,0 +1,99 @@
+{
+  "scenarios": [
+    {
+      "explain": [
+        {
+          "Plan": {
+            "Async Capable": false,
+            "Node Type": "Limit",
+            "Parallel Aware": false,
+            "Plan Rows": 1,
+            "Plan Width": 1164,
+            "Plans": [
+              {
+                "Alias": "string_encrypted_10000",
+                "Async Capable": false,
+                "Index Cond": "(((value).data ->> 'hm'::text) = '9b50b28ba1880a29710f2713a7afa5fb67d3f44d65357495b1f65bf5bdabb02e'::text)",
+                "Index Name": "string_encrypted_10000_hash_index",
+                "Node Type": "Index Scan",
+                "Parallel Aware": false,
+                "Parent Relationship": "Outer",
+                "Plan Rows": 1,
+                "Plan Width": 1164,
+                "Relation Name": "string_encrypted_10000",
+                "Scan Direction": "Forward",
+                "Startup Cost": 0.0,
+                "Total Cost": 8.02
+              }
+            ],
+            "Startup Cost": 0.0,
+            "Total Cost": 8.02
+          }
+        }
+      ],
+      "id": "EXACT/exact/eql_cast/10000",
+      "indexes_used": [
+        "string_encrypted_10000_hash_index"
+      ],
+      "parameters": [
+        {
+          "hm": "9b50b28ba1880a29710f2713a7afa5fb67d3f44d65357495b1f65bf5bdabb02e",
+          "i": {
+            "c": "value",
+            "t": "string_encrypted_10000"
+          },
+          "v": 2
+        }
+      ],
+      "query": "SELECT value FROM string_encrypted_10000 WHERE value = $1 LIMIT 1"
+    },
+    {
+      "explain": [
+        {
+          "Plan": {
+            "Async Capable": false,
+            "Node Type": "Limit",
+            "Parallel Aware": false,
+            "Plan Rows": 1,
+            "Plan Width": 1164,
+            "Plans": [
+              {
+                "Alias": "string_encrypted_10000",
+                "Async Capable": false,
+                "Index Cond": "(((value).data ->> 'hm'::text) = '9b50b28ba1880a29710f2713a7afa5fb67d3f44d65357495b1f65bf5bdabb02e'::text)",
+                "Index Name": "string_encrypted_10000_hash_index",
+                "Node Type": "Index Scan",
+                "Parallel Aware": false,
+                "Parent Relationship": "Outer",
+                "Plan Rows": 1,
+                "Plan Width": 1164,
+                "Relation Name": "string_encrypted_10000",
+                "Scan Direction": "Forward",
+                "Startup Cost": 0.0,
+                "Total Cost": 8.02
+              }
+            ],
+            "Startup Cost": 0.0,
+            "Total Cost": 8.02
+          }
+        }
+      ],
+      "id": "EXACT/exact/eql_hash/10000",
+      "indexes_used": [
+        "string_encrypted_10000_hash_index"
+      ],
+      "parameters": [
+        {
+          "hm": "9b50b28ba1880a29710f2713a7afa5fb67d3f44d65357495b1f65bf5bdabb02e",
+          "i": {
+            "c": "value",
+            "t": "string_encrypted_10000"
+          },
+          "v": 2
+        }
+      ],
+      "query": "SELECT value FROM string_encrypted_10000 WHERE eql_v2.hmac_256(value) = eql_v2.hmac_256($1::jsonb) LIMIT 1"
+    }
+  ],
+  "target_rows": "10000"
+}

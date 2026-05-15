@@ -1,5 +1,7 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use dbbenches::{extract_indexes_used, write_metadata_file, ScenarioMetadata};
 use sqlx::postgres::PgPoolOptions;
+use sqlx::types::Json;
 use sqlx::Row;
 use tokio::runtime::Runtime;
 
@@ -75,14 +77,58 @@ fn criterion_benchmark(c: &mut Criterion) {
             .expect("Failed to connect to database")
     });
 
+    // Build per-scenario queries up front so we can also run EXPLAIN once
+    // each before the criterion loop opens. The EXPLAIN pass writes a
+    // `results/query/group_by_metadata_<rows>.json` sidecar capturing the
+    // exact SQL, the planner's chosen plan, and any indexes the planner
+    // picked. See lib.rs::write_metadata_file for the schema.
+    let scenarios: Vec<(String, String)> = QUERY_TEMPLATES
+        .iter()
+        .map(|(query_template, scenario, base_table)| {
+            let table_name = format!("{}{}", base_table, table_suffix);
+            let query_str = query_template.replace("{TABLE}", &table_name);
+            let bench_id = format!("GROUP_BY/group_by/{}/{}", scenario, target_rows);
+            (bench_id, query_str)
+        })
+        .collect();
+
+    let metadata = rt.block_on(async {
+        let mut out = Vec::with_capacity(scenarios.len());
+        for (bench_id, query_str) in &scenarios {
+            let explain_sql = format!("EXPLAIN (FORMAT JSON) {}", query_str);
+            let plan: (Json<serde_json::Value>,) = sqlx::query_as(&explain_sql)
+                .fetch_one(&pool)
+                .await
+                .expect("EXPLAIN failed for bench scenario");
+            let explain = plan.0 .0;
+            let indexes_used = extract_indexes_used(&explain);
+            out.push(ScenarioMetadata {
+                id: bench_id.clone(),
+                query: query_str.clone(),
+                parameters: Vec::new(),
+                explain,
+                indexes_used,
+            });
+        }
+        out
+    });
+
+    write_metadata_file("group_by", &target_rows, metadata)
+        .expect("failed to write bench metadata sidecar");
+
     let mut group = c.benchmark_group("GROUP_BY");
     group.sample_size(10);
 
-    for (query_template, scenario, base_table) in QUERY_TEMPLATES {
-        let table_name = format!("{}{}", base_table, table_suffix);
-        let query_str = query_template.replace("{TABLE}", &table_name);
-
-        group.bench_function(format!("group_by/{}/{}", scenario, target_rows), |b| {
+    for (bench_id, query_str) in scenarios {
+        // bench_id is e.g. "GROUP_BY/group_by/count_groups_encrypted/100000".
+        // criterion's group.bench_function joins the group name ("GROUP_BY")
+        // with the function name we pass; strip the leading "GROUP_BY/" so
+        // it doesn't get doubled.
+        let function_name = bench_id
+            .strip_prefix("GROUP_BY/")
+            .expect("bench_id missing GROUP_BY/ prefix")
+            .to_string();
+        group.bench_function(function_name, |b| {
             b.to_async(&rt).iter(|| async {
                 let rows = sqlx::query(&query_str)
                     .fetch_all(&pool)
