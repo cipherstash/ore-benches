@@ -102,12 +102,18 @@ fn criterion_benchmark(c: &mut Criterion) {
                 .expect("EXPLAIN failed for bench scenario");
             let explain = plan.0 .0;
             let indexes_used = extract_indexes_used(&explain);
+            let rows = sqlx::query(query_str)
+                .fetch_all(&pool)
+                .await
+                .expect("execute for row-count failed");
+            let rows_returned = rows.len() as u64;
             out.push(ScenarioMetadata {
                 id: bench_id.clone(),
                 query: query_str.clone(),
                 parameters: Vec::new(),
                 explain,
                 indexes_used,
+                rows_returned,
             });
         }
         out

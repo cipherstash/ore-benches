@@ -430,6 +430,11 @@ pub struct ScenarioMetadata {
     pub parameters: Vec<serde_json::Value>,
     pub explain: serde_json::Value,
     pub indexes_used: Vec<String>,
+    /// Actual row count returned by a single pre-bench execution of the
+    /// query. The cost (one extra round-trip per scenario at startup) is
+    /// trivial relative to criterion's warmup phase, and gives us a real
+    /// number rather than the planner's estimate from `Plan Rows`.
+    pub rows_returned: u64,
 }
 
 /// Walk an `EXPLAIN (FORMAT JSON)` tree and collect every `Index Name`.

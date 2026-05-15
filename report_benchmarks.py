@@ -63,6 +63,10 @@ class ScenarioMetadata:
     parameters: list      # bound values as JSON (encrypted payload for EQL scenarios)
     explain: list         # PG's EXPLAIN (FORMAT JSON) output (top-level array)
     indexes_used: List[str]
+    # Actual row count from a one-shot pre-bench execution. None when the
+    # sidecar predates the actual-rows capture and we're falling back to
+    # the planner estimate from `explain[0]["Plan"]["Plan Rows"]`.
+    rows_returned: Optional[int] = None
 
 
 class BenchmarkReporter:
@@ -183,6 +187,7 @@ class BenchmarkReporter:
                     parameters=s.get("parameters", []),
                     explain=s.get("explain", []),
                     indexes_used=s.get("indexes_used", []),
+                    rows_returned=s.get("rows_returned"),
                 )
 
     def format_time(self, ns: float, include_indicator: bool = True) -> str:
@@ -850,8 +855,18 @@ class BenchmarkReporter:
         if has_slow_queries:
             f.write("*⚠️ = Query time exceeds 100ms*\n\n")
 
-        f.write("| Data Set Size | Rows (est.) | Query Time (no decrypt) | Query Time (with decrypt) |\n")
-        f.write("|---------------|-------------|-------------------------|---------------------------|\n")
+        # Decide column header based on whether any tier has actual rows
+        # data (preferred) or only planner estimates from EXPLAIN.
+        any_actual = any(
+            (m := self.metadata.get((query_type, query_name, rc))) is not None
+            and m.rows_returned is not None
+            for rc in row_counts
+        )
+        rows_header = "Rows Returned" if any_actual else "Rows (est.)"
+        f.write(f"| Data Set Size | {rows_header} | Query Time (no decrypt) | Query Time (with decrypt) |\n")
+        f.write("|---------------|-")
+        f.write("-" * len(rows_header))
+        f.write("-|-------------------------|---------------------------|\n")
 
         for row_count in row_counts:
             no_decrypt = next((r for r in results if r.row_count == row_count and not r.decrypt), None)
@@ -861,15 +876,30 @@ class BenchmarkReporter:
             with_decrypt_str = self.format_time(with_decrypt.mean_ns) if with_decrypt else "N/A"
 
             meta = self.metadata.get((query_type, query_name, row_count))
-            rows_est = self.planner_estimated_rows(meta.explain) if meta else None
-            rows_str = f"{rows_est:,}" if rows_est is not None else "—"
+            # Prefer the actual row count from a pre-bench execute; fall
+            # back to the planner's estimate when the sidecar predates
+            # actual-rows capture, with an explicit (est.) suffix so the
+            # number isn't misread as authoritative.
+            if meta is not None and meta.rows_returned is not None:
+                rows_str = f"{meta.rows_returned:,}"
+            elif meta is not None:
+                planner = self.planner_estimated_rows(meta.explain)
+                rows_str = f"{planner:,} (est.)" if planner is not None else "—"
+            else:
+                rows_str = "—"
 
             f.write(f"| {row_count:,} | {rows_str} | {no_decrypt_str} | {with_decrypt_str} |\n")
 
         f.write("\n")
-        f.write("_Rows (est.) is the planner's estimate from `EXPLAIN` "
-                "captured before the bench loop. For LIMIT-bounded queries it "
-                "matches the LIMIT; for aggregates it's the estimated group count._\n\n")
+        if not any_actual:
+            f.write("_Rows are the planner's estimate from `EXPLAIN` "
+                    "captured before the bench loop; re-run the bench with the "
+                    "current source to capture actual row counts._\n\n")
+        else:
+            f.write("_Rows Returned is the actual count from a one-shot pre-bench "
+                    "execution. For LIMIT-bounded queries it matches the LIMIT (or "
+                    "is lower when the table doesn't have enough matching rows); "
+                    "for aggregates wrapped in `count(*)` it's 1._\n\n")
 
         # Per-tier EXPLAIN plans (collapsed). Useful when the plan shape
         # changes across data sizes — e.g. the ORE bench, where the planner

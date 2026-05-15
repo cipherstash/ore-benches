@@ -147,12 +147,18 @@ fn criterion_benchmark(c: &mut Criterion) {
             let explain = query.explain(&pool).await.expect("EXPLAIN failed");
             let indexes_used = extract_indexes_used(&explain);
             let parameters = vec![query.parameter_json().expect("serialise parameter")];
+            let rows = query
+                .execute(&pool)
+                .await
+                .expect("execute for row-count failed");
+            let rows_returned = rows.len() as u64;
             out.push(ScenarioMetadata {
                 id: bench_id,
                 query: query.statement.clone(),
                 parameters,
                 explain,
                 indexes_used,
+                rows_returned,
             });
         }
         out

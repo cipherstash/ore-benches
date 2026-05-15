@@ -163,32 +163,48 @@ fn criterion_benchmark(c: &mut Criterion) {
 
         let explain = explain_one(&pool, &q_field_eq, Some(&needle)).await;
         let indexes_used = extract_indexes_used(&explain);
+        let rows = sqlx::query(&q_field_eq)
+            .bind(&needle)
+            .fetch_all(&pool)
+            .await
+            .expect("field_eq row-count execute failed");
         out.push(ScenarioMetadata {
             id: format!("JSON/json/field_eq/{}", target_rows),
             query: q_field_eq.clone(),
             parameters: vec![serde_json::Value::String(needle.clone())],
             explain,
             indexes_used,
+            rows_returned: rows.len() as u64,
         });
 
         let explain = explain_one(&pool, &q_field_extract, None).await;
         let indexes_used = extract_indexes_used(&explain);
+        let rows = sqlx::query(&q_field_extract)
+            .fetch_all(&pool)
+            .await
+            .expect("field_extract row-count execute failed");
         out.push(ScenarioMetadata {
             id: format!("JSON/json/field_extract/{}", target_rows),
             query: q_field_extract.clone(),
             parameters: Vec::new(),
             explain,
             indexes_used,
+            rows_returned: rows.len() as u64,
         });
 
         let explain = explain_one(&pool, &q_field_group_by, None).await;
         let indexes_used = extract_indexes_used(&explain);
+        let rows = sqlx::query(&q_field_group_by)
+            .fetch_all(&pool)
+            .await
+            .expect("field_group_by row-count execute failed");
         out.push(ScenarioMetadata {
             id: format!("JSON/json/field_group_by/{}", target_rows),
             query: q_field_group_by.clone(),
             parameters: Vec::new(),
             explain,
             indexes_used,
+            rows_returned: rows.len() as u64,
         });
 
         out
