@@ -260,9 +260,33 @@ fi
 echo "Dropping indexes..."
 docker exec -i ore-benches-postgres psql -U postgres -d postgres < sql/indexes/${TABLE_NAME}_down.sql
 
-ROWS_TO_INSERT=$((TARGET_ROWS - CURRENT_ROWS))
-echo "Inserting $ROWS_TO_INSERT additional rows..."
-NUM_RECORDS=$ROWS_TO_INSERT TABLE_SUFFIX="_${TARGET_ROWS}" ./target/release/$BINARY_NAME
+# ZeroKMS occasionally returns "Unexpected error" mid-stream on long encrypt
+# runs (typically 150-400k rows in), killing the binary. The binary writes
+# rows transactionally per batch, so a re-run from the current row count
+# picks up where we left off. Retry the inner binary until the table
+# reaches the target (or MAX_ATTEMPTS — typically <5 needed even at 10M).
+MAX_ATTEMPTS=30
+attempt=1
+while true; do
+  CURRENT_ROWS=$(docker exec ore-benches-postgres psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM $TABLE_NAME;" | tr -d ' ')
+  if [ "$CURRENT_ROWS" -ge "$TARGET_ROWS" ]; then
+    echo "Table reached $CURRENT_ROWS rows (>= $TARGET_ROWS)."
+    break
+  fi
+  if [ "$attempt" -gt "$MAX_ATTEMPTS" ]; then
+    echo "Error: exceeded $MAX_ATTEMPTS attempts, table has $CURRENT_ROWS / $TARGET_ROWS rows."
+    exit 1
+  fi
+  ROWS_TO_INSERT=$((TARGET_ROWS - CURRENT_ROWS))
+  echo "Attempt $attempt: inserting $ROWS_TO_INSERT additional rows..."
+  if NUM_RECORDS=$ROWS_TO_INSERT TABLE_SUFFIX="_${TARGET_ROWS}" ./target/release/$BINARY_NAME; then
+    echo "Attempt $attempt: succeeded."
+  else
+    echo "Attempt $attempt: failed (likely ZeroKMS transient), retrying after backoff..."
+    sleep 5
+  fi
+  attempt=$((attempt + 1))
+done
 
 echo "Creating indexes..."
 docker exec -i ore-benches-postgres psql -U postgres -d postgres < sql/indexes/${TABLE_NAME}_up.sql
