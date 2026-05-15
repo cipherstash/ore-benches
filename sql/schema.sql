@@ -33,6 +33,29 @@ CREATE TABLE IF NOT EXISTS string_plaintext (
     value TEXT NOT NULL
 );
 
+-- Sized plaintext variants for the GROUP BY plaintext-baseline bench.
+-- Populated via SQL (`md5(random()::text)`) by `prepare:string_plaintext`;
+-- no encryption-client dependency so they're cheap to populate.
+CREATE TABLE IF NOT EXISTS string_plaintext_10000 (
+    id SERIAL PRIMARY KEY,
+    value TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS string_plaintext_100000 (
+    id SERIAL PRIMARY KEY,
+    value TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS string_plaintext_1000000 (
+    id SERIAL PRIMARY KEY,
+    value TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS string_plaintext_10000000 (
+    id SERIAL PRIMARY KEY,
+    value TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS string_encrypted (
     id SERIAL PRIMARY KEY,
     value eql_v2_encrypted NOT NULL

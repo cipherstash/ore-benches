@@ -283,6 +283,63 @@ run = "mise run prepare:_table integer_encrypted encrypt_int $1"
 description = "Prepare json_ste_vec_small_encrypted table with target row count"
 run = "mise run prepare:_table json_ste_vec_small_encrypted encrypt_ste_vec_small $1"
 
+[tasks."prepare:string_plaintext"]
+description = "Prepare string_plaintext_<size> table with random high-cardinality strings (md5)"
+depends = ["postgres"]
+run = """
+#!/usr/bin/env bash
+set -e
+
+TARGET_ROWS="$1"
+
+if [ -z "$TARGET_ROWS" ]; then
+  echo "Error: target row count argument required"
+  echo "Usage: mise run prepare:string_plaintext <target_rows>"
+  exit 1
+fi
+
+case "$TARGET_ROWS" in
+  10000|100000|1000000|10000000)
+    ;;
+  *)
+    echo "Error: TARGET_ROWS must be one of: 10000, 100000, 1000000, 10000000"
+    exit 1
+    ;;
+esac
+
+TABLE_NAME="string_plaintext_${TARGET_ROWS}"
+
+echo "Waiting for PostgreSQL to be ready..."
+until docker exec ore-benches-postgres pg_isready -U postgres > /dev/null 2>&1; do
+  sleep 1
+done
+
+CURRENT_ROWS=$(docker exec ore-benches-postgres psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM $TABLE_NAME;" | tr -d ' ')
+
+echo "Current rows in $TABLE_NAME: $CURRENT_ROWS"
+echo "Target rows: $TARGET_ROWS"
+
+if [ "$CURRENT_ROWS" -ge "$TARGET_ROWS" ]; then
+  echo "Table already has $CURRENT_ROWS rows (>= $TARGET_ROWS). No action needed."
+  exit 0
+fi
+
+ROWS_TO_INSERT=$((TARGET_ROWS - CURRENT_ROWS))
+echo "Inserting $ROWS_TO_INSERT random rows (md5 of (random, ordinal))..."
+
+# md5(random()::text || g::text) is high-cardinality 32-char hex per row.
+# Single SQL insert in PG is far faster than per-row roundtrips — completes
+# 10M rows in tens of seconds, no encryption-client dependency.
+docker exec ore-benches-postgres psql -v ON_ERROR_STOP=1 -U postgres -d postgres -c "
+  INSERT INTO $TABLE_NAME (value)
+  SELECT md5(random()::text || g::text)
+  FROM generate_series(1, $ROWS_TO_INSERT) g;
+"
+
+FINAL_ROWS=$(docker exec ore-benches-postgres psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM $TABLE_NAME;" | tr -d ' ')
+echo "Preparation complete! Final row count: $FINAL_ROWS"
+"""
+
 [tasks."bench:query:ore"]
 description = "Run ORE query benchmark"
 run = """
@@ -403,6 +460,9 @@ fi
 
 echo "Preparing string_encrypted table with $TARGET_ROWS rows..."
 mise run prepare:string_encrypted "$TARGET_ROWS"
+
+echo "Preparing string_plaintext table with $TARGET_ROWS rows (plaintext baseline)..."
+mise run prepare:string_plaintext "$TARGET_ROWS"
 
 echo "Cleaning old benchmark data..."
 rm -rf target/criterion/data/main/GROUP_BY target/criterion/reports/GROUP_BY

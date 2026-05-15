@@ -167,7 +167,7 @@ ON string_encrypted_10000 USING GIN (
 
 ### GROUP_BY Queries
 
-#### count_groups
+#### count_groups_encrypted
 
 **Description:** GROUP BY in extractor form on `eql_v2.hmac_256(value)`, wrapped in `count(*)` to isolate aggregation cost from emit cost
 
@@ -176,7 +176,7 @@ ON string_encrypted_10000 USING GIN (
 SELECT count(*) FROM (SELECT 1 FROM {TABLE} GROUP BY eql_v2.hmac_256(value)) g
 ```
 
-**Table: `string_encrypted_{rows}` with encrypted string values (carrying an `hm` HMAC term, configured via the `unique` search index). Index: no index drives `GROUP BY` directly — hash aggregation is in-memory. The extractor's 32-byte HMAC group key fits in default `work_mem`, so the planner picks `HashAggregate` reliably across deployments. **Why the subquery wrapper.** The bench data is `fake::name::Name<EN>` — effectively unique per row, so a bare `SELECT count(*) FROM tbl GROUP BY eql_v2.hmac_256(value)` emits ~one row per input row. Wall-clock time on that shape is dominated by result emission (server-side row construction, network round-trip, sqlx deserialisation, bench iter-and-sum), not by the aggregation work the recipe is actually about. Wrapping the GROUP BY in `count(*)` keeps the inner HashAggregate identical but emits a single row, so the bench measures aggregation cost. Natural-form `GROUP BY value` against an encrypted column was removed from this bench in an earlier pass because the planner picks `GroupAggregate` + sort against the full ~1-2 KB ciphertext payload at scale — see §5 of the EQL query-performance guide.**
+**Table: `string_encrypted_{rows}` with encrypted string values (carrying an `hm` HMAC term, configured via the `unique` search index). Index: no index drives `GROUP BY` directly — hash aggregation is in-memory. The extractor's 32-byte HMAC group key fits in default `work_mem`, so the planner picks `HashAggregate` reliably across deployments. **Why the subquery wrapper.** The bench data is `fake::name::Name<EN>` — effectively unique per row, so a bare `SELECT count(*) FROM tbl GROUP BY eql_v2.hmac_256(value)` emits ~one row per input row. Wall-clock time on that shape is dominated by result emission (server-side row construction, network round-trip, sqlx deserialisation, bench iter-and-sum), not by the aggregation work the recipe is actually about. Wrapping the GROUP BY in `count(*)` keeps the inner HashAggregate identical but emits a single row, so the bench measures aggregation cost. The companion `count_groups_plaintext` scenario runs the same query shape against an unencrypted column for comparison. Natural-form `GROUP BY value` against an encrypted column was removed from this bench in an earlier pass because the planner picks `GroupAggregate` + sort against the full ~1-2 KB ciphertext payload at scale — see §5 of the EQL query-performance guide.**
 
 **Indexes:**
 ```sql
@@ -197,12 +197,32 @@ ON string_encrypted_10000 USING GIN (
 
 | Data Set Size | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|-------------------------|---------------------------|
-| 10,000 | 5.38ms | N/A |
-| 100,000 | 63.34ms | N/A |
-| 1,000,000 | ⚠️ 792.58ms | N/A |
-| 10,000,000 | ⚠️ 10.990s | N/A |
+| 10,000 | 4.95ms | N/A |
+| 100,000 | 66.51ms | N/A |
+| 1,000,000 | ⚠️ 829.22ms | N/A |
 
-![Query Performance - GROUP_BY/count_groups](query_group_by_count_groups_chart.png)
+![Query Performance - GROUP_BY/count_groups_encrypted](query_group_by_count_groups_encrypted_chart.png)
+
+#### count_groups_plaintext
+
+**Description:** Plaintext baseline: GROUP BY on a plain TEXT column, same query shape as the encrypted scenario
+
+**SQL Query:**
+```sql
+SELECT count(*) FROM (SELECT 1 FROM {TABLE} GROUP BY value) g
+```
+
+**Table: `string_plaintext_{rows}` with unencrypted high-cardinality random strings (`md5(random()::text || ordinal)`). Populated via SQL by `mise run prepare:string_plaintext` — no encryption-client dependency. Index: none. Same `SELECT count(*) FROM (SELECT 1 ... GROUP BY value) g` shape as the encrypted scenario, so the wall-clock delta between this and `count_groups_encrypted` is the EQL recipe's overhead relative to a bare-PG aggregate on a TEXT column at the same row count and cardinality.**
+
+*⚠️ = Query time exceeds 100ms*
+
+| Data Set Size | Query Time (no decrypt) | Query Time (with decrypt) |
+|---------------|-------------------------|---------------------------|
+| 10,000 | 3.21ms | N/A |
+| 100,000 | 32.53ms | N/A |
+| 1,000,000 | ⚠️ 727.76ms | N/A |
+
+![Query Performance - GROUP_BY/count_groups_plaintext](query_group_by_count_groups_plaintext_chart.png)
 
 ### MATCH Queries
 

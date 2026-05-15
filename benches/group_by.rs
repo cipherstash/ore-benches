@@ -3,41 +3,53 @@ use sqlx::postgres::PgPoolOptions;
 use sqlx::Row;
 use tokio::runtime::Runtime;
 
-// The canonical `GROUP BY` recipe on an encrypted column is the extractor
-// form: `GROUP BY eql_v2.hmac_256(value)`. The body of `eql_v2.hmac_256` is
-// inlinable single-statement SQL (`(val).data ->> 'hm'`), so the planner
-// folds it into the aggregation and the group key is a 32-byte HMAC that
-// fits comfortably in `work_mem`. `HashAggregate` engages on every
-// deployment without `work_mem` tuning.
+// Two scenarios, same query shape, side-by-side encrypted vs plaintext.
 //
-// The bench wraps the GROUP BY in a `count(*)` subquery:
+//   count_groups_encrypted — `GROUP BY eql_v2.hmac_256(value)` against
+//                            `string_encrypted_<N>` (encrypted column,
+//                            inlinable HMAC extractor).
 //
-//   SELECT count(*) FROM (SELECT 1 FROM tbl GROUP BY eql_v2.hmac_256(value)) g
+//   count_groups_plaintext — `GROUP BY value` against `string_plaintext_<N>`
+//                            (plain TEXT column, no encryption). The
+//                            baseline: "what would this cost without
+//                            encryption?" The plaintext data is
+//                            high-cardinality `md5(random()::text)` so the
+//                            cardinality matches the encrypted side (fake
+//                            random names give similar ~99% uniqueness).
 //
-// rather than running the bare `SELECT count(*) FROM tbl GROUP BY ...` form.
-// The bench tables are populated by `encrypt_string` with `fake` random
-// English names — effectively unique per row at high cardinality — so the
-// bare-GROUP BY shape emitted ~as many rows as the table size. Wall-clock
-// time was then dominated by result emission (server-side row construction,
-// network round-trip, sqlx deserialisation, the bench's iter-and-sum loop),
-// not by the per-row hash extraction or HashAggregate insert that the
-// recipe is actually about. Wrapping in `count(*)` keeps the inner
-// HashAggregate work identical (scan + hash + group) but emits a single row,
-// so the bench measures aggregation cost rather than emission cost.
+// Both queries wrap the GROUP BY in `count(*)`:
 //
-// The natural form (`GROUP BY value` directly on `eql_v2_encrypted`) was
-// dropped from this bench in an earlier pass. The planner estimates the
-// hash table against the full ~1-2 KB encrypted payload, decides it won't
-// fit in the default `work_mem = 4 MB`, and falls back to `GroupAggregate`
-// + sort. At 100k rows that's ~29 s vs the extractor's tens of ms. The
-// natural form measured the planner's cost model, not EQL — and recommended
-// practice is the extractor form anyway. See §5 of
-// `docs/reference/query-performance.md` in the EQL repo.
-static QUERY_TEMPLATES: &[(&str, &str)] = &[
+//   SELECT count(*) FROM (SELECT 1 FROM tbl GROUP BY <key>) g
+//
+// rather than the bare `SELECT count(*) FROM tbl GROUP BY <key>` form. With
+// effectively-unique rows the bare form emits ~one row per input row, so
+// wall-clock is bottlenecked by result emission (server-side row
+// construction, network round-trip, sqlx deserialisation, the bench's own
+// iter-and-sum), not by aggregation work. The subquery wrapper keeps the
+// inner HashAggregate identical but emits one row regardless of
+// cardinality — both scenarios measure aggregation cost cleanly.
+//
+// The natural form (`GROUP BY value` against `eql_v2_encrypted`) was dropped
+// from this bench earlier. The planner picks `GroupAggregate` + sort against
+// the full ~1-2 KB ciphertext payload at scale; the cost is the planner's
+// work_mem fallback, not anything EQL controls. See §5 of EQL's
+// `docs/reference/query-performance.md`.
+//
+// QUERY_TEMPLATES entries: (sql_template, scenario_name, base_table_name).
+// The bench substitutes `{TABLE}` with `<base_table_name>_<TARGET_ROWS>` so
+// each scenario runs against its own table family.
+static QUERY_TEMPLATES: &[(&str, &str, &str)] = &[
     (
         "SELECT count(*) FROM \
          (SELECT 1 FROM {TABLE} GROUP BY eql_v2.hmac_256(value)) g",
-        "count_groups",
+        "count_groups_encrypted",
+        "string_encrypted",
+    ),
+    (
+        "SELECT count(*) FROM \
+         (SELECT 1 FROM {TABLE} GROUP BY value) g",
+        "count_groups_plaintext",
+        "string_plaintext",
     ),
 ];
 
@@ -51,7 +63,6 @@ fn criterion_benchmark(c: &mut Criterion) {
         "10000" | "100000" | "1000000" | "10000000" => format!("_{}", target_rows),
         _ => String::new(),
     };
-    let table_name = format!("string_encrypted{}", table_suffix);
 
     let pool = rt.block_on(async {
         let database_url =
@@ -67,7 +78,8 @@ fn criterion_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("GROUP_BY");
     group.sample_size(10);
 
-    for (query_template, scenario) in QUERY_TEMPLATES {
+    for (query_template, scenario, base_table) in QUERY_TEMPLATES {
+        let table_name = format!("{}{}", base_table, table_suffix);
         let query_str = query_template.replace("{TABLE}", &table_name);
 
         group.bench_function(format!("group_by/{}/{}", scenario, target_rows), |b| {
@@ -76,7 +88,7 @@ fn criterion_benchmark(c: &mut Criterion) {
                     .fetch_all(&pool)
                     .await
                     .expect("group_by query failed");
-                // Drain the result to force the aggregation to materialise.
+                // Drain the single-row result to force the aggregation to materialise.
                 black_box(rows.iter().map(|r| r.get::<i64, _>(0)).sum::<i64>())
             })
         });

@@ -220,9 +220,14 @@ class BenchmarkReporter:
                 )
             },
             "GROUP_BY": {
-                "count_groups": (
+                "count_groups_encrypted": (
                     "SELECT count(*) FROM "
                     "(SELECT 1 FROM {TABLE} GROUP BY eql_v2.hmac_256(value)) g",
+                    ""
+                ),
+                "count_groups_plaintext": (
+                    "SELECT count(*) FROM "
+                    "(SELECT 1 FROM {TABLE} GROUP BY value) g",
                     ""
                 )
             },
@@ -323,7 +328,7 @@ class BenchmarkReporter:
                 )
             },
             "GROUP_BY": {
-                "count_groups": (
+                "count_groups_encrypted": (
                     "GROUP BY in extractor form on `eql_v2.hmac_256(value)`, "
                     "wrapped in `count(*)` to isolate aggregation cost from emit cost",
                     "Table: `string_encrypted_{rows}` with encrypted string values "
@@ -339,11 +344,24 @@ class BenchmarkReporter:
                     "deserialisation, bench iter-and-sum), not by the aggregation work the "
                     "recipe is actually about. Wrapping the GROUP BY in `count(*)` keeps the "
                     "inner HashAggregate identical but emits a single row, so the bench "
-                    "measures aggregation cost. Natural-form `GROUP BY value` against an "
-                    "encrypted column was removed from this bench in an earlier pass "
-                    "because the planner picks `GroupAggregate` + sort against the full "
-                    "~1-2 KB ciphertext payload at scale — see §5 of the EQL "
-                    "query-performance guide."
+                    "measures aggregation cost. The companion `count_groups_plaintext` "
+                    "scenario runs the same query shape against an unencrypted column for "
+                    "comparison. Natural-form `GROUP BY value` against an encrypted column "
+                    "was removed from this bench in an earlier pass because the planner picks "
+                    "`GroupAggregate` + sort against the full ~1-2 KB ciphertext payload at "
+                    "scale — see §5 of the EQL query-performance guide."
+                ),
+                "count_groups_plaintext": (
+                    "Plaintext baseline: GROUP BY on a plain TEXT column, same query shape "
+                    "as the encrypted scenario",
+                    "Table: `string_plaintext_{rows}` with unencrypted high-cardinality "
+                    "random strings (`md5(random()::text || ordinal)`). Populated via SQL "
+                    "by `mise run prepare:string_plaintext` — no encryption-client "
+                    "dependency. Index: none. Same `SELECT count(*) FROM (SELECT 1 ... "
+                    "GROUP BY value) g` shape as the encrypted scenario, so the wall-clock "
+                    "delta between this and `count_groups_encrypted` is the EQL recipe's "
+                    "overhead relative to a bare-PG aggregate on a TEXT column at the same "
+                    "row count and cardinality."
                 )
             },
             "JSON": {
@@ -689,9 +707,14 @@ class BenchmarkReporter:
 
         # Add index information for one of the row counts (they all use same indexes)
         if results:
-            # Determine table name based on query type
+            # Determine table name based on query type / scenario.
             sample_row_count = results[0].row_count
-            if query_type in ["EXACT", "MATCH", "GROUP_BY"]:
+            if query_type == "GROUP_BY" and query_name == "count_groups_plaintext":
+                # Plaintext baseline runs against a plain TEXT column — no
+                # functional EQL indexes; lookup will return None and the
+                # Indexes block will be skipped.
+                table_name = f"string_plaintext_{sample_row_count}"
+            elif query_type in ["EXACT", "MATCH", "GROUP_BY"]:
                 # String-encrypted scenarios all run against the same table family.
                 table_name = f"string_encrypted_{sample_row_count}"
             elif query_type == "ORE":
