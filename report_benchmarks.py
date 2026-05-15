@@ -47,6 +47,24 @@ class QueryResult:
     median_ns: float
 
 
+@dataclass
+class ScenarioMetadata:
+    """Per-scenario metadata captured at bench startup (lib.rs sidecar).
+
+    The bench writes one of these per (scenario, row_count) tier into
+    `results/query/<prefix>_metadata_<rows>.json` alongside the criterion
+    timing data. We use it to enrich the report with the actual SQL ran,
+    which indexes the planner picked, and what the plan looked like.
+    """
+    query_type: str       # e.g. "EXACT"
+    query_name: str       # e.g. "eql_cast"
+    row_count: int
+    query: str            # SQL with $N placeholders intact
+    parameters: list      # bound values as JSON (encrypted payload for EQL scenarios)
+    explain: list         # PG's EXPLAIN (FORMAT JSON) output (top-level array)
+    indexes_used: List[str]
+
+
 class BenchmarkReporter:
     def __init__(self, results_dir: Path, output_file: Path, sql_dir: Optional[Path] = None):
         self.results_dir = results_dir
@@ -54,6 +72,9 @@ class BenchmarkReporter:
         self.sql_dir = sql_dir or Path("sql")
         self.ingest_results: List[IngestResult] = []
         self.query_results: List[QueryResult] = []
+        # Keyed by (query_type, query_name, row_count) so a scenario can
+        # look up its own per-tier metadata in O(1).
+        self.metadata: Dict[Tuple[str, str, int], ScenarioMetadata] = {}
         self.index_cache: Dict[str, str] = {}  # Cache for index SQL
 
     def load_ingest_results(self):
@@ -131,6 +152,38 @@ class BenchmarkReporter:
                         mean_ns=mean_ns,
                         median_ns=median_ns
                     ))
+
+    def load_query_metadata(self):
+        """Load `*_metadata_*.json` sidecars written by each bench at startup."""
+        query_dir = self.results_dir / "query"
+        meta_pattern = re.compile(r'^(.+)_metadata_(\d+)$')
+        for json_file in query_dir.glob("*_metadata_*.json"):
+            m = meta_pattern.match(json_file.stem)
+            if not m:
+                continue
+            # The prefix in the filename (e.g. "exact", "group_by") drives the
+            # criterion bench name, not the query_type — we get the real
+            # query_type from the bench id inside each scenario record.
+            row_count = int(m.group(2))
+            with open(json_file) as f:
+                doc = json.load(f)
+            for s in doc.get("scenarios", []):
+                bench_id = s.get("id", "")
+                parts = bench_id.split("/")
+                if len(parts) < 3:
+                    continue
+                query_type = parts[0]      # "EXACT", "ORE", "GROUP_BY", ...
+                scenario_name = parts[2]   # "eql_cast", "range_gt_10", ...
+                key = (query_type, scenario_name, row_count)
+                self.metadata[key] = ScenarioMetadata(
+                    query_type=query_type,
+                    query_name=scenario_name,
+                    row_count=row_count,
+                    query=s.get("query", ""),
+                    parameters=s.get("parameters", []),
+                    explain=s.get("explain", []),
+                    indexes_used=s.get("indexes_used", []),
+                )
 
     def format_time(self, ns: float, include_indicator: bool = True) -> str:
         """Format nanoseconds into human-readable time with performance indicator
@@ -397,6 +450,46 @@ class BenchmarkReporter:
         }
 
         return descriptions.get(query_type, {}).get(query_name, ("Unknown query", ""))
+
+    def planner_estimated_rows(self, explain: list) -> Optional[int]:
+        """Pull the top-level Plan's `Plan Rows` from an EXPLAIN (FORMAT JSON)
+        result. That's the planner's row-count estimate for the final output;
+        for LIMIT-bounded queries it matches the LIMIT, for aggregates it's
+        the estimated group count. Returns None on malformed input."""
+        if not explain:
+            return None
+        try:
+            return int(explain[0]["Plan"]["Plan Rows"])
+        except (KeyError, TypeError, IndexError, ValueError):
+            return None
+
+    def format_plan_tree(self, plan_node: dict, depth: int = 0) -> str:
+        """Render an EXPLAIN plan node as an indented text tree. One line per
+        node with the bits a human reader cares about: node type, scan
+        strategy, target relation, picked index. Children indented two
+        spaces."""
+        indent = "  " * depth
+        node_type = plan_node.get("Node Type", "?")
+        parts = [node_type]
+        strategy = plan_node.get("Strategy")
+        # "Plain" is the default for Aggregate; only show the strategy when
+        # it's something interesting (Hashed, Sorted, Mixed).
+        if strategy and strategy != "Plain":
+            parts.append(f"({strategy})")
+        relation = plan_node.get("Relation Name")
+        index = plan_node.get("Index Name")
+        if index:
+            parts.append(f"using {index}")
+            if relation:
+                parts.append(f"on {relation}")
+        elif relation:
+            parts.append(f"on {relation}")
+        line = f"{indent}{' '.join(parts)}"
+        child_lines = [
+            self.format_plan_tree(child, depth + 1)
+            for child in plan_node.get("Plans", [])
+        ]
+        return "\n".join([line] + child_lines)
 
     def get_table_indexes(self, table_name: str) -> Optional[str]:
         """Get index SQL for a table by reading from sql/indexes directory"""
@@ -727,31 +820,78 @@ class BenchmarkReporter:
             if table_name:
                 indexes_sql = self.get_table_indexes(table_name)
                 if indexes_sql:
-                    f.write(f"**Indexes:**\n```sql\n{indexes_sql}\n```\n\n")
-        
+                    f.write(f"**Indexes available on the table:**\n```sql\n{indexes_sql}\n```\n\n")
+
+        # Group by row_count for the various per-tier renderings below.
+        row_counts = sorted(set(r.row_count for r in results))
+
+        # Indexes used per data set size, sourced from the EXPLAIN metadata
+        # sidecars. The list can vary between tiers — small tables often
+        # take a Seq Scan even when a functional index exists.
+        used_by_size = [
+            (rc, self.metadata.get((query_type, query_name, rc)))
+            for rc in row_counts
+        ]
+        if any(m is not None for _, m in used_by_size):
+            f.write("**Indexes used by the planner (per data set size):**\n\n")
+            for rc, meta in used_by_size:
+                if meta is None:
+                    f.write(f"- {rc:,}: _(no metadata)_\n")
+                elif meta.indexes_used:
+                    idx_list = ", ".join(f"`{i}`" for i in meta.indexes_used)
+                    f.write(f"- {rc:,}: {idx_list}\n")
+                else:
+                    f.write(f"- {rc:,}: _none — planner picked a sequential / hash-aggregate / sort plan_\n")
+            f.write("\n")
+
         # Create table with legend if any results exceed 100ms
         has_slow_queries = any((r.mean_ns / 1_000_000) > 100 for r in results)
-        
+
         if has_slow_queries:
             f.write("*⚠️ = Query time exceeds 100ms*\n\n")
-        
-        f.write("| Data Set Size | Query Time (no decrypt) | Query Time (with decrypt) |\n")
-        f.write("|---------------|-------------------------|---------------------------|\n")
-        
-        # Group by row_count
-        row_counts = sorted(set(r.row_count for r in results))
-        
+
+        f.write("| Data Set Size | Rows (est.) | Query Time (no decrypt) | Query Time (with decrypt) |\n")
+        f.write("|---------------|-------------|-------------------------|---------------------------|\n")
+
         for row_count in row_counts:
             no_decrypt = next((r for r in results if r.row_count == row_count and not r.decrypt), None)
             with_decrypt = next((r for r in results if r.row_count == row_count and r.decrypt), None)
-            
+
             no_decrypt_str = self.format_time(no_decrypt.mean_ns) if no_decrypt else "N/A"
             with_decrypt_str = self.format_time(with_decrypt.mean_ns) if with_decrypt else "N/A"
-            
-            f.write(f"| {row_count:,} | {no_decrypt_str} | {with_decrypt_str} |\n")
-        
+
+            meta = self.metadata.get((query_type, query_name, row_count))
+            rows_est = self.planner_estimated_rows(meta.explain) if meta else None
+            rows_str = f"{rows_est:,}" if rows_est is not None else "—"
+
+            f.write(f"| {row_count:,} | {rows_str} | {no_decrypt_str} | {with_decrypt_str} |\n")
+
         f.write("\n")
-        
+        f.write("_Rows (est.) is the planner's estimate from `EXPLAIN` "
+                "captured before the bench loop. For LIMIT-bounded queries it "
+                "matches the LIMIT; for aggregates it's the estimated group count._\n\n")
+
+        # Per-tier EXPLAIN plans (collapsed). Useful when the plan shape
+        # changes across data sizes — e.g. the ORE bench, where the planner
+        # picks Seq Scan at every tier for bare-range queries but switches to
+        # Index Scan for the hybrid ordered scenario.
+        explain_blocks = [
+            (rc, meta)
+            for rc, meta in used_by_size
+            if meta is not None and meta.explain
+        ]
+        if explain_blocks:
+            f.write("<details>\n<summary>EXPLAIN plans (per data set size)</summary>\n\n")
+            for rc, meta in explain_blocks:
+                f.write(f"**{rc:,} rows**\n\n")
+                plan = meta.explain[0].get("Plan", {})
+                tree = self.format_plan_tree(plan)
+                f.write(f"```\n{tree}\n```\n\n")
+                f.write("Full `EXPLAIN (FORMAT JSON)`:\n\n")
+                pretty = json.dumps(meta.explain, indent=2)
+                f.write(f"```json\n{pretty}\n```\n\n")
+            f.write("</details>\n\n")
+
         # Generate chart if matplotlib is available
         if HAS_MATPLOTLIB and len(row_counts) > 1:
             chart_path = self.output_file.parent / f"query_{query_type.lower()}_{query_name}_chart.png"
@@ -836,6 +976,10 @@ def main():
     print("Loading query results...")
     reporter.load_query_results()
     print(f"  Found {len(reporter.query_results)} query results")
+
+    print("Loading query metadata sidecars...")
+    reporter.load_query_metadata()
+    print(f"  Found {len(reporter.metadata)} per-scenario metadata records")
     
     print(f"Generating report: {args.output}")
     reporter.generate_report()
