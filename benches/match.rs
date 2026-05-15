@@ -6,7 +6,7 @@ use cipherstash_client::{
 };
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use dbbenches::{
-    extract_indexes_used, init_scoped_cipher, write_metadata_file, EncryptedQuery,
+    bench_assert, extract_indexes_used, init_scoped_cipher, write_metadata_file, EncryptedQuery,
     EncryptedQueryBuilder, ScenarioMetadata,
 };
 use sqlx::postgres::PgPoolOptions;
@@ -114,16 +114,23 @@ fn criterion_benchmark(c: &mut Criterion) {
 
     for (i, query) in queries.into_iter().enumerate() {
         let (_, _, scenario) = QUERY_TEMPLATES[i];
-        
+        let exec_id = format!("MATCH/match/{}/{}", scenario, target_rows);
+        let decrypt_id = format!("MATCH/match_decrypt/{}/{}", scenario, target_rows);
+
+        let exec_id_inner = exec_id.clone();
         group.bench_function(format!("match/{}/{}", scenario, target_rows), |b| {
             b.to_async(&rt).iter(|| async {
-                let _: Vec<_> = query.execute(&pool).await.unwrap();
+                let _: Vec<_> = bench_assert(query.execute(&pool).await, &exec_id_inner);
             })
         });
 
+        let decrypt_id_inner = decrypt_id.clone();
         group.bench_function(format!("match_decrypt/{}/{}", scenario, target_rows), |b| {
             b.to_async(&rt).iter(|| async {
-                let _r: Vec<String> = black_box(query.execute_and_decrypt(&pool).await.unwrap());
+                let _r: Vec<String> = black_box(bench_assert(
+                    query.execute_and_decrypt(&pool).await,
+                    &decrypt_id_inner,
+                ));
             })
         });
     }

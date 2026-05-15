@@ -45,7 +45,8 @@
           "v": 2
         }
       ],
-      "query": "SELECT value FROM string_encrypted_10000 WHERE value = $1 LIMIT 1"
+      "query": "SELECT value FROM string_encrypted_10000 WHERE value = $1 LIMIT 1",
+      "rows_returned": 0
     },
     {
       "explain": [
@@ -92,7 +93,8 @@
           "v": 2
         }
       ],
-      "query": "SELECT value FROM string_encrypted_10000 WHERE eql_v2.hmac_256(value) = eql_v2.hmac_256($1::jsonb) LIMIT 1"
+      "query": "SELECT value FROM string_encrypted_10000 WHERE eql_v2.hmac_256(value) = eql_v2.hmac_256($1::jsonb) LIMIT 1",
+      "rows_returned": 0
     }
   ],
   "target_rows": "10000"

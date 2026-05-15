@@ -1,5 +1,5 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use dbbenches::{extract_indexes_used, write_metadata_file, ScenarioMetadata};
+use dbbenches::{bench_assert, extract_indexes_used, write_metadata_file, ScenarioMetadata};
 use sqlx::postgres::PgPoolOptions;
 use sqlx::types::Json;
 use sqlx::Row;
@@ -134,12 +134,13 @@ fn criterion_benchmark(c: &mut Criterion) {
             .strip_prefix("GROUP_BY/")
             .expect("bench_id missing GROUP_BY/ prefix")
             .to_string();
+        let scenario_id = bench_id.clone();
         group.bench_function(function_name, |b| {
             b.to_async(&rt).iter(|| async {
-                let rows = sqlx::query(&query_str)
-                    .fetch_all(&pool)
-                    .await
-                    .expect("group_by query failed");
+                let rows = bench_assert(
+                    sqlx::query(&query_str).fetch_all(&pool).await,
+                    &scenario_id,
+                );
                 // Drain the single-row result to force the aggregation to materialise.
                 black_box(rows.iter().map(|r| r.get::<i64, _>(0)).sum::<i64>())
             })

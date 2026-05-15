@@ -471,6 +471,85 @@ fn collect_index_names(node: &serde_json::Value, out: &mut Vec<String>) {
     }
 }
 
+/// Diagnostic wrapper for inner-loop bench failures. Prints a structured
+/// error block before panicking, including the scenario id, the error's
+/// `Display` *and* `Debug` forms (so the anyhow chain shows up), and a
+/// hint about the common failure modes we've seen.
+///
+/// Replaces bare `.unwrap()` / `.expect("...")` in criterion `iter`
+/// closures — when a bench fails an hour into a 10M run, the
+/// difference between "called unwrap on Err" and "ORE/ore_decrypt/.../1M
+/// — ZeroKMS decrypt failure, here's what to do" matters.
+pub fn bench_assert<T, E>(result: Result<T, E>, scenario: &str) -> T
+where
+    E: std::fmt::Display + std::fmt::Debug,
+{
+    match result {
+        Ok(v) => v,
+        Err(e) => {
+            print_bench_failure(scenario, &e);
+            panic!("bench failed in `{}`: {}", scenario, e);
+        }
+    }
+}
+
+fn print_bench_failure<E>(scenario: &str, e: &E)
+where
+    E: std::fmt::Display + std::fmt::Debug,
+{
+    let msg = format!("{}", e);
+    eprintln!();
+    eprintln!("==== BENCH FAILURE ====");
+    eprintln!("scenario: {}", scenario);
+    eprintln!("error:    {}", e);
+    eprintln!("debug:    {:?}", e);
+
+    // The most common failure on long bench runs is the ZeroKMS scoped
+    // cipher's TTL expiring mid-iteration. We've hit this several times;
+    // the underlying message is the bit after "Could not decrypt data
+    // using keyset", which on its own doesn't tell a fresh reader what
+    // to do next.
+    if msg.contains("Could not decrypt") || msg.contains("keyset") {
+        eprintln!();
+        eprintln!("hint: ZeroKMS decrypt failure. Most likely the scoped-cipher TTL");
+        eprintln!("      expired mid-run — ScopedCipher::init_default binds the");
+        eprintln!("      session to a fixed lifetime (~10-15 minutes on ZeroKMS) and");
+        eprintln!("      criterion's full sample sweep at 1M/10M can outlive it.");
+        eprintln!("      Re-running the bench picks up fresh credentials.");
+        eprintln!("      If the failure persists across a fresh run:");
+        eprintln!("        1. `mise run truncate` to drop rows that may have been");
+        eprintln!("           encrypted under an earlier generation.");
+        eprintln!("        2. Re-populate via the relevant `prepare:*` task.");
+        eprintln!("        3. Re-run the bench.");
+        eprintln!("      If still failing, verify CS_CLIENT_ID / CS_CLIENT_KEY /");
+        eprintln!("      CS_WORKSPACE_CRN are valid and check the CipherStash");
+        eprintln!("      console for rate limits / quota.");
+    } else if msg.contains("Unexpected error") {
+        eprintln!();
+        eprintln!("hint: opaque cipherstash-client error. The message itself is");
+        eprintln!("      unhelpful but the underlying cause is often a ZeroKMS");
+        eprintln!("      authentication issue (TTL expiry, rate limit, expired");
+        eprintln!("      credential). Same recovery as the decrypt-failure hint:");
+        eprintln!("      re-run; if persistent, check the CipherStash console.");
+    } else if msg.contains("Connection refused") || msg.contains("Connection reset") {
+        eprintln!();
+        eprintln!("hint: database connection error. The postgres container may have");
+        eprintln!("      stopped — try `mise run postgres` to start it.");
+    } else if msg.contains("relation") && msg.contains("does not exist") {
+        eprintln!();
+        eprintln!("hint: missing table. The schema isn't set up — run `mise run");
+        eprintln!("      setup-db` or, for query benches, the `prepare:*` task");
+        eprintln!("      that creates the target row-count variant table.");
+    } else if msg.contains("query failed") || msg.contains("syntax error") {
+        eprintln!();
+        eprintln!("hint: SQL execution error. Inspect the recorded query in the");
+        eprintln!("      `*_metadata_<rows>.json` sidecar for the scenario above");
+        eprintln!("      and try running it against the bench database directly.");
+    }
+    eprintln!("==== END BENCH FAILURE ====");
+    eprintln!();
+}
+
 /// Write the scenario metadata sidecar to
 /// `results/query/<prefix>_metadata_<rows>.json` (path relative to the
 /// bench process's current working directory, which `cargo criterion`

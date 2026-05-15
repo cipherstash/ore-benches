@@ -60,7 +60,8 @@
       "id": "GROUP_BY/group_by/count_groups_encrypted/1000000",
       "indexes_used": [],
       "parameters": [],
-      "query": "SELECT count(*) FROM (SELECT 1 FROM string_encrypted_1000000 GROUP BY eql_v2.hmac_256(value)) g"
+      "query": "SELECT count(*) FROM (SELECT 1 FROM string_encrypted_1000000 GROUP BY eql_v2.hmac_256(value)) g",
+      "rows_returned": 1
     },
     {
       "explain": [
@@ -122,7 +123,8 @@
       "id": "GROUP_BY/group_by/count_groups_plaintext/1000000",
       "indexes_used": [],
       "parameters": [],
-      "query": "SELECT count(*) FROM (SELECT 1 FROM string_plaintext_1000000 GROUP BY value) g"
+      "query": "SELECT count(*) FROM (SELECT 1 FROM string_plaintext_1000000 GROUP BY value) g",
+      "rows_returned": 1
     }
   ],
   "target_rows": "1000000"

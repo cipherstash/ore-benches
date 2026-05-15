@@ -1,5 +1,5 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use dbbenches::{extract_indexes_used, write_metadata_file, ScenarioMetadata};
+use dbbenches::{bench_assert, extract_indexes_used, write_metadata_file, ScenarioMetadata};
 use sqlx::postgres::PgPoolOptions;
 use sqlx::types::Json;
 use sqlx::Row;
@@ -215,33 +215,39 @@ fn criterion_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("JSON");
     group.sample_size(10);
 
+    let field_eq_id = format!("JSON/json/field_eq/{}", target_rows);
+    let field_extract_id = format!("JSON/json/field_extract/{}", target_rows);
+    let field_group_by_id = format!("JSON/json/field_group_by/{}", target_rows);
+
+    let field_eq_id_inner = field_eq_id.clone();
     group.bench_function(format!("json/field_eq/{}", target_rows), |b| {
         b.to_async(&rt).iter(|| async {
-            let rows = sqlx::query(&q_field_eq)
-                .bind(&needle)
-                .fetch_all(&pool)
-                .await
-                .expect("field_eq query failed");
+            let rows = bench_assert(
+                sqlx::query(&q_field_eq).bind(&needle).fetch_all(&pool).await,
+                &field_eq_id_inner,
+            );
             black_box(rows.iter().map(|r| r.get::<i32, _>(0)).sum::<i32>())
         })
     });
 
+    let field_extract_id_inner = field_extract_id.clone();
     group.bench_function(format!("json/field_extract/{}", target_rows), |b| {
         b.to_async(&rt).iter(|| async {
-            let rows = sqlx::query(&q_field_extract)
-                .fetch_all(&pool)
-                .await
-                .expect("field_extract query failed");
+            let rows = bench_assert(
+                sqlx::query(&q_field_extract).fetch_all(&pool).await,
+                &field_extract_id_inner,
+            );
             black_box(rows.len())
         })
     });
 
+    let field_group_by_id_inner = field_group_by_id.clone();
     group.bench_function(format!("json/field_group_by/{}", target_rows), |b| {
         b.to_async(&rt).iter(|| async {
-            let rows = sqlx::query(&q_field_group_by)
-                .fetch_all(&pool)
-                .await
-                .expect("field_group_by query failed");
+            let rows = bench_assert(
+                sqlx::query(&q_field_group_by).fetch_all(&pool).await,
+                &field_group_by_id_inner,
+            );
             black_box(rows.iter().map(|r| r.get::<i64, _>(1)).sum::<i64>())
         })
     });
