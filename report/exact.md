@@ -41,10 +41,10 @@ ON string_encrypted_10000 USING GIN (
 
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
-| 10,000 | 0 | 417.91μs | 411.64μs |
-| 100,000 | 0 | 398.18μs | 415.60μs |
-| 1,000,000 | 0 | 518.60μs | 413.16μs |
-| 10,000,000 | 0 | 429.34μs | 423.97μs |
+| 10,000 | 0 | 428.29μs | 435.88μs |
+| 100,000 | 0 | 450.88μs | 411.44μs |
+| 1,000,000 | 0 | 414.56μs | 423.32μs |
+| 10,000,000 | 0 | 410.21μs | 419.32μs |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
 
@@ -73,7 +73,7 @@ Full `EXPLAIN (FORMAT JSON)`:
         {
           "Alias": "string_encrypted_10000",
           "Async Capable": false,
-          "Index Cond": "(((value).data ->> 'hm'::text) = '9b50b28ba1880a29710f2713a7afa5fb67d3f44d65357495b1f65bf5bdabb02e'::text)",
+          "Index Cond": "(((value).data ->> 'hm'::text) = 'b8140713f4ae49445a3220c3d13c28af7a08e31776368d943d1cba2860870712'::text)",
           "Index Name": "string_encrypted_10000_hash_index",
           "Node Type": "Index Scan",
           "Parallel Aware": false,
@@ -115,7 +115,7 @@ Full `EXPLAIN (FORMAT JSON)`:
         {
           "Alias": "string_encrypted_100000",
           "Async Capable": false,
-          "Index Cond": "(((value).data ->> 'hm'::text) = '9b50b28ba1880a29710f2713a7afa5fb67d3f44d65357495b1f65bf5bdabb02e'::text)",
+          "Index Cond": "(((value).data ->> 'hm'::text) = 'b8140713f4ae49445a3220c3d13c28af7a08e31776368d943d1cba2860870712'::text)",
           "Index Name": "string_encrypted_100000_hash_index",
           "Node Type": "Index Scan",
           "Parallel Aware": false,
@@ -157,7 +157,7 @@ Full `EXPLAIN (FORMAT JSON)`:
         {
           "Alias": "string_encrypted_1000000",
           "Async Capable": false,
-          "Index Cond": "(((value).data ->> 'hm'::text) = '9b50b28ba1880a29710f2713a7afa5fb67d3f44d65357495b1f65bf5bdabb02e'::text)",
+          "Index Cond": "(((value).data ->> 'hm'::text) = 'b8140713f4ae49445a3220c3d13c28af7a08e31776368d943d1cba2860870712'::text)",
           "Index Name": "string_encrypted_1000000_hash_index",
           "Node Type": "Index Scan",
           "Parallel Aware": false,
@@ -199,7 +199,7 @@ Full `EXPLAIN (FORMAT JSON)`:
         {
           "Alias": "string_encrypted_10000000",
           "Async Capable": false,
-          "Index Cond": "(((value).data ->> 'hm'::text) = '9b50b28ba1880a29710f2713a7afa5fb67d3f44d65357495b1f65bf5bdabb02e'::text)",
+          "Index Cond": "(((value).data ->> 'hm'::text) = 'b8140713f4ae49445a3220c3d13c28af7a08e31776368d943d1cba2860870712'::text)",
           "Index Name": "string_encrypted_10000000_hash_index",
           "Node Type": "Index Scan",
           "Parallel Aware": false,
@@ -260,10 +260,10 @@ ON string_encrypted_10000 USING GIN (
 
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
-| 10,000 | 0 | 412.70μs | 395.84μs |
-| 100,000 | 0 | 406.77μs | 400.13μs |
-| 1,000,000 | 0 | 401.58μs | 397.75μs |
-| 10,000,000 | 0 | 387.61μs | 399.45μs |
+| 10,000 | 0 | 403.48μs | 421.56μs |
+| 100,000 | 0 | 404.76μs | 418.98μs |
+| 1,000,000 | 0 | 407.13μs | 386.56μs |
+| 10,000,000 | 0 | 396.38μs | 403.55μs |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
 
@@ -292,7 +292,7 @@ Full `EXPLAIN (FORMAT JSON)`:
         {
           "Alias": "string_encrypted_10000",
           "Async Capable": false,
-          "Index Cond": "(((value).data ->> 'hm'::text) = '9b50b28ba1880a29710f2713a7afa5fb67d3f44d65357495b1f65bf5bdabb02e'::text)",
+          "Index Cond": "(((value).data ->> 'hm'::text) = 'b8140713f4ae49445a3220c3d13c28af7a08e31776368d943d1cba2860870712'::text)",
           "Index Name": "string_encrypted_10000_hash_index",
           "Node Type": "Index Scan",
           "Parallel Aware": false,
@@ -334,7 +334,7 @@ Full `EXPLAIN (FORMAT JSON)`:
         {
           "Alias": "string_encrypted_100000",
           "Async Capable": false,
-          "Index Cond": "(((value).data ->> 'hm'::text) = '9b50b28ba1880a29710f2713a7afa5fb67d3f44d65357495b1f65bf5bdabb02e'::text)",
+          "Index Cond": "(((value).data ->> 'hm'::text) = 'b8140713f4ae49445a3220c3d13c28af7a08e31776368d943d1cba2860870712'::text)",
           "Index Name": "string_encrypted_100000_hash_index",
           "Node Type": "Index Scan",
           "Parallel Aware": false,
@@ -376,7 +376,7 @@ Full `EXPLAIN (FORMAT JSON)`:
         {
           "Alias": "string_encrypted_1000000",
           "Async Capable": false,
-          "Index Cond": "(((value).data ->> 'hm'::text) = '9b50b28ba1880a29710f2713a7afa5fb67d3f44d65357495b1f65bf5bdabb02e'::text)",
+          "Index Cond": "(((value).data ->> 'hm'::text) = 'b8140713f4ae49445a3220c3d13c28af7a08e31776368d943d1cba2860870712'::text)",
           "Index Name": "string_encrypted_1000000_hash_index",
           "Node Type": "Index Scan",
           "Parallel Aware": false,
@@ -418,7 +418,7 @@ Full `EXPLAIN (FORMAT JSON)`:
         {
           "Alias": "string_encrypted_10000000",
           "Async Capable": false,
-          "Index Cond": "(((value).data ->> 'hm'::text) = '9b50b28ba1880a29710f2713a7afa5fb67d3f44d65357495b1f65bf5bdabb02e'::text)",
+          "Index Cond": "(((value).data ->> 'hm'::text) = 'b8140713f4ae49445a3220c3d13c28af7a08e31776368d943d1cba2860870712'::text)",
           "Index Name": "string_encrypted_10000000_hash_index",
           "Node Type": "Index Scan",
           "Parallel Aware": false,

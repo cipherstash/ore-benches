@@ -9,8 +9,8 @@ use cipherstash_client::{
 };
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use dbbenches::{
-    bench_assert, extract_indexes_used, init_scoped_cipher, write_metadata_file, EncryptedQuery,
-    EncryptedQueryBuilder, ScenarioMetadata,
+    bench_assert, extract_indexes_used, init_scoped_cipher, init_tracing, write_metadata_file,
+    EncryptedQuery, EncryptedQueryBuilder, ScenarioMetadata,
 };
 use sqlx::postgres::PgPoolOptions;
 use std::sync::Arc;
@@ -116,6 +116,10 @@ async fn build_query(
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
+    // Wire up cipherstash-client / zerokms-protocol trace! emissions to
+    // stderr when RUST_LOG is set. No-op when unset.
+    init_tracing();
+
     let rt = Runtime::new().unwrap();
 
     let target_rows = std::env::var("TARGET_ROWS")

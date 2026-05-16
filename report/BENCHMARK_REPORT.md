@@ -92,11 +92,11 @@ Per-query-type detail is broken out into separate pages — click into a scenari
 
 | Query Type | Scenarios | Tiers | Largest-tier median (no decrypt) | Detail |
 |-|-|-|-|-|
-| COMBO | `bloom_ore_order_limit`, `filtered_group_by`, `top_n_filtered_group_by` | 10,000, 100,000, 1,000,000, 10,000,000 | 105.58ms | [open](combo.md) |
-| EXACT | `eql_cast`, `eql_hash` | 10,000, 100,000, 1,000,000, 10,000,000 | 412.26μs | [open](exact.md) |
-| GROUP_BY | `low_cardinality_groups_encrypted`, `low_cardinality_groups_plaintext`, `top_n_groups_encrypted`, `top_n_groups_plaintext` | 10,000, 100,000, 1,000,000, 10,000,000 | 981.51ms | [open](group_by.md) |
-| MATCH | `eql_bloom`, `eql_cast_firstname`, `eql_cast_lastname` | 10,000, 100,000, 1,000,000, 10,000,000 | 122.53ms | [open](match.md) |
-| ORE | `range_gt_10`, `range_gt_100`, `range_highly_selective_gt_10`, `range_lt_10`, `range_lt_100`, `range_lt_hybrid_ordered_10`, `range_selective_gt_100` | 10,000, 100,000, 1,000,000, 10,000,000 | 483.80ms | [open](ore.md) |
+| COMBO | `bloom_ore_order_limit`, `filtered_group_by`, `top_n_filtered_group_by` | 10,000, 100,000, 1,000,000, 10,000,000 | 99.48ms | [open](combo.md) |
+| EXACT | `eql_cast`, `eql_hash` | 10,000, 100,000, 1,000,000, 10,000,000 | 401.88μs | [open](exact.md) |
+| GROUP_BY | `low_cardinality_groups_encrypted`, `low_cardinality_groups_plaintext`, `top_n_groups_encrypted`, `top_n_groups_plaintext` | 10,000, 100,000, 1,000,000, 10,000,000 | 969.58ms | [open](group_by.md) |
+| MATCH | `eql_bloom`, `eql_cast_firstname`, `eql_cast_lastname` | 10,000, 100,000, 1,000,000, 10,000,000 | 64.93ms | [open](match.md) |
+| ORE | `range_gt_10`, `range_gt_100`, `range_highly_selective_gt_10`, `range_lt_10`, `range_lt_100`, `range_lt_hybrid_ordered_10`, `range_selective_gt_100` | 10,000, 100,000, 1,000,000, 10,000,000 | 512.87ms | [open](ore.md) |
 
 
 ---

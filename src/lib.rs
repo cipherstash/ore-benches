@@ -32,6 +32,21 @@ impl Dummy<FakeCategory> for String {
     }
 }
 
+/// Install a tracing subscriber honouring `RUST_LOG` (defaults to `warn` if
+/// unset). Idempotent — calling twice is a no-op. Lets cipherstash-client
+/// / zerokms-protocol trace! emissions reach stderr, including the rich
+/// internal failure traces in `vitur_client::generate_keys` /
+/// `decrypt` / `retrieve_keys`.
+pub fn init_tracing() {
+    let _ = tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("warn")),
+        )
+        .with_writer(std::io::stderr)
+        .try_init();
+}
+
 pub async fn init_scoped_cipher() -> Result<Arc<ScopedCipher<AutoStrategy>>> {
     // Tuning for the bulk-ingest path. See the "Tuning for bulk ingest"
     // section on `ZeroKMSBuilder` (cipherstash-suite#1960) for the
