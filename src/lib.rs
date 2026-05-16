@@ -33,8 +33,30 @@ impl Dummy<FakeCategory> for String {
 }
 
 pub async fn init_scoped_cipher() -> Result<Arc<ScopedCipher<AutoStrategy>>> {
+    // Tuning for the bulk-ingest path. See the "Tuning for bulk ingest"
+    // section on `ZeroKMSBuilder` (cipherstash-suite#1960) for the
+    // rationale; the short version:
+    //
+    //   - `connect_timeout(5)`: fast-fail if TCP+TLS to ZeroKMS can't open
+    //     in 5 s. Real broken-network signal.
+    //   - `request_timeout(60)`: generous total budget. The default (10 s)
+    //     trips at scale because cold-pool `generate-data-key` calls can
+    //     plausibly exceed it under variable AWS Sydney latency.
+    //   - `pool_idle_timeout(600)`: keep warm TLS connections alive across
+    //     the bench's idle gaps between batches (default closes after 90
+    //     s).
+    //   - `max_keys_per_req(100)`: smaller per-request server work →
+    //     lower per-call latency → lower chance of any one request
+    //     timing out. Trades request count for predictability.
+    //   - `max_concurrent_reqs(20)`: more parallelism to compensate for
+    //     the smaller batches.
     let zerokms = ZeroKMSBuilder::auto()
         .context("failed to build ZeroKMS client")?
+        .with_connect_timeout(5)
+        .with_request_timeout(60)
+        .with_pool_idle_timeout(600)
+        .with_max_keys_per_req(100)
+        .with_max_concurrent_reqs(20)
         .with_key_provider(FallbackKeyProvider::new(
             EnvKeyProvider,
             ProfileStore::default(),
@@ -108,13 +130,6 @@ impl IngestOptionsBuilder {
     }
 }
 
-/// Re-initialise the scoped cipher after this many rows. The ZeroKMS scoped
-/// cipher has a ~10-15 minute TTL bound to one `init_default` call; a single
-/// 10M-row ingest run reliably outlives that. Re-binding at a row-count
-/// cadence (cheap call vs. the slow encrypt path) keeps the cipher fresh
-/// without requiring callers to chunk their invocations.
-const REINIT_EVERY_ROWS: i32 = 200_000;
-
 impl IngestOptions {
     pub async fn ingest<T, F>(self, f: F) -> Result<()>
     where
@@ -138,21 +153,18 @@ impl IngestOptions {
             .connect(&database_url)
             .await?;
 
-        let mut scoped_cipher = init_scoped_cipher().await?;
-        let mut rows_since_reinit: i32 = 0;
+        // Init once and reuse for the binary lifetime. The previous
+        // "refresh every 200k rows" loop discarded the warm reqwest
+        // connection pool and forced cold-start TLS handshakes — which,
+        // with the cipherstash-client default 10s request_timeout,
+        // reliably tripped `SendRequest: operation timed out`. Auth
+        // tokens auto-refresh through stack-auth's AutoRefresh under the
+        // same client; no manual rotation needed.
+        let scoped_cipher = init_scoped_cipher().await?;
 
         let column_config = Cow::Borrowed(&self.column_config);
 
         for batch_start in (0..self.num_records).step_by(self.batch_size) {
-            if rows_since_reinit >= REINIT_EVERY_ROWS {
-                eprintln!(
-                    "ingest: refreshing scoped cipher after {} rows ({}/{} total)",
-                    rows_since_reinit, batch_start, self.num_records
-                );
-                scoped_cipher = init_scoped_cipher().await?;
-                rows_since_reinit = 0;
-            }
-
             let batch_end = (batch_start + self.batch_size as i32).min(self.num_records);
             let batch_count = batch_end - batch_start;
 
@@ -180,8 +192,6 @@ impl IngestOptions {
                 .build()
                 .execute(&pool)
                 .await?;
-
-            rows_since_reinit += batch_count;
         }
 
         let result = json!({

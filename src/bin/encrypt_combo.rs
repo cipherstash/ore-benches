@@ -30,10 +30,6 @@ use sqlx::{postgres::PgPoolOptions, types::Json, QueryBuilder};
 use std::borrow::Cow;
 use std::env;
 
-// Re-init scoped cipher every 200_000 rows (same threshold as lib.rs::ingest)
-// to stay under the ZeroKMS TTL window for 10M-row preparations.
-const REINIT_EVERY_ROWS: i32 = 200_000;
-
 #[tokio::main]
 async fn main() -> Result<()> {
     // Honour RUST_LOG for cipherstash-client / zerokms-protocol trace!
@@ -65,8 +61,9 @@ async fn main() -> Result<()> {
         .connect(&database_url)
         .await?;
 
-    let mut scoped_cipher = init_scoped_cipher().await?;
-    let mut rows_since_reinit: i32 = 0;
+    // Init once and reuse for the binary lifetime — see lib.rs::ingest
+    // for the rationale.
+    let scoped_cipher = init_scoped_cipher().await?;
 
     let name_config = ColumnConfig::build("name")
         .casts_as(ColumnType::Utf8Str)
@@ -84,15 +81,6 @@ async fn main() -> Result<()> {
     let category_ident = Identifier::new(&table_name, "category");
 
     for batch_start in (0..num_records).step_by(batch_size) {
-        if rows_since_reinit >= REINIT_EVERY_ROWS {
-            eprintln!(
-                "encrypt_combo: refreshing scoped cipher after {} rows ({}/{} total)",
-                rows_since_reinit, batch_start, num_records
-            );
-            scoped_cipher = init_scoped_cipher().await?;
-            rows_since_reinit = 0;
-        }
-
         let batch_end = (batch_start + batch_size as i32).min(num_records);
         let batch_count = batch_end - batch_start;
 
@@ -147,8 +135,6 @@ async fn main() -> Result<()> {
         .build()
         .execute(&pool)
         .await?;
-
-        rows_since_reinit += batch_count;
     }
 
     Ok(())

@@ -620,7 +620,7 @@ dependencies = [
 [[package]]
 name = "cipherstash-client"
 version = "0.34.0"
-source = "git+ssh://git@github.com/cipherstash/cipherstash-suite.git?branch=dan%2Fzerokms-unexpected-error-context#e9c9bb57415ea5b4e5bdd2db559ae84880cde6b9"
+source = "git+ssh://git@github.com/cipherstash/cipherstash-suite.git?branch=dan%2Fzerokms-unexpected-error-context#6f5c916b233cdff34b5ce432918fdd532c86eb8d"
 dependencies = [
  "aes-gcm-siv",
  "anyhow",
@@ -682,7 +682,7 @@ dependencies = [
 [[package]]
 name = "cipherstash-config"
 version = "0.34.0"
-source = "git+ssh://git@github.com/cipherstash/cipherstash-suite.git?branch=dan%2Fzerokms-unexpected-error-context#e9c9bb57415ea5b4e5bdd2db559ae84880cde6b9"
+source = "git+ssh://git@github.com/cipherstash/cipherstash-suite.git?branch=dan%2Fzerokms-unexpected-error-context#6f5c916b233cdff34b5ce432918fdd532c86eb8d"
 dependencies = [
  "bitflags 2.11.1",
  "serde",
@@ -692,7 +692,7 @@ dependencies = [
 [[package]]
 name = "cipherstash-core"
 version = "0.34.0"
-source = "git+ssh://git@github.com/cipherstash/cipherstash-suite.git?branch=dan%2Fzerokms-unexpected-error-context#e9c9bb57415ea5b4e5bdd2db559ae84880cde6b9"
+source = "git+ssh://git@github.com/cipherstash/cipherstash-suite.git?branch=dan%2Fzerokms-unexpected-error-context#6f5c916b233cdff34b5ce432918fdd532c86eb8d"
 dependencies = [
  "hmac",
  "lazy_static",
@@ -727,7 +727,7 @@ dependencies = [
 [[package]]
 name = "cllw-ore"
 version = "0.34.0"
-source = "git+ssh://git@github.com/cipherstash/cipherstash-suite.git?branch=dan%2Fzerokms-unexpected-error-context#e9c9bb57415ea5b4e5bdd2db559ae84880cde6b9"
+source = "git+ssh://git@github.com/cipherstash/cipherstash-suite.git?branch=dan%2Fzerokms-unexpected-error-context#6f5c916b233cdff34b5ce432918fdd532c86eb8d"
 dependencies = [
  "blake3",
  "hex",
@@ -1029,7 +1029,7 @@ dependencies = [
 [[package]]
 name = "cts-common"
 version = "0.34.0"
-source = "git+ssh://git@github.com/cipherstash/cipherstash-suite.git?branch=dan%2Fzerokms-unexpected-error-context#e9c9bb57415ea5b4e5bdd2db559ae84880cde6b9"
+source = "git+ssh://git@github.com/cipherstash/cipherstash-suite.git?branch=dan%2Fzerokms-unexpected-error-context#6f5c916b233cdff34b5ce432918fdd532c86eb8d"
 dependencies = [
  "arrayvec",
  "base32",
@@ -3259,7 +3259,7 @@ dependencies = [
 [[package]]
 name = "recipher"
 version = "0.34.0"
-source = "git+ssh://git@github.com/cipherstash/cipherstash-suite.git?branch=dan%2Fzerokms-unexpected-error-context#e9c9bb57415ea5b4e5bdd2db559ae84880cde6b9"
+source = "git+ssh://git@github.com/cipherstash/cipherstash-suite.git?branch=dan%2Fzerokms-unexpected-error-context#6f5c916b233cdff34b5ce432918fdd532c86eb8d"
 dependencies = [
  "aes",
  "async-trait",
@@ -4235,7 +4235,7 @@ checksum = "6ce2be8dc25455e1f91df71bfa12ad37d7af1092ae736f3a6cd0e37bc7810596"
 [[package]]
 name = "stack-auth"
 version = "0.34.0"
-source = "git+ssh://git@github.com/cipherstash/cipherstash-suite.git?branch=dan%2Fzerokms-unexpected-error-context#e9c9bb57415ea5b4e5bdd2db559ae84880cde6b9"
+source = "git+ssh://git@github.com/cipherstash/cipherstash-suite.git?branch=dan%2Fzerokms-unexpected-error-context#6f5c916b233cdff34b5ce432918fdd532c86eb8d"
 dependencies = [
  "aquamarine",
  "cts-common",
@@ -4258,7 +4258,7 @@ dependencies = [
 [[package]]
 name = "stack-profile"
 version = "0.34.0"
-source = "git+ssh://git@github.com/cipherstash/cipherstash-suite.git?branch=dan%2Fzerokms-unexpected-error-context#e9c9bb57415ea5b4e5bdd2db559ae84880cde6b9"
+source = "git+ssh://git@github.com/cipherstash/cipherstash-suite.git?branch=dan%2Fzerokms-unexpected-error-context#6f5c916b233cdff34b5ce432918fdd532c86eb8d"
 dependencies = [
  "dirs",
  "gethostname",
@@ -5866,7 +5866,7 @@ dependencies = [
 [[package]]
 name = "zerokms-protocol"
 version = "0.34.0"
-source = "git+ssh://git@github.com/cipherstash/cipherstash-suite.git?branch=dan%2Fzerokms-unexpected-error-context#e9c9bb57415ea5b4e5bdd2db559ae84880cde6b9"
+source = "git+ssh://git@github.com/cipherstash/cipherstash-suite.git?branch=dan%2Fzerokms-unexpected-error-context#6f5c916b233cdff34b5ce432918fdd532c86eb8d"
 dependencies = [
  "base64",
  "cipherstash-config",
