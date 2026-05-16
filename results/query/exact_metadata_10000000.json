@@ -8,26 +8,26 @@
             "Node Type": "Limit",
             "Parallel Aware": false,
             "Plan Rows": 1,
-            "Plan Width": 1162,
+            "Plan Width": 36,
             "Plans": [
               {
                 "Alias": "string_encrypted_10000000",
                 "Async Capable": false,
-                "Index Cond": "(((value).data ->> 'hm'::text) = 'b8140713f4ae49445a3220c3d13c28af7a08e31776368d943d1cba2860870712'::text)",
+                "Index Cond": "(((value).data ->> 'hm'::text) = '3ad65b2ad0d1cd146d576dffe73c17884b1c3d7004d17efc546d7d9d7a6e0677'::text)",
                 "Index Name": "string_encrypted_10000000_hash_index",
                 "Node Type": "Index Scan",
                 "Parallel Aware": false,
                 "Parent Relationship": "Outer",
                 "Plan Rows": 8,
-                "Plan Width": 1162,
+                "Plan Width": 36,
                 "Relation Name": "string_encrypted_10000000",
                 "Scan Direction": "Forward",
                 "Startup Cost": 0.0,
-                "Total Cost": 36.14
+                "Total Cost": 38.14
               }
             ],
             "Startup Cost": 0.0,
-            "Total Cost": 4.52
+            "Total Cost": 4.77
           }
         }
       ],
@@ -37,7 +37,7 @@
       ],
       "parameters": [
         {
-          "hm": "b8140713f4ae49445a3220c3d13c28af7a08e31776368d943d1cba2860870712",
+          "hm": "3ad65b2ad0d1cd146d576dffe73c17884b1c3d7004d17efc546d7d9d7a6e0677",
           "i": {
             "c": "value",
             "t": "string_encrypted_10000000"
@@ -45,8 +45,8 @@
           "v": 2
         }
       ],
-      "query": "SELECT value FROM string_encrypted_10000000 WHERE value = $1 LIMIT 1",
-      "rows_returned": 0
+      "query": "SELECT id, value::jsonb FROM string_encrypted_10000000 WHERE value = $1 LIMIT 1",
+      "rows_returned": 1
     },
     {
       "explain": [
@@ -56,26 +56,26 @@
             "Node Type": "Limit",
             "Parallel Aware": false,
             "Plan Rows": 1,
-            "Plan Width": 1162,
+            "Plan Width": 36,
             "Plans": [
               {
                 "Alias": "string_encrypted_10000000",
                 "Async Capable": false,
-                "Index Cond": "(((value).data ->> 'hm'::text) = 'b8140713f4ae49445a3220c3d13c28af7a08e31776368d943d1cba2860870712'::text)",
+                "Index Cond": "(((value).data ->> 'hm'::text) = '3ad65b2ad0d1cd146d576dffe73c17884b1c3d7004d17efc546d7d9d7a6e0677'::text)",
                 "Index Name": "string_encrypted_10000000_hash_index",
                 "Node Type": "Index Scan",
                 "Parallel Aware": false,
                 "Parent Relationship": "Outer",
                 "Plan Rows": 8,
-                "Plan Width": 1162,
+                "Plan Width": 36,
                 "Relation Name": "string_encrypted_10000000",
                 "Scan Direction": "Forward",
                 "Startup Cost": 0.0,
-                "Total Cost": 36.14
+                "Total Cost": 38.14
               }
             ],
             "Startup Cost": 0.0,
-            "Total Cost": 4.52
+            "Total Cost": 4.77
           }
         }
       ],
@@ -85,7 +85,7 @@
       ],
       "parameters": [
         {
-          "hm": "b8140713f4ae49445a3220c3d13c28af7a08e31776368d943d1cba2860870712",
+          "hm": "3ad65b2ad0d1cd146d576dffe73c17884b1c3d7004d17efc546d7d9d7a6e0677",
           "i": {
             "c": "value",
             "t": "string_encrypted_10000000"
@@ -93,8 +93,8 @@
           "v": 2
         }
       ],
-      "query": "SELECT value FROM string_encrypted_10000000 WHERE eql_v2.hmac_256(value) = eql_v2.hmac_256($1::jsonb) LIMIT 1",
-      "rows_returned": 0
+      "query": "SELECT id, value::jsonb FROM string_encrypted_10000000 WHERE eql_v2.hmac_256(value) = eql_v2.hmac_256($1::jsonb) LIMIT 1",
+      "rows_returned": 1
     }
   ],
   "target_rows": "10000000"

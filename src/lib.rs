@@ -32,6 +32,48 @@ impl Dummy<FakeCategory> for String {
     }
 }
 
+/// Sample a single plaintext string from an encrypted table by decrypting
+/// the first row. Used by `benches/exact.rs` to derive a search term that's
+/// guaranteed to match at least one record — the previous hardcoded
+/// `"Bob Johnson"` returned zero rows at every tier because `fake::Name<EN>`
+/// doesn't generate that exact combination, so the EXACT bench was secretly
+/// measuring "hash-index lookup + nothing found + LIMIT 1 early exit"
+/// rather than realistic equality-query cost.
+pub async fn sample_plaintext_string(
+    pool: &sqlx::PgPool,
+    cipher: Arc<ScopedCipher<AutoStrategy>>,
+    table_name: &str,
+) -> Result<String> {
+    // `value::jsonb` cast is needed because the column type is the custom
+    // `eql_v2_encrypted` Postgres type — sqlx's JSONB decoder doesn't know
+    // how to read that directly. Every other bench file does the same cast
+    // in its SELECT shape (e.g. `SELECT id, value::jsonb FROM ...`).
+    let row: (Json<EqlCiphertext>,) =
+        sqlx::query_as(&format!("SELECT value::jsonb FROM {} LIMIT 1", table_name))
+            .fetch_one(pool)
+            .await
+            .with_context(|| format!("sample query failed against {}", table_name))?;
+
+    let decrypted = decrypt_eql(cipher, vec![row.0 .0], &Default::default())
+        .await
+        .context("sample decrypt failed")?;
+
+    // `Plaintext` implements `Drop` (for zeroizing on drop), so we can't
+    // move the inner String out via pattern match — borrow + clone instead.
+    let pt = decrypted
+        .into_iter()
+        .next()
+        .ok_or_else(|| anyhow::anyhow!("decrypt_eql returned empty Vec for {}", table_name))?;
+    match &pt {
+        Plaintext::Utf8Str(Some(s)) => Ok(s.clone()),
+        other => anyhow::bail!(
+            "expected Utf8Str sample from {}, got {:?}",
+            table_name,
+            other
+        ),
+    }
+}
+
 /// Install a tracing subscriber honouring `RUST_LOG` (defaults to `warn` if
 /// unset). Idempotent — calling twice is a no-op. Lets cipherstash-client
 /// / zerokms-protocol trace! emissions reach stderr, including the rich

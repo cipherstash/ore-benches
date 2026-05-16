@@ -41,10 +41,10 @@ ON string_encrypted_10000 USING GIN (
 
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
-| 10,000 | 0 | 423.10μs | 450.34μs |
-| 100,000 | 0 | 430.20μs | 418.60μs |
-| 1,000,000 | 0 | 415.64μs | 546.78μs |
-| 10,000,000 | 0 | 441.30μs | 422.38μs |
+| 10,000 | 1 | 497.31μs | 25.63ms |
+| 100,000 | 1 | 488.75μs | 25.52ms |
+| 1,000,000 | 1 | 452.76μs | 25.55ms |
+| 10,000,000 | 1 | 469.54μs | 25.63ms |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
 
@@ -68,26 +68,26 @@ Full `EXPLAIN (FORMAT JSON)`:
       "Node Type": "Limit",
       "Parallel Aware": false,
       "Plan Rows": 1,
-      "Plan Width": 1157,
+      "Plan Width": 36,
       "Plans": [
         {
           "Alias": "string_encrypted_10000",
           "Async Capable": false,
-          "Index Cond": "(((value).data ->> 'hm'::text) = 'b8140713f4ae49445a3220c3d13c28af7a08e31776368d943d1cba2860870712'::text)",
+          "Index Cond": "(((value).data ->> 'hm'::text) = '5488ee1b0cc520560b6cac5bcfc63439d219b24846747a3fed35772326388405'::text)",
           "Index Name": "string_encrypted_10000_hash_index",
           "Node Type": "Index Scan",
           "Parallel Aware": false,
           "Parent Relationship": "Outer",
           "Plan Rows": 1,
-          "Plan Width": 1157,
+          "Plan Width": 36,
           "Relation Name": "string_encrypted_10000",
           "Scan Direction": "Forward",
           "Startup Cost": 0.0,
-          "Total Cost": 8.02
+          "Total Cost": 8.27
         }
       ],
       "Startup Cost": 0.0,
-      "Total Cost": 8.02
+      "Total Cost": 8.27
     }
   }
 ]
@@ -110,26 +110,26 @@ Full `EXPLAIN (FORMAT JSON)`:
       "Node Type": "Limit",
       "Parallel Aware": false,
       "Plan Rows": 1,
-      "Plan Width": 1159,
+      "Plan Width": 36,
       "Plans": [
         {
           "Alias": "string_encrypted_100000",
           "Async Capable": false,
-          "Index Cond": "(((value).data ->> 'hm'::text) = 'b8140713f4ae49445a3220c3d13c28af7a08e31776368d943d1cba2860870712'::text)",
+          "Index Cond": "(((value).data ->> 'hm'::text) = '78ef439942d7046b495cad3df8afc1555af6aff90d1d287a5dd3f18dadfa6ef7'::text)",
           "Index Name": "string_encrypted_100000_hash_index",
           "Node Type": "Index Scan",
           "Parallel Aware": false,
           "Parent Relationship": "Outer",
           "Plan Rows": 1,
-          "Plan Width": 1159,
+          "Plan Width": 36,
           "Relation Name": "string_encrypted_100000",
           "Scan Direction": "Forward",
           "Startup Cost": 0.0,
-          "Total Cost": 8.02
+          "Total Cost": 8.27
         }
       ],
       "Startup Cost": 0.0,
-      "Total Cost": 8.02
+      "Total Cost": 8.27
     }
   }
 ]
@@ -152,26 +152,26 @@ Full `EXPLAIN (FORMAT JSON)`:
       "Node Type": "Limit",
       "Parallel Aware": false,
       "Plan Rows": 1,
-      "Plan Width": 1161,
+      "Plan Width": 36,
       "Plans": [
         {
           "Alias": "string_encrypted_1000000",
           "Async Capable": false,
-          "Index Cond": "(((value).data ->> 'hm'::text) = 'b8140713f4ae49445a3220c3d13c28af7a08e31776368d943d1cba2860870712'::text)",
+          "Index Cond": "(((value).data ->> 'hm'::text) = '1246c1084a30cdf8fad11d1b43ea7efa0966d7b8afed182d8041b6138a0cd67f'::text)",
           "Index Name": "string_encrypted_1000000_hash_index",
           "Node Type": "Index Scan",
           "Parallel Aware": false,
           "Parent Relationship": "Outer",
           "Plan Rows": 5000,
-          "Plan Width": 1161,
+          "Plan Width": 36,
           "Relation Name": "string_encrypted_1000000",
           "Scan Direction": "Forward",
           "Startup Cost": 0.0,
-          "Total Cost": 19855.5
+          "Total Cost": 21105.5
         }
       ],
       "Startup Cost": 0.0,
-      "Total Cost": 3.97
+      "Total Cost": 4.22
     }
   }
 ]
@@ -194,26 +194,26 @@ Full `EXPLAIN (FORMAT JSON)`:
       "Node Type": "Limit",
       "Parallel Aware": false,
       "Plan Rows": 1,
-      "Plan Width": 1162,
+      "Plan Width": 36,
       "Plans": [
         {
           "Alias": "string_encrypted_10000000",
           "Async Capable": false,
-          "Index Cond": "(((value).data ->> 'hm'::text) = 'b8140713f4ae49445a3220c3d13c28af7a08e31776368d943d1cba2860870712'::text)",
+          "Index Cond": "(((value).data ->> 'hm'::text) = '3ad65b2ad0d1cd146d576dffe73c17884b1c3d7004d17efc546d7d9d7a6e0677'::text)",
           "Index Name": "string_encrypted_10000000_hash_index",
           "Node Type": "Index Scan",
           "Parallel Aware": false,
           "Parent Relationship": "Outer",
           "Plan Rows": 8,
-          "Plan Width": 1162,
+          "Plan Width": 36,
           "Relation Name": "string_encrypted_10000000",
           "Scan Direction": "Forward",
           "Startup Cost": 0.0,
-          "Total Cost": 36.14
+          "Total Cost": 38.14
         }
       ],
       "Startup Cost": 0.0,
-      "Total Cost": 4.52
+      "Total Cost": 4.77
     }
   }
 ]
@@ -260,10 +260,10 @@ ON string_encrypted_10000 USING GIN (
 
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
-| 10,000 | 0 | 392.26μs | 399.87μs |
-| 100,000 | 0 | 419.67μs | 407.23μs |
-| 1,000,000 | 0 | 694.00μs | 423.82μs |
-| 10,000,000 | 0 | 381.18μs | 402.59μs |
+| 10,000 | 1 | 430.15μs | 25.40ms |
+| 100,000 | 1 | 437.40μs | 25.68ms |
+| 1,000,000 | 1 | 452.30μs | 25.50ms |
+| 10,000,000 | 1 | 455.17μs | 25.72ms |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
 
@@ -287,26 +287,26 @@ Full `EXPLAIN (FORMAT JSON)`:
       "Node Type": "Limit",
       "Parallel Aware": false,
       "Plan Rows": 1,
-      "Plan Width": 1157,
+      "Plan Width": 36,
       "Plans": [
         {
           "Alias": "string_encrypted_10000",
           "Async Capable": false,
-          "Index Cond": "(((value).data ->> 'hm'::text) = 'b8140713f4ae49445a3220c3d13c28af7a08e31776368d943d1cba2860870712'::text)",
+          "Index Cond": "(((value).data ->> 'hm'::text) = '5488ee1b0cc520560b6cac5bcfc63439d219b24846747a3fed35772326388405'::text)",
           "Index Name": "string_encrypted_10000_hash_index",
           "Node Type": "Index Scan",
           "Parallel Aware": false,
           "Parent Relationship": "Outer",
           "Plan Rows": 1,
-          "Plan Width": 1157,
+          "Plan Width": 36,
           "Relation Name": "string_encrypted_10000",
           "Scan Direction": "Forward",
           "Startup Cost": 0.0,
-          "Total Cost": 8.02
+          "Total Cost": 8.27
         }
       ],
       "Startup Cost": 0.0,
-      "Total Cost": 8.02
+      "Total Cost": 8.27
     }
   }
 ]
@@ -329,26 +329,26 @@ Full `EXPLAIN (FORMAT JSON)`:
       "Node Type": "Limit",
       "Parallel Aware": false,
       "Plan Rows": 1,
-      "Plan Width": 1159,
+      "Plan Width": 36,
       "Plans": [
         {
           "Alias": "string_encrypted_100000",
           "Async Capable": false,
-          "Index Cond": "(((value).data ->> 'hm'::text) = 'b8140713f4ae49445a3220c3d13c28af7a08e31776368d943d1cba2860870712'::text)",
+          "Index Cond": "(((value).data ->> 'hm'::text) = '78ef439942d7046b495cad3df8afc1555af6aff90d1d287a5dd3f18dadfa6ef7'::text)",
           "Index Name": "string_encrypted_100000_hash_index",
           "Node Type": "Index Scan",
           "Parallel Aware": false,
           "Parent Relationship": "Outer",
           "Plan Rows": 1,
-          "Plan Width": 1159,
+          "Plan Width": 36,
           "Relation Name": "string_encrypted_100000",
           "Scan Direction": "Forward",
           "Startup Cost": 0.0,
-          "Total Cost": 8.02
+          "Total Cost": 8.27
         }
       ],
       "Startup Cost": 0.0,
-      "Total Cost": 8.02
+      "Total Cost": 8.27
     }
   }
 ]
@@ -371,26 +371,26 @@ Full `EXPLAIN (FORMAT JSON)`:
       "Node Type": "Limit",
       "Parallel Aware": false,
       "Plan Rows": 1,
-      "Plan Width": 1161,
+      "Plan Width": 36,
       "Plans": [
         {
           "Alias": "string_encrypted_1000000",
           "Async Capable": false,
-          "Index Cond": "(((value).data ->> 'hm'::text) = 'b8140713f4ae49445a3220c3d13c28af7a08e31776368d943d1cba2860870712'::text)",
+          "Index Cond": "(((value).data ->> 'hm'::text) = '1246c1084a30cdf8fad11d1b43ea7efa0966d7b8afed182d8041b6138a0cd67f'::text)",
           "Index Name": "string_encrypted_1000000_hash_index",
           "Node Type": "Index Scan",
           "Parallel Aware": false,
           "Parent Relationship": "Outer",
           "Plan Rows": 5000,
-          "Plan Width": 1161,
+          "Plan Width": 36,
           "Relation Name": "string_encrypted_1000000",
           "Scan Direction": "Forward",
           "Startup Cost": 0.0,
-          "Total Cost": 19855.5
+          "Total Cost": 21105.5
         }
       ],
       "Startup Cost": 0.0,
-      "Total Cost": 3.97
+      "Total Cost": 4.22
     }
   }
 ]
@@ -413,26 +413,26 @@ Full `EXPLAIN (FORMAT JSON)`:
       "Node Type": "Limit",
       "Parallel Aware": false,
       "Plan Rows": 1,
-      "Plan Width": 1162,
+      "Plan Width": 36,
       "Plans": [
         {
           "Alias": "string_encrypted_10000000",
           "Async Capable": false,
-          "Index Cond": "(((value).data ->> 'hm'::text) = 'b8140713f4ae49445a3220c3d13c28af7a08e31776368d943d1cba2860870712'::text)",
+          "Index Cond": "(((value).data ->> 'hm'::text) = '3ad65b2ad0d1cd146d576dffe73c17884b1c3d7004d17efc546d7d9d7a6e0677'::text)",
           "Index Name": "string_encrypted_10000000_hash_index",
           "Node Type": "Index Scan",
           "Parallel Aware": false,
           "Parent Relationship": "Outer",
           "Plan Rows": 8,
-          "Plan Width": 1162,
+          "Plan Width": 36,
           "Relation Name": "string_encrypted_10000000",
           "Scan Direction": "Forward",
           "Startup Cost": 0.0,
-          "Total Cost": 36.14
+          "Total Cost": 38.14
         }
       ],
       "Startup Cost": 0.0,
-      "Total Cost": 4.52
+      "Total Cost": 4.77
     }
   }
 ]
