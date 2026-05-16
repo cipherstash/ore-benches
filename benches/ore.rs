@@ -13,6 +13,7 @@ use dbbenches::{
     EncryptedQuery, EncryptedQueryBuilder, ScenarioMetadata,
 };
 use sqlx::postgres::PgPoolOptions;
+use sqlx::types::Json;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
 
@@ -34,12 +35,23 @@ use tokio::runtime::Runtime;
 // suite because they're the natural form a caller would write, and the
 // timing tells us what that case actually costs.
 //
-// **Selective scenarios** (thresholds 2_140_000_000 / 2_147_000_000 — out at
-// the i32 tail). Selectivity drops to ~0.17% and ~0.011% respectively, so the
-// planner switches to Index Scan: walking from the top of the b-tree and
-// returning the first LIMIT rows is cheaper than scanning the whole table.
-// These demonstrate the same functional-btree path the perf guide §4 describes,
-// in a regime where the planner has reason to prefer it.
+// **Selective scenarios with LIMIT** (thresholds 2_140_000_000 / 2_147_000_000
+// — out at the i32 tail). Selectivity drops to ~0.17% and ~0.011% respectively.
+// The planner picks Index Scan at every tier (10k → 10M) when stats are
+// current: walking the b-tree from the top and returning the first LIMIT rows
+// is cheaper than scanning the whole table.
+//
+// **Stats matter.** Without an `ANALYZE` after the table is re-ingested, the
+// planner defaults to `~14%` selectivity for `>` comparisons and picks Seq
+// Scan even for highly selective predicates. The bench's `prepare:_table`
+// task now runs `ANALYZE <table>` after index creation specifically to avoid
+// this silent-fallback failure mode.
+//
+// **Selective scenarios without LIMIT** (`*_count` — `SELECT count(*) WHERE
+// value <op> threshold`). No LIMIT means the planner must process every
+// matching row to compute the count; with a selective predicate this
+// strongly favours Index Scan over Seq Scan at every tier. Companion to the
+// `_LIMIT` variants — removes LIMIT-related cost-model edge cases.
 //
 // **Hybrid ordered range** uses extractor ORDER BY (`ORDER BY
 // eql_v2.ore_block_u64_8_256(val)`) matching the functional index expression —
@@ -92,6 +104,25 @@ static QUERY_TEMPLATES: &[(&str, i32, &str)] = &[
          ORDER BY eql_v2.ore_block_u64_8_256(value) LIMIT 10",
         5000,
         "range_lt_hybrid_ordered_10",
+    ),
+];
+
+// Count-style selective scenarios — no LIMIT, so the planner must process
+// every matching row, which strongly favours Index Scan on the functional
+// btree once selectivity is low. These reliably engage the index at every
+// tier (10k → 10M) and are the canonical "yes the ORE index is doing real
+// work" demonstration. SELECT count(*) returns a single row; the bench
+// loop drains it and black_boxes the result.
+static COUNT_QUERY_TEMPLATES: &[(&str, i32, &str)] = &[
+    (
+        "SELECT count(*) FROM {TABLE} WHERE value > $1",
+        2_140_000_000,
+        "range_selective_gt_count",
+    ),
+    (
+        "SELECT count(*) FROM {TABLE} WHERE value > $1",
+        2_147_000_000,
+        "range_highly_selective_gt_count",
     ),
 ];
 
@@ -159,11 +190,27 @@ fn criterion_benchmark(c: &mut Criterion) {
         queries
     });
 
+    // Count-style scenarios reuse the same build_query path (to encrypt
+    // the threshold as the bound parameter) but produce a different SQL
+    // shape — they're executed via raw sqlx in the iter loop below
+    // because EncryptedQuery::execute is typed for `Vec<(i32,
+    // Json<EqlCiphertext>)>`, which doesn't match a `SELECT count(*)`
+    // result.
+    let count_queries = rt.block_on(async {
+        let mut queries = Vec::with_capacity(COUNT_QUERY_TEMPLATES.len());
+        for (query_template, x, _) in COUNT_QUERY_TEMPLATES {
+            let query_str = query_template.replace("{TABLE}", &table_name);
+            let query = build_query(Arc::clone(&cipher), &query_str, *x, &table_name).await;
+            queries.push(query);
+        }
+        queries
+    });
+
     // Capture per-scenario metadata (exact SQL, bound parameter, EXPLAIN
     // plan, indexes used) before the criterion loop. Writes
     // `results/query/ore_metadata_<rows>.json`.
     let metadata = rt.block_on(async {
-        let mut out = Vec::with_capacity(queries.len());
+        let mut out = Vec::with_capacity(queries.len() + count_queries.len());
         for (i, query) in queries.iter().enumerate() {
             let (_, _, scenario) = QUERY_TEMPLATES[i];
             let bench_id = format!("ORE/ore/{}/{}", scenario, target_rows);
@@ -174,6 +221,30 @@ fn criterion_benchmark(c: &mut Criterion) {
                 .execute(&pool)
                 .await
                 .expect("execute for row-count failed");
+            let rows_returned = rows.len() as u64;
+            out.push(ScenarioMetadata {
+                id: bench_id,
+                query: query.statement.clone(),
+                parameters,
+                explain,
+                indexes_used,
+                rows_returned,
+            });
+        }
+
+        // Count-scenarios: same metadata shape, but use raw sqlx (the
+        // count(*) return type doesn't match EncryptedQuery::execute).
+        for (i, query) in count_queries.iter().enumerate() {
+            let (_, _, scenario) = COUNT_QUERY_TEMPLATES[i];
+            let bench_id = format!("ORE/ore/{}/{}", scenario, target_rows);
+            let explain = query.explain(&pool).await.expect("EXPLAIN failed");
+            let indexes_used = extract_indexes_used(&explain);
+            let parameters = vec![query.parameter_json().expect("serialise parameter")];
+            let rows = sqlx::query(&query.statement)
+                .bind(Json(&query.eql))
+                .fetch_all(&pool)
+                .await
+                .expect("count(*) execute for row-count failed");
             let rows_returned = rows.len() as u64;
             out.push(ScenarioMetadata {
                 id: bench_id,
@@ -215,6 +286,27 @@ fn criterion_benchmark(c: &mut Criterion) {
                     query.execute_and_decrypt(&pool).await,
                     &decrypt_id_inner,
                 ));
+            })
+        });
+    }
+
+    // Count-style scenarios — single iter loop each, raw sqlx (count(*)
+    // return type doesn't match EncryptedQuery::execute). No `_decrypt`
+    // variant — there's nothing to decrypt in a count result.
+    for (i, query) in count_queries.into_iter().enumerate() {
+        let (_, _, scenario) = COUNT_QUERY_TEMPLATES[i];
+        let exec_id = format!("ORE/ore/{}/{}", scenario, target_rows);
+        let exec_id_inner = exec_id.clone();
+        group.bench_function(format!("ore/{}/{}", scenario, target_rows), |b| {
+            b.to_async(&rt).iter(|| async {
+                let rows = bench_assert(
+                    sqlx::query(&query.statement)
+                        .bind(Json(&query.eql))
+                        .fetch_all(&pool)
+                        .await,
+                    &exec_id_inner,
+                );
+                black_box(rows.len());
             })
         });
     }

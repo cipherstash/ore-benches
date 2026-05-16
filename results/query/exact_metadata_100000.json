@@ -8,7 +8,7 @@
             "Node Type": "Limit",
             "Parallel Aware": false,
             "Plan Rows": 1,
-            "Plan Width": 1163,
+            "Plan Width": 1159,
             "Plans": [
               {
                 "Alias": "string_encrypted_100000",
@@ -19,7 +19,7 @@
                 "Parallel Aware": false,
                 "Parent Relationship": "Outer",
                 "Plan Rows": 1,
-                "Plan Width": 1163,
+                "Plan Width": 1159,
                 "Relation Name": "string_encrypted_100000",
                 "Scan Direction": "Forward",
                 "Startup Cost": 0.0,
@@ -56,7 +56,7 @@
             "Node Type": "Limit",
             "Parallel Aware": false,
             "Plan Rows": 1,
-            "Plan Width": 1163,
+            "Plan Width": 1159,
             "Plans": [
               {
                 "Alias": "string_encrypted_100000",
@@ -67,7 +67,7 @@
                 "Parallel Aware": false,
                 "Parent Relationship": "Outer",
                 "Plan Rows": 1,
-                "Plan Width": 1163,
+                "Plan Width": 1159,
                 "Relation Name": "string_encrypted_100000",
                 "Scan Direction": "Forward",
                 "Startup Cost": 0.0,

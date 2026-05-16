@@ -291,6 +291,15 @@ done
 echo "Creating indexes..."
 docker exec -i ore-benches-postgres psql -U postgres -d postgres < sql/indexes/${TABLE_NAME}_up.sql
 
+# ANALYZE the freshly-loaded table so the planner has accurate
+# selectivity stats for the functional indexes. Without this, the
+# planner uses default selectivity assumptions (e.g. ~14% for `>`)
+# and reliably picks Seq Scan over Index Scan for low-selectivity
+# predicates — which silently looks like a benchmark of "EQL is slow"
+# when really it's "stats are stale". Costs seconds even at 10M rows.
+echo "Running ANALYZE..."
+docker exec -i ore-benches-postgres psql -U postgres -d postgres -c "ANALYZE $TABLE_NAME;"
+
 FINAL_ROWS=$(docker exec ore-benches-postgres psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM $TABLE_NAME;" | tr -d ' ')
 echo "Preparation complete! Final row count: $FINAL_ROWS"
 """

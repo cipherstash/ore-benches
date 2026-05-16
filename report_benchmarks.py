@@ -278,6 +278,14 @@ class BenchmarkReporter:
                     "SELECT id,value::jsonb FROM {TABLE} WHERE value > $1 LIMIT 10",
                     "2147000000"
                 ),
+                "range_selective_gt_count": (
+                    "SELECT count(*) FROM {TABLE} WHERE value > $1",
+                    "2140000000"
+                ),
+                "range_highly_selective_gt_count": (
+                    "SELECT count(*) FROM {TABLE} WHERE value > $1",
+                    "2147000000"
+                ),
                 "range_lt_hybrid_ordered_10": (
                     "SELECT id,value::jsonb FROM {TABLE} "
                     "WHERE value < $1 "
@@ -413,30 +421,47 @@ class BenchmarkReporter:
                     "Query: WHERE value < 5000 LIMIT 100."
                 ),
                 "range_selective_gt_100": (
-                    "Selective range query (~0.17% selectivity) returning up to 100 results",
+                    "Selective range query (~0.17% selectivity) with LIMIT 100",
                     "Table: `integer_encrypted_{rows}` with Block-ORE-encrypted integer values. "
                     "Index: functional btree on `eql_v2.ore_block_u64_8_256(value)`. "
                     "Query: WHERE value > 2_140_000_000 LIMIT 100. The threshold sits 7.5M "
-                    "values below `i32::MAX`, so on `Faker.fake::<i32>()` uniform random data "
-                    "only ~0.17% of rows match. At this selectivity the planner switches from "
-                    "the Seq Scan + LIMIT shape it picked for the non-selective baselines "
-                    "(`range_gt_*` with threshold 5000) to Index Scan — walking the b-tree "
-                    "from the top and returning the first 100 matches is cheaper than "
-                    "scanning the whole table. This is the same functional-btree path the "
-                    "EQL query-performance guide §4 documents; the non-selective baselines "
-                    "demonstrate that the planner correctly *avoids* the index when "
-                    "selectivity is too low for the lookup to win."
+                    "values below `i32::MAX`, so ~0.17% of rows match on `Faker.fake::<i32>()` "
+                    "uniform random data. Engages the ORE btree at every tier (10k → 10M) — "
+                    "walking the b-tree from the top and returning the first 100 matches is "
+                    "cheaper than scanning the table once the planner knows the predicate is "
+                    "selective. **Note on stats**: this requires up-to-date planner stats on "
+                    "the functional index expression (`ANALYZE <table>` after re-ingest). "
+                    "Without current stats the planner falls back to default `>` selectivity "
+                    "(~14%) and picks Seq Scan, which is silent but produces misleading "
+                    "timing. The bench's `prepare:_table` now ANALYZE's automatically."
                 ),
                 "range_highly_selective_gt_10": (
-                    "Highly selective range query (~0.011% selectivity) returning up to 10 results",
+                    "Highly selective range query (~0.011% selectivity) with LIMIT 10",
                     "Table: `integer_encrypted_{rows}` with Block-ORE-encrypted integer values. "
                     "Index: functional btree on `eql_v2.ore_block_u64_8_256(value)`. "
-                    "Query: WHERE value > 2_147_000_000 LIMIT 10. The threshold sits 483k "
-                    "values below `i32::MAX`. Even at 10k rows the planner picks Index Scan: "
-                    "with 0.011% selectivity it expects ~1 matching row, which it finds at "
-                    "the top of the b-tree in a single page read. Useful as the upper-bound "
-                    "demonstration of how cheap a selective range lookup becomes when the "
-                    "functional index engages."
+                    "Query: WHERE value > 2_147_000_000 LIMIT 10. Threshold sits 483k values "
+                    "below `i32::MAX` (~0.011% selectivity). Engages the ORE btree at every "
+                    "tier (with current stats — see the note on `range_selective_gt_100`). "
+                    "Useful as the upper-bound demonstration of how cheap a selective range "
+                    "lookup becomes when the functional index engages."
+                ),
+                "range_selective_gt_count": (
+                    "Selective range count (~0.17% selectivity), no LIMIT",
+                    "Table: `integer_encrypted_{rows}` with Block-ORE-encrypted integer values. "
+                    "Index: functional btree on `eql_v2.ore_block_u64_8_256(value)`. "
+                    "Query: `SELECT count(*) FROM tbl WHERE value > 2_140_000_000`. With no "
+                    "LIMIT the planner must process every matching row, which at low "
+                    "selectivity strongly favours Index Scan over Seq Scan. The companion "
+                    "to `range_selective_gt_100` — removes any LIMIT-related cost-model "
+                    "edge cases and demonstrates the index path in pure form."
+                ),
+                "range_highly_selective_gt_count": (
+                    "Highly selective range count (~0.011% selectivity), no LIMIT",
+                    "Table: `integer_encrypted_{rows}` with Block-ORE-encrypted integer values. "
+                    "Index: functional btree on `eql_v2.ore_block_u64_8_256(value)`. "
+                    "Query: `SELECT count(*) FROM tbl WHERE value > 2_147_000_000`. Tighter "
+                    "selectivity than `range_selective_gt_count`; near-floor cost for an "
+                    "indexed lookup."
                 ),
                 "range_lt_hybrid_ordered_10": (
                     "Ordered range query (hybrid form: natural WHERE, extractor ORDER BY)",

@@ -18,16 +18,16 @@
                 "Node Type": "Index Scan",
                 "Parallel Aware": false,
                 "Parent Relationship": "Outer",
-                "Plan Rows": 2,
+                "Plan Rows": 5000,
                 "Plan Width": 1161,
                 "Relation Name": "string_encrypted_1000000",
                 "Scan Direction": "Forward",
                 "Startup Cost": 0.0,
-                "Total Cost": 12.04
+                "Total Cost": 19855.5
               }
             ],
             "Startup Cost": 0.0,
-            "Total Cost": 6.02
+            "Total Cost": 3.97
           }
         }
       ],
@@ -66,16 +66,16 @@
                 "Node Type": "Index Scan",
                 "Parallel Aware": false,
                 "Parent Relationship": "Outer",
-                "Plan Rows": 2,
+                "Plan Rows": 5000,
                 "Plan Width": 1161,
                 "Relation Name": "string_encrypted_1000000",
                 "Scan Direction": "Forward",
                 "Startup Cost": 0.0,
-                "Total Cost": 12.04
+                "Total Cost": 19855.5
               }
             ],
             "Startup Cost": 0.0,
-            "Total Cost": 6.02
+            "Total Cost": 3.97
           }
         }
       ],

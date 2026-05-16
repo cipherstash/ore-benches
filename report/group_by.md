@@ -35,10 +35,10 @@ ON category_encrypted_10000 using hash (
 
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
-| 10,000 | 1 | 2.61ms | N/A |
-| 100,000 | 1 | 29.25ms | N/A |
-| 1,000,000 | 1 | 93.42ms | N/A |
-| 10,000,000 | 1 | ⚠️ 1.669s | N/A |
+| 10,000 | 1 | 2.73ms | N/A |
+| 100,000 | 1 | 27.33ms | N/A |
+| 1,000,000 | 1 | ⚠️ 124.61ms | N/A |
+| 10,000,000 | 1 | ⚠️ 1.466s | N/A |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
 
@@ -412,10 +412,10 @@ SELECT count(*) FROM (SELECT 1 FROM {TABLE} GROUP BY value) g
 
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
-| 10,000 | 1 | 1.44ms | N/A |
-| 100,000 | 1 | 9.96ms | N/A |
-| 1,000,000 | 1 | 36.04ms | N/A |
-| 10,000,000 | 1 | ⚠️ 557.87ms | N/A |
+| 10,000 | 1 | 1.51ms | N/A |
+| 100,000 | 1 | 9.69ms | N/A |
+| 1,000,000 | 1 | 40.15ms | N/A |
+| 10,000,000 | 1 | ⚠️ 430.47ms | N/A |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
 
@@ -798,10 +798,10 @@ ON category_encrypted_10000 using hash (
 
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
-| 10,000 | 10 | 2.72ms | N/A |
-| 100,000 | 10 | 29.11ms | N/A |
-| 1,000,000 | 10 | 94.56ms | N/A |
-| 10,000,000 | 10 | ⚠️ 1.352s | N/A |
+| 10,000 | 10 | 2.87ms | N/A |
+| 100,000 | 10 | 27.79ms | N/A |
+| 1,000,000 | 10 | 95.87ms | N/A |
+| 10,000,000 | 10 | ⚠️ 1.312s | N/A |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
 
@@ -1235,10 +1235,10 @@ SELECT value, count(*) FROM {TABLE} GROUP BY 1 ORDER BY count(*) DESC LIMIT 10
 
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
-| 10,000 | 10 | 1.54ms | N/A |
-| 100,000 | 10 | 10.38ms | N/A |
-| 1,000,000 | 10 | 37.31ms | N/A |
-| 10,000,000 | 10 | ⚠️ 600.45ms | N/A |
+| 10,000 | 10 | 1.61ms | N/A |
+| 100,000 | 10 | 10.15ms | N/A |
+| 1,000,000 | 10 | 38.71ms | N/A |
+| 10,000,000 | 10 | ⚠️ 461.75ms | N/A |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
 
