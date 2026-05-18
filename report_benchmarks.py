@@ -291,6 +291,12 @@ class BenchmarkReporter:
                     "WHERE value < $1 "
                     "ORDER BY eql_v2.ore_block_u64_8_256(value) LIMIT 10",
                     "5000"
+                ),
+                "range_lt_natural_ordered_10": (
+                    "SELECT id,value::jsonb FROM {TABLE} "
+                    "WHERE value < $1 "
+                    "ORDER BY value LIMIT 10",
+                    "5000"
                 )
             },
             "GROUP_BY": {
@@ -472,6 +478,18 @@ class BenchmarkReporter:
                     "out of the index already ordered — no Sort node. See §4 of the EQL "
                     "query-performance guide for the natural-form sort-key trap that this "
                     "shape avoids."
+                ),
+                "range_lt_natural_ordered_10": (
+                    "Ordered range query (natural form: column in ORDER BY)",
+                    "Table: `integer_encrypted_{rows}` with Block-ORE-encrypted integer values. "
+                    "Index: functional btree on `eql_v2.ore_block_u64_8_256(value)`. "
+                    "Query: WHERE value < 5000 ORDER BY value LIMIT 10. The sort key doesn't "
+                    "match the index expression, so the plan keeps a residual Top-N Sort over "
+                    "the bitmap-scan output. Post-EQL #218 each comparison in the sort is the "
+                    "inlined ORE-term path (no plpgsql dispatch per row), but the Sort cost "
+                    "still scales with the size of the post-WHERE set. Companion to "
+                    "`range_lt_hybrid_ordered_10`; the cost delta is the price of the §4 "
+                    "sort-key shortcut."
                 )
             },
             "GROUP_BY": {

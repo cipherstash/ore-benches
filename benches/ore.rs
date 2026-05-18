@@ -55,10 +55,12 @@ use tokio::runtime::Runtime;
 //
 // **Hybrid ordered range** uses extractor ORDER BY (`ORDER BY
 // eql_v2.ore_block_u64_8_256(val)`) matching the functional index expression —
-// rows stream out of the index already sorted (Index Scan, no Sort node). The
-// natural-form variant (`ORDER BY value`) is the §4 sort-key trap and was
-// dropped from this bench in an earlier pass — its cost (Top-N Sort over the
-// full post-WHERE bitmap) is documented in the guide already.
+// rows stream out of the index already sorted (Index Scan, no Sort node).
+//
+// **Natural-form ordered range** uses column ORDER BY (`ORDER BY value`). The
+// sort key doesn't match the functional index expression syntactically, so the
+// plan keeps a residual Top-N Sort over the bitmap-scan output. The hybrid /
+// natural pair documents the cost of taking the §4 sort-key shortcut.
 static QUERY_TEMPLATES: &[(&str, i32, &str)] = &[
     // ── Non-selective baselines (≈50% selectivity → Seq Scan + LIMIT) ──
     (
@@ -98,12 +100,29 @@ static QUERY_TEMPLATES: &[(&str, i32, &str)] = &[
         "range_highly_selective_gt_10",
     ),
     // ── Hybrid ordered range (extractor in ORDER BY) ──
+    // Sort key matches the functional index expression syntactically, so rows
+    // stream out of the index already sorted — no Sort node in the plan.
     (
         "SELECT id,value::jsonb FROM {TABLE} \
          WHERE value < $1 \
          ORDER BY eql_v2.ore_block_u64_8_256(value) LIMIT 10",
         5000,
         "range_lt_hybrid_ordered_10",
+    ),
+    // ── Natural-form ordered range (column in ORDER BY) ──
+    // Companion to the hybrid scenario above. Postgres can't structurally
+    // match `ORDER BY value` against the functional index expression, so the
+    // plan has a residual Top-N Sort over the bitmap-scan output. Post-EQL
+    // #218 each comparison in the sort is the inlined ORE-term path, so the
+    // residual cost is bounded by Sort + heap fetches rather than per-row
+    // plpgsql. The cost delta vs the hybrid form is what justifies (or
+    // doesn't) the §4 sort-key recommendation in the EQL perf guide.
+    (
+        "SELECT id,value::jsonb FROM {TABLE} \
+         WHERE value < $1 \
+         ORDER BY value LIMIT 10",
+        5000,
+        "range_lt_natural_ordered_10",
     ),
 ];
 
