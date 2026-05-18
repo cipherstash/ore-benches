@@ -5,7 +5,10 @@ use cipherstash_client::{
     AutoStrategy,
 };
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use dbbenches::{init_scoped_cipher, EncryptedQuery, EncryptedQueryBuilder};
+use dbbenches::{
+    bench_assert, extract_indexes_used, init_scoped_cipher, write_metadata_file, EncryptedQuery,
+    EncryptedQueryBuilder, ScenarioMetadata,
+};
 use sqlx::postgres::PgPoolOptions;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
@@ -23,7 +26,7 @@ async fn build_query(
     table_name: &str,
 ) -> EncryptedQuery {
     let column_config = ColumnConfig::build("value")
-        .casts_as(ColumnType::Text)
+        .casts_as(ColumnType::Utf8Str)
         .add_index(Index::new_match());
 
     let identifier = Identifier::new(table_name, "value");
@@ -76,21 +79,58 @@ fn criterion_benchmark(c: &mut Criterion) {
         queries
     });
 
+    // Capture per-scenario metadata (exact SQL, bound parameter, EXPLAIN
+    // plan, indexes used) before the criterion loop. Writes
+    // `results/query/match_metadata_<rows>.json`.
+    let metadata = rt.block_on(async {
+        let mut out = Vec::with_capacity(queries.len());
+        for (i, query) in queries.iter().enumerate() {
+            let (_, _, scenario) = QUERY_TEMPLATES[i];
+            let bench_id = format!("MATCH/match/{}/{}", scenario, target_rows);
+            let explain = query.explain(&pool).await.expect("EXPLAIN failed");
+            let indexes_used = extract_indexes_used(&explain);
+            let parameters = vec![query.parameter_json().expect("serialise parameter")];
+            let rows = query
+                .execute(&pool)
+                .await
+                .expect("execute for row-count failed");
+            let rows_returned = rows.len() as u64;
+            out.push(ScenarioMetadata {
+                id: bench_id,
+                query: query.statement.clone(),
+                parameters,
+                explain,
+                indexes_used,
+                rows_returned,
+            });
+        }
+        out
+    });
+    write_metadata_file("match", &target_rows, metadata)
+        .expect("failed to write bench metadata sidecar");
+
     let mut group = c.benchmark_group("MATCH");
     group.sample_size(10);
 
     for (i, query) in queries.into_iter().enumerate() {
         let (_, _, scenario) = QUERY_TEMPLATES[i];
-        
+        let exec_id = format!("MATCH/match/{}/{}", scenario, target_rows);
+        let decrypt_id = format!("MATCH/match_decrypt/{}/{}", scenario, target_rows);
+
+        let exec_id_inner = exec_id.clone();
         group.bench_function(format!("match/{}/{}", scenario, target_rows), |b| {
             b.to_async(&rt).iter(|| async {
-                let _: Vec<_> = query.execute(&pool).await.unwrap();
+                let _: Vec<_> = bench_assert(query.execute(&pool).await, &exec_id_inner);
             })
         });
 
+        let decrypt_id_inner = decrypt_id.clone();
         group.bench_function(format!("match_decrypt/{}/{}", scenario, target_rows), |b| {
             b.to_async(&rt).iter(|| async {
-                let _r: Vec<String> = black_box(query.execute_and_decrypt(&pool).await.unwrap());
+                let _r: Vec<String> = black_box(bench_assert(
+                    query.execute_and_decrypt(&pool).await,
+                    &decrypt_id_inner,
+                ));
             })
         });
     }

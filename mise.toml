@@ -40,6 +40,48 @@ docker exec -i ore-benches-postgres psql -U postgres -d template1 -c "CREATE DAT
 echo "Database reset complete. Run 'mise run setup-db' to set up tables and data."
 """
 
+[tasks.truncate]
+description = "Truncate all bench tables (keeps EQL install + schema; just wipes rows)"
+depends = ["postgres"]
+run = """
+#!/usr/bin/env bash
+set -e
+
+echo "Waiting for PostgreSQL to be ready..."
+until docker exec ore-benches-postgres pg_isready -U postgres > /dev/null 2>&1; do
+  sleep 1
+done
+
+echo "Truncating all bench tables in public schema..."
+docker exec -i ore-benches-postgres psql -v ON_ERROR_STOP=1 -U postgres -d postgres <<'SQL'
+DO $$
+DECLARE
+  r record;
+  table_list text := '';
+BEGIN
+  FOR r IN
+    SELECT tablename
+    FROM pg_tables
+    WHERE schemaname = 'public'
+      AND (tablename LIKE '%_encrypted%' OR tablename LIKE '%_plaintext%')
+    ORDER BY tablename
+  LOOP
+    table_list := table_list || 'public.' || quote_ident(r.tablename) || ', ';
+  END LOOP;
+
+  IF table_list = '' THEN
+    RAISE NOTICE 'No bench tables found to truncate.';
+  ELSE
+    table_list := rtrim(table_list, ', ');
+    RAISE NOTICE 'Truncating: %', table_list;
+    EXECUTE 'TRUNCATE TABLE ' || table_list || ' RESTART IDENTITY CASCADE';
+  END IF;
+END $$;
+SQL
+
+echo "Truncate complete. EQL version untouched."
+"""
+
 [tasks.setup-db]
 description = "Set up the test database (create tables and load data)"
 depends = ["postgres"]
@@ -76,20 +118,27 @@ cargo build --release
 
 [tasks."bench:ingest:_run"]
 description = "Internal: Run a generic ingest benchmark"
-depends = ["bench:build"]
+depends = ["postgres", "bench:build"]
 run = """
 #!/usr/bin/env bash
 set -e
+[ -f .env ] && set -a && source .env && set +a
 
 BENCH_NAME="$1"
+TABLE_NAME="$2"
+NUM_RECORDS="${3:-500,1000,10000}"
 
-if [ -z "$BENCH_NAME" ]; then
-  echo "Error: BENCH_NAME argument must be provided"
+if [ -z "$BENCH_NAME" ] || [ -z "$TABLE_NAME" ]; then
+  echo "Error: BENCH_NAME and TABLE_NAME arguments must be provided"
+  echo "Usage: mise run bench:ingest:_run <bench_name> <table_name> [num_records]"
   exit 1
 fi
 
 echo "Running $BENCH_NAME ingest benchmark..."
-mise x -- hyperfine --export-json target/${BENCH_NAME}_hyperfine.json -L num_records 500,1000,10000 --runs 2 "NUM_RECORDS={num_records} ./target/release/$BENCH_NAME"
+mise x -- hyperfine --export-json target/${BENCH_NAME}_hyperfine.json \
+  -L num_records "${NUM_RECORDS}" --runs 2 \
+  --prepare "docker exec ore-benches-postgres psql -U postgres -d postgres -c 'TRUNCATE TABLE ${TABLE_NAME};'" \
+  "NUM_RECORDS={num_records} ./target/release/$BENCH_NAME"
 
 echo "Combining results..."
 ./target/release/combine_benchmark "$BENCH_NAME"
@@ -99,19 +148,68 @@ echo "Benchmark complete! Results written to results/ingest/${BENCH_NAME}_combin
 
 [tasks."bench:ingest:encrypt_int"]
 description = "Run encrypt_int ingest benchmark and combine results"
-run = "mise run bench:ingest:_run encrypt_int"
+run = "mise run bench:ingest:_run encrypt_int integer_encrypted"
 
 [tasks."bench:ingest:encrypt_string"]
 description = "Run encrypt_string ingest benchmark and combine results"
-run = "mise run bench:ingest:_run encrypt_string"
+run = "mise run bench:ingest:_run encrypt_string string_encrypted"
 
-[tasks."bench:ingest:encrypt_json_small"]
-description = "Run encrypt_json_small ingest benchmark and combine results"
-run = "mise run bench:ingest:_run encrypt_json_small"
+[tasks."bench:ingest:json-small"]
+description = "Run encrypt_json_small (no-index baseline) ingest benchmark"
+run = "mise run bench:ingest:_run encrypt_json_small json_small_encrypted"
+
+[tasks."bench:ingest:json-large"]
+description = "Run encrypt_json_large (no-index baseline) ingest benchmark"
+run = "mise run bench:ingest:_run encrypt_json_large json_large_encrypted"
+
+[tasks."bench:ingest:json-ste-vec-small"]
+description = "Run encrypt_ste_vec_small (SteVec-indexed) ingest benchmark"
+run = "mise run bench:ingest:_run encrypt_ste_vec_small json_ste_vec_small_encrypted $1"
+
+[tasks."bench:ingest:json-ste-vec-small-gin"]
+description = "Run encrypt_ste_vec_small ingest benchmark with the GIN index pre-created (measures index-write cost amortised over insert path)"
+depends = ["postgres", "bench:build"]
+run = """
+#!/usr/bin/env bash
+set -e
+[ -f .env ] && set -a && source .env && set +a
+
+BENCH_NAME="encrypt_ste_vec_small"
+TABLE_NAME="json_ste_vec_small_encrypted"
+NUM_RECORDS="${1:-500,1000,10000}"
+
+echo "Waiting for PostgreSQL to be ready..."
+until docker exec ore-benches-postgres pg_isready -U postgres > /dev/null 2>&1; do
+  sleep 1
+done
+
+echo "Truncating table and creating GIN index before ingest..."
+docker exec -i ore-benches-postgres psql -v ON_ERROR_STOP=1 -U postgres -d postgres -c "TRUNCATE TABLE ${TABLE_NAME};"
+docker exec -i ore-benches-postgres psql -v ON_ERROR_STOP=1 -U postgres -d postgres < sql/indexes/${TABLE_NAME}_down.sql
+docker exec -i ore-benches-postgres psql -v ON_ERROR_STOP=1 -U postgres -d postgres < sql/indexes/${TABLE_NAME}_up.sql
+
+echo "Running $BENCH_NAME ingest benchmark (with GIN index)..."
+mkdir -p results/ingest
+hyperfine --export-json results/ingest/${BENCH_NAME}_gin_hyperfine.json \
+  -L num_records "${NUM_RECORDS}" --runs 2 \
+  --prepare "docker exec ore-benches-postgres psql -U postgres -d postgres -c 'TRUNCATE TABLE ${TABLE_NAME};'" \
+  "NUM_RECORDS={num_records} ./target/release/$BENCH_NAME"
+
+echo "Benchmark complete! Results written to results/ingest/${BENCH_NAME}_gin_hyperfine.json"
+"""
+
+[tasks."bench:ingest:json-ste-vec-large"]
+description = "Run encrypt_ste_vec_large (SteVec-indexed) ingest benchmark"
+run = "mise run bench:ingest:_run encrypt_ste_vec_large json_large_encrypted"
 
 [tasks."bench:ingest"]
 description = "Run all ingest benchmarks sequentially"
-depends = ["bench:ingest:encrypt_int", "bench:ingest:encrypt_string", "bench:ingest:encrypt_json_small"]
+depends = [
+  "bench:ingest:encrypt_int",
+  "bench:ingest:encrypt_string",
+  "bench:ingest:json-small",
+  "bench:ingest:json-large",
+]
 
 [tasks."prepare:_table"]
 description = "Internal: Prepare a table with target row count"
@@ -162,12 +260,45 @@ fi
 echo "Dropping indexes..."
 docker exec -i ore-benches-postgres psql -U postgres -d postgres < sql/indexes/${TABLE_NAME}_down.sql
 
-ROWS_TO_INSERT=$((TARGET_ROWS - CURRENT_ROWS))
-echo "Inserting $ROWS_TO_INSERT additional rows..."
-NUM_RECORDS=$ROWS_TO_INSERT TABLE_SUFFIX="_${TARGET_ROWS}" ./target/release/$BINARY_NAME
+# ZeroKMS occasionally returns "Unexpected error" mid-stream on long encrypt
+# runs (typically 150-400k rows in), killing the binary. The binary writes
+# rows transactionally per batch, so a re-run from the current row count
+# picks up where we left off. Retry the inner binary until the table
+# reaches the target (or MAX_ATTEMPTS — typically <5 needed even at 10M).
+MAX_ATTEMPTS=30
+attempt=1
+while true; do
+  CURRENT_ROWS=$(docker exec ore-benches-postgres psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM $TABLE_NAME;" | tr -d ' ')
+  if [ "$CURRENT_ROWS" -ge "$TARGET_ROWS" ]; then
+    echo "Table reached $CURRENT_ROWS rows (>= $TARGET_ROWS)."
+    break
+  fi
+  if [ "$attempt" -gt "$MAX_ATTEMPTS" ]; then
+    echo "Error: exceeded $MAX_ATTEMPTS attempts, table has $CURRENT_ROWS / $TARGET_ROWS rows."
+    exit 1
+  fi
+  ROWS_TO_INSERT=$((TARGET_ROWS - CURRENT_ROWS))
+  echo "Attempt $attempt: inserting $ROWS_TO_INSERT additional rows..."
+  if NUM_RECORDS=$ROWS_TO_INSERT TABLE_SUFFIX="_${TARGET_ROWS}" ./target/release/$BINARY_NAME; then
+    echo "Attempt $attempt: succeeded."
+  else
+    echo "Attempt $attempt: failed (likely ZeroKMS transient), retrying after backoff..."
+    sleep 5
+  fi
+  attempt=$((attempt + 1))
+done
 
 echo "Creating indexes..."
 docker exec -i ore-benches-postgres psql -U postgres -d postgres < sql/indexes/${TABLE_NAME}_up.sql
+
+# ANALYZE the freshly-loaded table so the planner has accurate
+# selectivity stats for the functional indexes. Without this, the
+# planner uses default selectivity assumptions (e.g. ~14% for `>`)
+# and reliably picks Seq Scan over Index Scan for low-selectivity
+# predicates — which silently looks like a benchmark of "EQL is slow"
+# when really it's "stats are stale". Costs seconds even at 10M rows.
+echo "Running ANALYZE..."
+docker exec -i ore-benches-postgres psql -U postgres -d postgres -c "ANALYZE $TABLE_NAME;"
 
 FINAL_ROWS=$(docker exec ore-benches-postgres psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM $TABLE_NAME;" | tr -d ' ')
 echo "Preparation complete! Final row count: $FINAL_ROWS"
@@ -180,6 +311,131 @@ run = "mise run prepare:_table string_encrypted encrypt_string $1"
 [tasks."prepare:integer_encrypted"]
 description = "Prepare integer_encrypted table with target row count"
 run = "mise run prepare:_table integer_encrypted encrypt_int $1"
+
+[tasks."prepare:json_ste_vec_small"]
+description = "Prepare json_ste_vec_small_encrypted table with target row count"
+run = "mise run prepare:_table json_ste_vec_small_encrypted encrypt_ste_vec_small $1"
+
+[tasks."prepare:category_encrypted"]
+description = "Prepare category_encrypted_<size> table with ~250 low-cardinality categorical values"
+run = "mise run prepare:_table category_encrypted encrypt_category $1"
+
+[tasks."prepare:combo_encrypted"]
+description = "Prepare combo_encrypted_<size> table with three encrypted columns (name + age + category)"
+run = "mise run prepare:_table combo_encrypted encrypt_combo $1"
+
+[tasks."prepare:category_plaintext"]
+description = "Prepare category_plaintext_<size> table with ~250 low-cardinality categorical strings (CAT_001..CAT_250, uniform random)"
+depends = ["postgres"]
+run = """
+#!/usr/bin/env bash
+set -e
+
+TARGET_ROWS="$1"
+
+if [ -z "$TARGET_ROWS" ]; then
+  echo "Error: target row count argument required"
+  echo "Usage: mise run prepare:category_plaintext <target_rows>"
+  exit 1
+fi
+
+case "$TARGET_ROWS" in
+  10000|100000|1000000|10000000)
+    ;;
+  *)
+    echo "Error: TARGET_ROWS must be one of: 10000, 100000, 1000000, 10000000"
+    exit 1
+    ;;
+esac
+
+TABLE_NAME="category_plaintext_${TARGET_ROWS}"
+
+echo "Waiting for PostgreSQL to be ready..."
+until docker exec ore-benches-postgres pg_isready -U postgres > /dev/null 2>&1; do
+  sleep 1
+done
+
+CURRENT_ROWS=$(docker exec ore-benches-postgres psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM $TABLE_NAME;" | tr -d ' ')
+
+echo "Current rows in $TABLE_NAME: $CURRENT_ROWS"
+echo "Target rows: $TARGET_ROWS"
+
+if [ "$CURRENT_ROWS" -ge "$TARGET_ROWS" ]; then
+  echo "Table already has $CURRENT_ROWS rows (>= $TARGET_ROWS). No action needed."
+  exit 0
+fi
+
+ROWS_TO_INSERT=$((TARGET_ROWS - CURRENT_ROWS))
+echo "Inserting $ROWS_TO_INSERT random category values (CAT_001..CAT_250, uniform)..."
+
+# `format('CAT_%s', lpad(((random()*249)::int + 1)::text, 3, '0'))` matches the
+# Rust FakeCategory output `format!("CAT_{:03}", n)`. 250 distinct buckets.
+docker exec ore-benches-postgres psql -v ON_ERROR_STOP=1 -U postgres -d postgres -c "
+  INSERT INTO $TABLE_NAME (value)
+  SELECT 'CAT_' || lpad(((random() * 249)::int + 1)::text, 3, '0')
+  FROM generate_series(1, $ROWS_TO_INSERT) g;
+"
+
+FINAL_ROWS=$(docker exec ore-benches-postgres psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM $TABLE_NAME;" | tr -d ' ')
+echo "Preparation complete! Final row count: $FINAL_ROWS"
+"""
+
+[tasks."prepare:string_plaintext"]
+description = "Prepare string_plaintext_<size> table with random high-cardinality strings (md5)"
+depends = ["postgres"]
+run = """
+#!/usr/bin/env bash
+set -e
+
+TARGET_ROWS="$1"
+
+if [ -z "$TARGET_ROWS" ]; then
+  echo "Error: target row count argument required"
+  echo "Usage: mise run prepare:string_plaintext <target_rows>"
+  exit 1
+fi
+
+case "$TARGET_ROWS" in
+  10000|100000|1000000|10000000)
+    ;;
+  *)
+    echo "Error: TARGET_ROWS must be one of: 10000, 100000, 1000000, 10000000"
+    exit 1
+    ;;
+esac
+
+TABLE_NAME="string_plaintext_${TARGET_ROWS}"
+
+echo "Waiting for PostgreSQL to be ready..."
+until docker exec ore-benches-postgres pg_isready -U postgres > /dev/null 2>&1; do
+  sleep 1
+done
+
+CURRENT_ROWS=$(docker exec ore-benches-postgres psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM $TABLE_NAME;" | tr -d ' ')
+
+echo "Current rows in $TABLE_NAME: $CURRENT_ROWS"
+echo "Target rows: $TARGET_ROWS"
+
+if [ "$CURRENT_ROWS" -ge "$TARGET_ROWS" ]; then
+  echo "Table already has $CURRENT_ROWS rows (>= $TARGET_ROWS). No action needed."
+  exit 0
+fi
+
+ROWS_TO_INSERT=$((TARGET_ROWS - CURRENT_ROWS))
+echo "Inserting $ROWS_TO_INSERT random rows (md5 of (random, ordinal))..."
+
+# md5(random()::text || g::text) is high-cardinality 32-char hex per row.
+# Single SQL insert in PG is far faster than per-row roundtrips — completes
+# 10M rows in tens of seconds, no encryption-client dependency.
+docker exec ore-benches-postgres psql -v ON_ERROR_STOP=1 -U postgres -d postgres -c "
+  INSERT INTO $TABLE_NAME (value)
+  SELECT md5(random()::text || g::text)
+  FROM generate_series(1, $ROWS_TO_INSERT) g;
+"
+
+FINAL_ROWS=$(docker exec ore-benches-postgres psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM $TABLE_NAME;" | tr -d ' ')
+echo "Preparation complete! Final row count: $FINAL_ROWS"
+"""
 
 [tasks."bench:query:ore"]
 description = "Run ORE query benchmark"
@@ -281,7 +537,7 @@ echo "Benchmark complete! Results written to $OUTPUT_FILE"
 """
 
 [tasks."bench:query:group_by"]
-description = "Run GROUP BY query benchmark"
+description = "Run GROUP BY query benchmark (low-cardinality categorical data + plaintext baseline)"
 run = """
 #!/usr/bin/env bash
 set -e
@@ -299,8 +555,11 @@ if ! [[ "$TARGET_ROWS" =~ ^[0-9]+$ ]]; then
   exit 1
 fi
 
-echo "Preparing string_encrypted table with $TARGET_ROWS rows..."
-mise run prepare:string_encrypted "$TARGET_ROWS"
+echo "Preparing category_encrypted table with $TARGET_ROWS rows (~250 distinct buckets)..."
+mise run prepare:category_encrypted "$TARGET_ROWS"
+
+echo "Preparing category_plaintext table with $TARGET_ROWS rows (plaintext baseline)..."
+mise run prepare:category_plaintext "$TARGET_ROWS"
 
 echo "Cleaning old benchmark data..."
 rm -rf target/criterion/data/main/GROUP_BY target/criterion/reports/GROUP_BY
@@ -309,6 +568,72 @@ echo "Running GROUP BY query benchmark..."
 mkdir -p results/query
 OUTPUT_FILE="results/query/group_by_rows_${TARGET_ROWS}.json"
 TARGET_ROWS="$TARGET_ROWS" cargo criterion --bench group_by --message-format json > "$OUTPUT_FILE"
+
+echo "Benchmark complete! Results written to $OUTPUT_FILE"
+"""
+
+[tasks."bench:query:combo"]
+description = "Run COMBO query benchmark (composite predicates on combo_encrypted)"
+run = """
+#!/usr/bin/env bash
+set -e
+
+TARGET_ROWS="$1"
+
+if [ -z "$TARGET_ROWS" ]; then
+  echo "Error: target row count argument required"
+  echo "Usage: mise run bench:query:combo <target_rows>"
+  exit 1
+fi
+
+if ! [[ "$TARGET_ROWS" =~ ^[0-9]+$ ]]; then
+  echo "Error: target row count must be a positive integer"
+  exit 1
+fi
+
+echo "Preparing combo_encrypted table with $TARGET_ROWS rows..."
+mise run prepare:combo_encrypted "$TARGET_ROWS"
+
+echo "Cleaning old benchmark data..."
+rm -rf target/criterion/data/main/COMBO target/criterion/reports/COMBO
+
+echo "Running COMBO query benchmark..."
+mkdir -p results/query
+OUTPUT_FILE="results/query/combo_rows_${TARGET_ROWS}.json"
+TARGET_ROWS="$TARGET_ROWS" cargo criterion --bench combo --message-format json > "$OUTPUT_FILE"
+
+echo "Benchmark complete! Results written to $OUTPUT_FILE"
+"""
+
+[tasks."bench:query:json"]
+description = "Run JSON / ste_vec query benchmark (field equality / extraction / GROUP BY)"
+run = """
+#!/usr/bin/env bash
+set -e
+
+TARGET_ROWS="$1"
+
+if [ -z "$TARGET_ROWS" ]; then
+  echo "Error: target row count argument required"
+  echo "Usage: mise run bench:query:json <target_rows>"
+  exit 1
+fi
+
+if ! [[ "$TARGET_ROWS" =~ ^[0-9]+$ ]]; then
+  echo "Error: target row count must be a positive integer"
+  exit 1
+fi
+
+echo "Preparing json_ste_vec_small_encrypted table with $TARGET_ROWS rows..."
+mise run prepare:json_ste_vec_small "$TARGET_ROWS"
+
+echo "Cleaning old benchmark data..."
+rm -rf target/criterion/data/main/JSON target/criterion/reports/JSON
+
+echo "Running JSON query benchmark..."
+mkdir -p results/query
+OUTPUT_FILE="results/query/json_rows_${TARGET_ROWS}.json"
+TARGET_ROWS="$TARGET_ROWS" cargo criterion --bench json --message-format json > "$OUTPUT_FILE"
 
 echo "Benchmark complete! Results written to $OUTPUT_FILE"
 """
@@ -324,7 +649,9 @@ ROW_COUNTS=(10000 100000 1000000 10000000)
 echo "========================================"
 echo "Starting comprehensive benchmark suite"
 echo "Row counts: ${ROW_COUNTS[*]}"
-echo "Benchmarks: exact, match, ore, group_by"
+echo "Benchmarks: exact, match, ore, group_by, combo"
+echo "(bench:query:json is parked until cipherstash-client emits the"
+echo " post-2.3 ste_vec shape — run it directly when ready.)"
 echo "========================================"
 echo ""
 
@@ -344,12 +671,16 @@ for ROWS in "${ROW_COUNTS[@]}"; do
   mise run bench:query:match "$ROWS"
   echo ""
 
-  echo "[3/4] Running ORE benchmark with $ROWS rows..."
+  echo "[3/5] Running ORE benchmark with $ROWS rows..."
   mise run bench:query:ore "$ROWS"
   echo ""
 
-  echo "[4/4] Running GROUP BY benchmark with $ROWS rows..."
+  echo "[4/5] Running GROUP BY benchmark with $ROWS rows..."
   mise run bench:query:group_by "$ROWS"
+  echo ""
+
+  echo "[5/5] Running COMBO benchmark with $ROWS rows..."
+  mise run bench:query:combo "$ROWS"
   echo ""
 
   echo "Completed benchmarks for $ROWS rows"

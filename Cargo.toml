@@ -14,13 +14,24 @@ ore-rs = "0.7.0"
 hex = "0.4.3"
 hex-literal = "0.3.4"
 rand = "0.8.5"
-cipherstash-client = { version = "0.34.1-alpha.4", features = ["tokio"] }
-stack-profile = "0.34.1-alpha.4"
+# Temporarily pointed at cipherstash-suite branch carrying the
+# RequestFailed Display/source fix (cipherstash-suite#1960) so the
+# benches surface the real ZeroKMS error chain instead of the opaque
+# "Unexpected error" catch-all. Revert to a crates.io version pin once
+# the fix lands in a published cipherstash-client release.
+cipherstash-client = { git = "ssh://git@github.com/cipherstash/cipherstash-suite.git", branch = "dan/zerokms-unexpected-error-context", features = ["tokio"] }
+stack-profile = { git = "ssh://git@github.com/cipherstash/cipherstash-suite.git", branch = "dan/zerokms-unexpected-error-context" }
 anyhow = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 chrono = "0.4"
 fake = { version = "4.4.0", features = ["chrono"] }
+# tracing-subscriber wires up the cipherstash-client / zerokms-protocol
+# trace! emissions to stderr when RUST_LOG is set. Without a subscriber
+# the trace calls are no-ops; with one, RUST_LOG=cipherstash_client=trace
+# (etc.) surfaces the rich ViturRequestError display from the inner
+# trace! at vitur_client::generate_keys.
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [[bin]]
 name = "generate_data"
@@ -38,6 +49,30 @@ path = "src/bin/encrypt_string.rs"
 name = "combine_benchmark"
 path = "src/bin/combine_benchmark.rs"
 
+[[bin]]
+name = "encrypt_json_small"
+path = "src/bin/encrypt_json_small.rs"
+
+[[bin]]
+name = "encrypt_json_large"
+path = "src/bin/encrypt_json_large.rs"
+
+[[bin]]
+name = "encrypt_ste_vec_small"
+path = "src/bin/encrypt_ste_vec_small.rs"
+
+[[bin]]
+name = "encrypt_ste_vec_large"
+path = "src/bin/encrypt_ste_vec_large.rs"
+
+[[bin]]
+name = "encrypt_category"
+path = "src/bin/encrypt_category.rs"
+
+[[bin]]
+name = "encrypt_combo"
+path = "src/bin/encrypt_combo.rs"
+
 [[bench]]
 name = "ore"
 harness = false
@@ -52,4 +87,12 @@ harness = false
 
 [[bench]]
 name = "group_by"
+harness = false
+
+[[bench]]
+name = "json"
+harness = false
+
+[[bench]]
+name = "combo"
 harness = false

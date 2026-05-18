@@ -1,0 +1,7 @@
+# Use the system `git` CLI for fetching git dependencies. Required because
+# the cipherstash-client / stack-profile git deps in Cargo.toml point at
+# the private cipherstash-suite repo, and cargo's built-in libgit2 SSH
+# transport can't pick up the user's SSH agent / config the same way the
+# CLI does. Removing this needs the deps to move back to crates.io.
+[net]
+git-fetch-with-cli = true

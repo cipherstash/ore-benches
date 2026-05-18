@@ -170,7 +170,15 @@ mise run bench:query:ore 1000000
 mise run bench:query:all
 ```
 
-Results are saved to `results/query/*.json`
+Each query bench writes two files to `results/query/` per row-count tier:
+
+- `<bench>_rows_<N>.json` — criterion's NDJSON message stream (one
+  `benchmark-complete` event per scenario, with mean / median / etc.).
+- `<bench>_metadata_<N>.json` — JSON sidecar with one record per
+  scenario: the exact SQL the bench ran, the bound parameter (encrypted
+  payload as JSON, or empty for raw-SQL benches), the
+  `EXPLAIN (FORMAT JSON)` plan captured once at startup, and the list of
+  indexes the planner picked. Join the two files by the `id` field.
 
 #### 6. Generate Report
 

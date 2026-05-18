@@ -1,20 +1,36 @@
 # Benchmark Report
 
-This report summarizes the performance benchmarks for encrypted database operations.
+This report summarises the performance benchmarks for encrypted database operations. Per-query-type detail lives on its own page — click through from the Query Performance section below.
 
 ## Table of Contents
 
 1. [Ingest Throughput](#ingest-throughput)
+   - [Int](#int)
+   - [Json Small](#json-small)
+   - [Ste Vec Small](#ste-vec-small)
+   - [String](#string)
 2. [Query Performance](#query-performance)
-   - [EXACT Queries](#exact-queries)
-   - [MATCH Queries](#match-queries)
-   - [ORE Queries](#ore-queries)
+   - [COMBO Queries](combo.md)
+   - [EXACT Queries](exact.md)
+   - [GROUP_BY Queries](group_by.md)
+   - [MATCH Queries](match.md)
+   - [ORE Queries](ore.md)
 
 ---
 
 ## Ingest Throughput
 
 This section measures the throughput of inserting encrypted records into the database.
+
+### Comparison at 10,000 Records
+
+Comparing all benchmark types at 10,000 records.
+
+![Throughput Comparison at 10,000 records](ingest_comparison_throughput_10000.png)
+
+![Total Time Comparison at 10,000 records](ingest_comparison_time_10000.png)
+
+![Total Time Comparison at 10,000 records (excluding ste_vec_large)](ingest_comparison_time_10000_filtered.png)
 
 ### Int
 
@@ -26,11 +42,13 @@ Tests insertion of encrypted integer values.
 | 1,000 | 1.11K | 0.90s | 17.83 MB |
 | 10,000 | 1.34K | 7.48s | 20.34 MB |
 
-![Ingest Throughput - int](ingest_int_chart.png)
+![Ingest Throughput - int](ingest_int_throughput_chart.png)
+
+![Ingest Total Time - int](ingest_int_time_chart.png)
 
 ### Json Small
 
-Tests insertion of small encrypted JSON objects.
+Tests insertion of small encrypted JSON objects (first_name, last_name, age, email).
 
 | Records | Throughput (records/sec) | Total Time | Avg Memory |
 |---------|--------------------------|------------|------------|
@@ -38,7 +56,21 @@ Tests insertion of small encrypted JSON objects.
 | 1,000 | 1.45K | 0.69s | 27.47 MB |
 | 10,000 | 2.22K | 4.51s | 45.33 MB |
 
-![Ingest Throughput - json_small](ingest_json_small_chart.png)
+![Ingest Throughput - json_small](ingest_json_small_throughput_chart.png)
+
+![Ingest Total Time - json_small](ingest_json_small_time_chart.png)
+
+### Ste Vec Small
+
+Tests insertion of small JSON objects with SteVec (searchable encrypted vector) indexing.
+
+| Records | Throughput (records/sec) | Total Time | Avg Memory |
+|---------|--------------------------|------------|------------|
+| 10,000 | 4.03K | 2.48s | 31.90 MB |
+
+![Ingest Throughput - ste_vec_small](ingest_ste_vec_small_throughput_chart.png)
+
+![Ingest Total Time - ste_vec_small](ingest_ste_vec_small_time_chart.png)
 
 ### String
 
@@ -50,408 +82,21 @@ Tests insertion of encrypted string values.
 | 1,000 | 1.86K | 0.54s | 16.19 MB |
 | 10,000 | 2.83K | 3.54s | 18.23 MB |
 
-![Ingest Throughput - string](ingest_string_chart.png)
+![Ingest Throughput - string](ingest_string_throughput_chart.png)
+
+![Ingest Total Time - string](ingest_string_time_chart.png)
 
 ## Query Performance
 
-This section measures query performance across different data set sizes. Each query is tested with and without decryption of results.
-
-### EXACT Queries
-
-#### eql_cast
-
-**Description:** Exact match using EQL cast operator
-
-**SQL Query:**
-```sql
-SELECT value FROM {TABLE} WHERE value = $1 LIMIT 1
-```
-
-**Parameter:** `Bob Johnson`
-
-**Table: `string_encrypted_{rows}` with encrypted string values. Index: UNIQUE index on the encrypted value column.**
-
-**Indexes:**
-```sql
-CREATE INDEX
-string_encrypted_10000_hash_index
-ON string_encrypted_10000 using hash (
-    eql_v2.hmac_256(value)
-);
-
-CREATE INDEX
-string_encrypted_10000_gin_index
-ON string_encrypted_10000 USING GIN (
-    eql_v2.bloom_filter(value)
-);
-
-CREATE INDEX
-string_encrypted_10000_eql_index
-ON string_encrypted_10000 (
-    value eql_v2.encrypted_operator_class
-);
-```
-
-*⚠️ = Query time exceeds 100ms*
-
-| Data Set Size | Query Time (no decrypt) | Query Time (with decrypt) |
-|---------------|-------------------------|---------------------------|
-| 10,000 | 422.00μs | 415.23μs |
-| 100,000 | 400.64μs | 427.65μs |
-| 1,000,000 | ⚠️ 8.012s | ⚠️ 8.012s |
-
-![Query Performance - EXACT/eql_cast](query_exact_eql_cast_chart.png)
-
-#### eql_hash
-
-**Description:** Exact match using EQL HMAC-256 hash function
-
-**SQL Query:**
-```sql
-SELECT value FROM {TABLE} WHERE eql_v2.hmac_256(value) = eql_v2.hmac_256($1::jsonb) LIMIT 1
-```
-
-**Parameter:** `Bob Johnson`
-
-**Table: `string_encrypted_{rows}` with encrypted string values. Index: Hash-based unique index using `eql_v2.hmac_256`.**
-
-**Indexes:**
-```sql
-CREATE INDEX
-string_encrypted_10000_hash_index
-ON string_encrypted_10000 using hash (
-    eql_v2.hmac_256(value)
-);
-
-CREATE INDEX
-string_encrypted_10000_gin_index
-ON string_encrypted_10000 USING GIN (
-    eql_v2.bloom_filter(value)
-);
-
-CREATE INDEX
-string_encrypted_10000_eql_index
-ON string_encrypted_10000 (
-    value eql_v2.encrypted_operator_class
-);
-```
-
-| Data Set Size | Query Time (no decrypt) | Query Time (with decrypt) |
-|---------------|-------------------------|---------------------------|
-| 10,000 | 393.98μs | 397.50μs |
-| 100,000 | 392.83μs | 404.50μs |
-| 1,000,000 | 401.06μs | 408.97μs |
-
-![Query Performance - EXACT/eql_hash](query_exact_eql_hash_chart.png)
-
-### MATCH Queries
-
-#### eql_bloom
-
-**Description:** Pattern matching using EQL bloom filter containment
-
-**SQL Query:**
-```sql
-SELECT id,value::jsonb FROM {TABLE} WHERE eql_v2.bloom_filter(value) @> eql_v2.bloom_filter($1) LIMIT 10
-```
-
-**Parameter:** `Johnson`
-
-**Table: `string_encrypted_{rows}` with encrypted string values. Index: Bloom filter index using `eql_v2.bloom_filter`. Query returns LIMIT 10 results.**
-
-**Indexes:**
-```sql
-CREATE INDEX
-string_encrypted_10000_hash_index
-ON string_encrypted_10000 using hash (
-    eql_v2.hmac_256(value)
-);
-
-CREATE INDEX
-string_encrypted_10000_gin_index
-ON string_encrypted_10000 USING GIN (
-    eql_v2.bloom_filter(value)
-);
-
-CREATE INDEX
-string_encrypted_10000_eql_index
-ON string_encrypted_10000 (
-    value eql_v2.encrypted_operator_class
-);
-```
-
-| Data Set Size | Query Time (no decrypt) | Query Time (with decrypt) |
-|---------------|-------------------------|---------------------------|
-| 10,000 | 1.07ms | 28.26ms |
-| 1,000,000 | 17.53ms | 42.35ms |
-
-![Query Performance - MATCH/eql_bloom](query_match_eql_bloom_chart.png)
-
-#### eql_cast_firstname
-
-**Description:** Pattern matching on first name using EQL cast and LIKE
-
-**SQL Query:**
-```sql
-SELECT id,value::jsonb FROM {TABLE} WHERE value LIKE $1 LIMIT 10
-```
-
-**Parameter:** `Bob`
-
-**Table: `string_encrypted_{rows}` with encrypted string values. Index: MATCH index for substring searches. Query returns LIMIT 10 results.**
-
-**Indexes:**
-```sql
-CREATE INDEX
-string_encrypted_10000_hash_index
-ON string_encrypted_10000 using hash (
-    eql_v2.hmac_256(value)
-);
-
-CREATE INDEX
-string_encrypted_10000_gin_index
-ON string_encrypted_10000 USING GIN (
-    eql_v2.bloom_filter(value)
-);
-
-CREATE INDEX
-string_encrypted_10000_eql_index
-ON string_encrypted_10000 (
-    value eql_v2.encrypted_operator_class
-);
-```
-
-*⚠️ = Query time exceeds 100ms*
-
-| Data Set Size | Query Time (no decrypt) | Query Time (with decrypt) |
-|---------------|-------------------------|---------------------------|
-| 10,000 | 751.37μs | 27.53ms |
-| 1,000,000 | ⚠️ 386.64ms | ⚠️ 418.49ms |
-
-![Query Performance - MATCH/eql_cast_firstname](query_match_eql_cast_firstname_chart.png)
-
-#### eql_cast_lastname
-
-**Description:** Pattern matching on last name using EQL cast and LIKE
-
-**SQL Query:**
-```sql
-SELECT id,value::jsonb FROM {TABLE} WHERE value LIKE $1 LIMIT 10
-```
-
-**Parameter:** `Johnson`
-
-**Table: `string_encrypted_{rows}` with encrypted string values. Index: MATCH index for substring searches. Query returns LIMIT 10 results.**
-
-**Indexes:**
-```sql
-CREATE INDEX
-string_encrypted_10000_hash_index
-ON string_encrypted_10000 using hash (
-    eql_v2.hmac_256(value)
-);
-
-CREATE INDEX
-string_encrypted_10000_gin_index
-ON string_encrypted_10000 USING GIN (
-    eql_v2.bloom_filter(value)
-);
-
-CREATE INDEX
-string_encrypted_10000_eql_index
-ON string_encrypted_10000 (
-    value eql_v2.encrypted_operator_class
-);
-```
-
-*⚠️ = Query time exceeds 100ms*
-
-| Data Set Size | Query Time (no decrypt) | Query Time (with decrypt) |
-|---------------|-------------------------|---------------------------|
-| 10,000 | 1.25ms | 30.30ms |
-| 1,000,000 | ⚠️ 132.59ms | ⚠️ 157.06ms |
-
-![Query Performance - MATCH/eql_cast_lastname](query_match_eql_cast_lastname_chart.png)
-
-### ORE Queries
-
-#### exact
-
-**Description:** Exact match query on encrypted integer
-
-**SQL Query:**
-```sql
-SELECT value FROM {TABLE} WHERE value = $1 LIMIT 1
-```
-
-**Parameter:** `5000`
-
-**Table: `integer_encrypted_{rows}` with ORE-encrypted integer values. Index: ORE index supporting equality and range queries. Query returns LIMIT 1 result.**
-
-**Indexes:**
-```sql
-CREATE INDEX
-integer_encrypted_10000_eql_index
-ON integer_encrypted_10000 (
-    value eql_v2.encrypted_operator_class
-);
-```
-
-*⚠️ = Query time exceeds 100ms*
-
-| Data Set Size | Query Time (no decrypt) | Query Time (with decrypt) |
-|---------------|-------------------------|---------------------------|
-| 10,000 | 464.23μs | 495.74μs |
-| 100,000 | ⚠️ 1.905s | ⚠️ 1.901s |
-
-![Query Performance - ORE/exact](query_ore_exact_chart.png)
-
-#### range_gt_10
-
-**Description:** Range query (greater than) returning 10 results
-
-**SQL Query:**
-```sql
-SELECT id,value::jsonb FROM {TABLE} WHERE value > $1 LIMIT 10
-```
-
-**Parameter:** `5000`
-
-**Table: `integer_encrypted_{rows}` with ORE-encrypted integer values. Index: ORE index supporting equality and range queries. Query: WHERE value > 5000 LIMIT 10.**
-
-**Indexes:**
-```sql
-CREATE INDEX
-integer_encrypted_10000_eql_index
-ON integer_encrypted_10000 (
-    value eql_v2.encrypted_operator_class
-);
-```
-
-| Data Set Size | Query Time (no decrypt) | Query Time (with decrypt) |
-|---------------|-------------------------|---------------------------|
-| 10,000 | 2.39ms | 29.57ms |
-| 100,000 | 1.53ms | 27.97ms |
-
-![Query Performance - ORE/range_gt_10](query_ore_range_gt_10_chart.png)
-
-#### range_gt_100
-
-**Description:** Range query (greater than) returning 100 results
-
-**SQL Query:**
-```sql
-SELECT id,value::jsonb FROM {TABLE} WHERE value > $1 LIMIT 100
-```
-
-**Parameter:** `5000`
-
-**Table: `integer_encrypted_{rows}` with ORE-encrypted integer values. Index: ORE index supporting equality and range queries. Query: WHERE value > 5000 LIMIT 100.**
-
-**Indexes:**
-```sql
-CREATE INDEX
-integer_encrypted_10000_eql_index
-ON integer_encrypted_10000 (
-    value eql_v2.encrypted_operator_class
-);
-```
-
-| Data Set Size | Query Time (no decrypt) | Query Time (with decrypt) |
-|---------------|-------------------------|---------------------------|
-| 10,000 | 14.33ms | 51.92ms |
-| 100,000 | 12.35ms | 52.45ms |
-
-![Query Performance - ORE/range_gt_100](query_ore_range_gt_100_chart.png)
-
-#### range_lt_10
-
-**Description:** Range query (less than) returning 10 results
-
-**SQL Query:**
-```sql
-SELECT id,value::jsonb FROM {TABLE} WHERE value < $1 LIMIT 10
-```
-
-**Parameter:** `5000`
-
-**Table: `integer_encrypted_{rows}` with ORE-encrypted integer values. Index: ORE index supporting equality and range queries. Query: WHERE value < 5000 LIMIT 10.**
-
-**Indexes:**
-```sql
-CREATE INDEX
-integer_encrypted_10000_eql_index
-ON integer_encrypted_10000 (
-    value eql_v2.encrypted_operator_class
-);
-```
-
-| Data Set Size | Query Time (no decrypt) | Query Time (with decrypt) |
-|---------------|-------------------------|---------------------------|
-| 10,000 | 2.71ms | 27.30ms |
-| 100,000 | 1.66ms | 28.69ms |
-
-![Query Performance - ORE/range_lt_10](query_ore_range_lt_10_chart.png)
-
-#### range_lt_100
-
-**Description:** Range query (less than) returning 100 results
-
-**SQL Query:**
-```sql
-SELECT id,value::jsonb FROM {TABLE} WHERE value < $1 LIMIT 100
-```
-
-**Parameter:** `5000`
-
-**Table: `integer_encrypted_{rows}` with ORE-encrypted integer values. Index: ORE index supporting equality and range queries. Query: WHERE value < 5000 LIMIT 100.**
-
-**Indexes:**
-```sql
-CREATE INDEX
-integer_encrypted_10000_eql_index
-ON integer_encrypted_10000 (
-    value eql_v2.encrypted_operator_class
-);
-```
-
-| Data Set Size | Query Time (no decrypt) | Query Time (with decrypt) |
-|---------------|-------------------------|---------------------------|
-| 10,000 | 14.85ms | 53.07ms |
-| 100,000 | 12.49ms | 52.96ms |
-
-![Query Performance - ORE/range_lt_100](query_ore_range_lt_100_chart.png)
-
-#### range_lt_ordered_10
-
-**Description:** Ordered range query (less than) with ORDER BY
-
-**SQL Query:**
-```sql
-SELECT id,value::jsonb FROM {TABLE} WHERE value < $1 ORDER BY value LIMIT 10
-```
-
-**Parameter:** `5000`
-
-**Table: `integer_encrypted_{rows}` with ORE-encrypted integer values. Index: ORE index supporting equality and range queries. Query: WHERE value < 5000 ORDER BY value LIMIT 10.**
-
-**Indexes:**
-```sql
-CREATE INDEX
-integer_encrypted_10000_eql_index
-ON integer_encrypted_10000 (
-    value eql_v2.encrypted_operator_class
-);
-```
-
-*⚠️ = Query time exceeds 100ms*
-
-| Data Set Size | Query Time (no decrypt) | Query Time (with decrypt) |
-|---------------|-------------------------|---------------------------|
-| 10,000 | ⚠️ 633.49ms | ⚠️ 655.54ms |
-| 100,000 | ⚠️ 5.453s | ⚠️ 5.495s |
-
-![Query Performance - ORE/range_lt_ordered_10](query_ore_range_lt_ordered_10_chart.png)
+Per-query-type detail is broken out into separate pages — click into a scenario family for the SQL, per-tier timings, the indexes the planner picked, and the EXPLAIN plan tree.
+
+| Query Type | Scenarios | Tiers | Largest-tier median (no decrypt) | Detail |
+|-|-|-|-|-|
+| COMBO | `bloom_ore_order_limit`, `filtered_group_by`, `top_n_filtered_group_by` | 10,000, 100,000, 1,000,000, 10,000,000 | 98.05ms | [open](combo.md) |
+| EXACT | `eql_cast`, `eql_hash` | 10,000, 100,000, 1,000,000, 10,000,000 | 454.21μs | [open](exact.md) |
+| GROUP_BY | `low_cardinality_groups_encrypted`, `low_cardinality_groups_plaintext`, `top_n_groups_encrypted`, `top_n_groups_plaintext` | 10,000, 100,000, 1,000,000, 10,000,000 | 864.52ms | [open](group_by.md) |
+| MATCH | `eql_bloom`, `eql_cast_firstname`, `eql_cast_lastname` | 10,000, 100,000, 1,000,000, 10,000,000 | 151.23ms | [open](match.md) |
+| ORE | `range_gt_10`, `range_gt_100`, `range_highly_selective_gt_10`, `range_highly_selective_gt_count`, `range_lt_10`, `range_lt_100`, `range_lt_hybrid_ordered_10`, `range_selective_gt_100`, `range_selective_gt_count` | 10,000, 100,000, 1,000,000, 10,000,000 | 573.45ms | [open](ore.md) |
 
 
 ---

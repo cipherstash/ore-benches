@@ -1,0 +1,423 @@
+{
+  "scenarios": [
+    {
+      "explain": [
+        {
+          "Plan": {
+            "Async Capable": false,
+            "Node Type": "Aggregate",
+            "Parallel Aware": false,
+            "Partial Mode": "Simple",
+            "Plan Rows": 1,
+            "Plan Width": 8,
+            "Plans": [
+              {
+                "Async Capable": false,
+                "Group Key": [
+                  "((((category_encrypted_1000000.value).data ->> 'hm'::text))::eql_v2.hmac_256)"
+                ],
+                "Node Type": "Group",
+                "Parallel Aware": false,
+                "Parent Relationship": "Outer",
+                "Plan Rows": 250,
+                "Plan Width": 36,
+                "Plans": [
+                  {
+                    "Async Capable": false,
+                    "Node Type": "Gather Merge",
+                    "Parallel Aware": false,
+                    "Parent Relationship": "Outer",
+                    "Plan Rows": 500,
+                    "Plan Width": 32,
+                    "Plans": [
+                      {
+                        "Async Capable": false,
+                        "Node Type": "Sort",
+                        "Parallel Aware": false,
+                        "Parent Relationship": "Outer",
+                        "Plan Rows": 250,
+                        "Plan Width": 32,
+                        "Plans": [
+                          {
+                            "Async Capable": false,
+                            "Group Key": [
+                              "(((category_encrypted_1000000.value).data ->> 'hm'::text))::eql_v2.hmac_256"
+                            ],
+                            "Node Type": "Aggregate",
+                            "Parallel Aware": false,
+                            "Parent Relationship": "Outer",
+                            "Partial Mode": "Partial",
+                            "Plan Rows": 250,
+                            "Plan Width": 32,
+                            "Planned Partitions": 0,
+                            "Plans": [
+                              {
+                                "Alias": "category_encrypted_1000000",
+                                "Async Capable": false,
+                                "Node Type": "Seq Scan",
+                                "Parallel Aware": true,
+                                "Parent Relationship": "Outer",
+                                "Plan Rows": 416665,
+                                "Plan Width": 32,
+                                "Relation Name": "category_encrypted_1000000",
+                                "Startup Cost": 0.0,
+                                "Total Cost": 50663.31
+                              }
+                            ],
+                            "Startup Cost": 51704.97,
+                            "Strategy": "Hashed",
+                            "Total Cost": 51708.1
+                          }
+                        ],
+                        "Sort Key": [
+                          "((((category_encrypted_1000000.value).data ->> 'hm'::text))::eql_v2.hmac_256)"
+                        ],
+                        "Startup Cost": 51718.05,
+                        "Total Cost": 51718.68
+                      }
+                    ],
+                    "Startup Cost": 52718.08,
+                    "Total Cost": 52776.41,
+                    "Workers Planned": 2
+                  }
+                ],
+                "Startup Cost": 52718.08,
+                "Total Cost": 52778.29
+              }
+            ],
+            "Startup Cost": 52781.41,
+            "Strategy": "Plain",
+            "Total Cost": 52781.42
+          }
+        }
+      ],
+      "id": "GROUP_BY/group_by/low_cardinality_groups_encrypted/1000000",
+      "indexes_used": [],
+      "parameters": [],
+      "query": "SELECT count(*) FROM (SELECT 1 FROM category_encrypted_1000000 GROUP BY eql_v2.hmac_256(value)) g",
+      "rows_returned": 1
+    },
+    {
+      "explain": [
+        {
+          "Plan": {
+            "Async Capable": false,
+            "Node Type": "Aggregate",
+            "Parallel Aware": false,
+            "Partial Mode": "Simple",
+            "Plan Rows": 1,
+            "Plan Width": 8,
+            "Plans": [
+              {
+                "Async Capable": false,
+                "Group Key": [
+                  "category_plaintext_1000000.value"
+                ],
+                "Node Type": "Group",
+                "Parallel Aware": false,
+                "Parent Relationship": "Outer",
+                "Plan Rows": 250,
+                "Plan Width": 12,
+                "Plans": [
+                  {
+                    "Async Capable": false,
+                    "Node Type": "Gather Merge",
+                    "Parallel Aware": false,
+                    "Parent Relationship": "Outer",
+                    "Plan Rows": 500,
+                    "Plan Width": 8,
+                    "Plans": [
+                      {
+                        "Async Capable": false,
+                        "Node Type": "Sort",
+                        "Parallel Aware": false,
+                        "Parent Relationship": "Outer",
+                        "Plan Rows": 250,
+                        "Plan Width": 8,
+                        "Plans": [
+                          {
+                            "Async Capable": false,
+                            "Group Key": [
+                              "category_plaintext_1000000.value"
+                            ],
+                            "Node Type": "Aggregate",
+                            "Parallel Aware": false,
+                            "Parent Relationship": "Outer",
+                            "Partial Mode": "Partial",
+                            "Plan Rows": 250,
+                            "Plan Width": 8,
+                            "Planned Partitions": 0,
+                            "Plans": [
+                              {
+                                "Alias": "category_plaintext_1000000",
+                                "Async Capable": false,
+                                "Node Type": "Seq Scan",
+                                "Parallel Aware": true,
+                                "Parent Relationship": "Outer",
+                                "Plan Rows": 416667,
+                                "Plan Width": 8,
+                                "Relation Name": "category_plaintext_1000000",
+                                "Startup Cost": 0.0,
+                                "Total Cost": 9572.67
+                              }
+                            ],
+                            "Startup Cost": 10614.33,
+                            "Strategy": "Hashed",
+                            "Total Cost": 10616.83
+                          }
+                        ],
+                        "Sort Key": [
+                          "category_plaintext_1000000.value"
+                        ],
+                        "Startup Cost": 10626.79,
+                        "Total Cost": 10627.42
+                      }
+                    ],
+                    "Startup Cost": 11626.82,
+                    "Total Cost": 11685.15,
+                    "Workers Planned": 2
+                  }
+                ],
+                "Startup Cost": 11626.82,
+                "Total Cost": 11686.4
+              }
+            ],
+            "Startup Cost": 11689.53,
+            "Strategy": "Plain",
+            "Total Cost": 11689.54
+          }
+        }
+      ],
+      "id": "GROUP_BY/group_by/low_cardinality_groups_plaintext/1000000",
+      "indexes_used": [],
+      "parameters": [],
+      "query": "SELECT count(*) FROM (SELECT 1 FROM category_plaintext_1000000 GROUP BY value) g",
+      "rows_returned": 1
+    },
+    {
+      "explain": [
+        {
+          "Plan": {
+            "Async Capable": false,
+            "Node Type": "Limit",
+            "Parallel Aware": false,
+            "Plan Rows": 10,
+            "Plan Width": 40,
+            "Plans": [
+              {
+                "Async Capable": false,
+                "Node Type": "Sort",
+                "Parallel Aware": false,
+                "Parent Relationship": "Outer",
+                "Plan Rows": 250,
+                "Plan Width": 40,
+                "Plans": [
+                  {
+                    "Async Capable": false,
+                    "Group Key": [
+                      "((((value).data ->> 'hm'::text))::eql_v2.hmac_256)"
+                    ],
+                    "Node Type": "Aggregate",
+                    "Parallel Aware": false,
+                    "Parent Relationship": "Outer",
+                    "Partial Mode": "Finalize",
+                    "Plan Rows": 250,
+                    "Plan Width": 40,
+                    "Plans": [
+                      {
+                        "Async Capable": false,
+                        "Node Type": "Gather Merge",
+                        "Parallel Aware": false,
+                        "Parent Relationship": "Outer",
+                        "Plan Rows": 500,
+                        "Plan Width": 40,
+                        "Plans": [
+                          {
+                            "Async Capable": false,
+                            "Node Type": "Sort",
+                            "Parallel Aware": false,
+                            "Parent Relationship": "Outer",
+                            "Plan Rows": 250,
+                            "Plan Width": 40,
+                            "Plans": [
+                              {
+                                "Async Capable": false,
+                                "Group Key": [
+                                  "(((value).data ->> 'hm'::text))::eql_v2.hmac_256"
+                                ],
+                                "Node Type": "Aggregate",
+                                "Parallel Aware": false,
+                                "Parent Relationship": "Outer",
+                                "Partial Mode": "Partial",
+                                "Plan Rows": 250,
+                                "Plan Width": 40,
+                                "Planned Partitions": 0,
+                                "Plans": [
+                                  {
+                                    "Alias": "category_encrypted_1000000",
+                                    "Async Capable": false,
+                                    "Node Type": "Seq Scan",
+                                    "Parallel Aware": true,
+                                    "Parent Relationship": "Outer",
+                                    "Plan Rows": 416665,
+                                    "Plan Width": 32,
+                                    "Relation Name": "category_encrypted_1000000",
+                                    "Startup Cost": 0.0,
+                                    "Total Cost": 50663.31
+                                  }
+                                ],
+                                "Startup Cost": 52746.63,
+                                "Strategy": "Hashed",
+                                "Total Cost": 52749.76
+                              }
+                            ],
+                            "Sort Key": [
+                              "((((value).data ->> 'hm'::text))::eql_v2.hmac_256)"
+                            ],
+                            "Startup Cost": 52759.72,
+                            "Total Cost": 52760.34
+                          }
+                        ],
+                        "Startup Cost": 53759.74,
+                        "Total Cost": 53818.08,
+                        "Workers Planned": 2
+                      }
+                    ],
+                    "Startup Cost": 53759.74,
+                    "Strategy": "Sorted",
+                    "Total Cost": 53823.7
+                  }
+                ],
+                "Sort Key": [
+                  "(count(*)) DESC"
+                ],
+                "Startup Cost": 53829.1,
+                "Total Cost": 53829.73
+              }
+            ],
+            "Startup Cost": 53829.1,
+            "Total Cost": 53829.13
+          }
+        }
+      ],
+      "id": "GROUP_BY/group_by/top_n_groups_encrypted/1000000",
+      "indexes_used": [],
+      "parameters": [],
+      "query": "SELECT eql_v2.hmac_256(value), count(*) FROM category_encrypted_1000000 GROUP BY 1 ORDER BY count(*) DESC LIMIT 10",
+      "rows_returned": 10
+    },
+    {
+      "explain": [
+        {
+          "Plan": {
+            "Async Capable": false,
+            "Node Type": "Limit",
+            "Parallel Aware": false,
+            "Plan Rows": 10,
+            "Plan Width": 16,
+            "Plans": [
+              {
+                "Async Capable": false,
+                "Node Type": "Sort",
+                "Parallel Aware": false,
+                "Parent Relationship": "Outer",
+                "Plan Rows": 250,
+                "Plan Width": 16,
+                "Plans": [
+                  {
+                    "Async Capable": false,
+                    "Group Key": [
+                      "value"
+                    ],
+                    "Node Type": "Aggregate",
+                    "Parallel Aware": false,
+                    "Parent Relationship": "Outer",
+                    "Partial Mode": "Finalize",
+                    "Plan Rows": 250,
+                    "Plan Width": 16,
+                    "Plans": [
+                      {
+                        "Async Capable": false,
+                        "Node Type": "Gather Merge",
+                        "Parallel Aware": false,
+                        "Parent Relationship": "Outer",
+                        "Plan Rows": 500,
+                        "Plan Width": 16,
+                        "Plans": [
+                          {
+                            "Async Capable": false,
+                            "Node Type": "Sort",
+                            "Parallel Aware": false,
+                            "Parent Relationship": "Outer",
+                            "Plan Rows": 250,
+                            "Plan Width": 16,
+                            "Plans": [
+                              {
+                                "Async Capable": false,
+                                "Group Key": [
+                                  "value"
+                                ],
+                                "Node Type": "Aggregate",
+                                "Parallel Aware": false,
+                                "Parent Relationship": "Outer",
+                                "Partial Mode": "Partial",
+                                "Plan Rows": 250,
+                                "Plan Width": 16,
+                                "Planned Partitions": 0,
+                                "Plans": [
+                                  {
+                                    "Alias": "category_plaintext_1000000",
+                                    "Async Capable": false,
+                                    "Node Type": "Seq Scan",
+                                    "Parallel Aware": true,
+                                    "Parent Relationship": "Outer",
+                                    "Plan Rows": 416667,
+                                    "Plan Width": 8,
+                                    "Relation Name": "category_plaintext_1000000",
+                                    "Startup Cost": 0.0,
+                                    "Total Cost": 9572.67
+                                  }
+                                ],
+                                "Startup Cost": 11656.0,
+                                "Strategy": "Hashed",
+                                "Total Cost": 11658.5
+                              }
+                            ],
+                            "Sort Key": [
+                              "value"
+                            ],
+                            "Startup Cost": 11668.46,
+                            "Total Cost": 11669.08
+                          }
+                        ],
+                        "Startup Cost": 12668.48,
+                        "Total Cost": 12726.82,
+                        "Workers Planned": 2
+                      }
+                    ],
+                    "Startup Cost": 12668.48,
+                    "Strategy": "Sorted",
+                    "Total Cost": 12731.82
+                  }
+                ],
+                "Sort Key": [
+                  "(count(*)) DESC"
+                ],
+                "Startup Cost": 12737.22,
+                "Total Cost": 12737.85
+              }
+            ],
+            "Startup Cost": 12737.22,
+            "Total Cost": 12737.25
+          }
+        }
+      ],
+      "id": "GROUP_BY/group_by/top_n_groups_plaintext/1000000",
+      "indexes_used": [],
+      "parameters": [],
+      "query": "SELECT value, count(*) FROM category_plaintext_1000000 GROUP BY 1 ORDER BY count(*) DESC LIMIT 10",
+      "rows_returned": 10
+    }
+  ],
+  "target_rows": "1000000"
+}

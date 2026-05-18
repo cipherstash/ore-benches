@@ -1,0 +1,3 @@
+DROP INDEX IF EXISTS json_ste_vec_small_encrypted_100000_ste_vec_index;
+DROP INDEX IF EXISTS json_ste_vec_small_encrypted_100000_hmac_terms_index;
+DROP INDEX IF EXISTS json_ste_vec_small_encrypted_100000_eql_index;
