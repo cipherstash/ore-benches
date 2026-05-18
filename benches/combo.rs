@@ -73,7 +73,7 @@ async fn build_query(
     // build_query produces a bloom-filter-shaped ciphertext for the
     // parameter.
     let column_config = ColumnConfig::build("name")
-        .casts_as(ColumnType::Utf8Str)
+        .casts_as(ColumnType::Text)
         .add_index(Index::new_unique())
         .add_index(Index::new_match());
 

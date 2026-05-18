@@ -66,14 +66,14 @@ async fn main() -> Result<()> {
     let scoped_cipher = init_scoped_cipher().await?;
 
     let name_config = ColumnConfig::build("name")
-        .casts_as(ColumnType::Utf8Str)
+        .casts_as(ColumnType::Text)
         .add_index(Index::new_unique())
         .add_index(Index::new_match());
     let age_config = ColumnConfig::build("age")
         .casts_as(ColumnType::Int)
         .add_index(Index::new_ore());
     let category_config = ColumnConfig::build("category")
-        .casts_as(ColumnType::Utf8Str)
+        .casts_as(ColumnType::Text)
         .add_index(Index::new_unique());
 
     let name_ident = Identifier::new(&table_name, "name");

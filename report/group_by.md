@@ -36,8 +36,8 @@ ON category_encrypted_10000 using hash (
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
 | 10,000 | 1 | 2.73ms | N/A |
-| 100,000 | 1 | 27.33ms | N/A |
-| 1,000,000 | 1 | ⚠️ 124.61ms | N/A |
+| 100,000 | 1 | 27.96ms | N/A |
+| 1,000,000 | 1 | ⚠️ 178.78ms | N/A |
 | 10,000,000 | 1 | ⚠️ 1.466s | N/A |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
@@ -235,37 +235,37 @@ Full `EXPLAIN (FORMAT JSON)`:
                           "Node Type": "Seq Scan",
                           "Parallel Aware": true,
                           "Parent Relationship": "Outer",
-                          "Plan Rows": 416665,
+                          "Plan Rows": 416663,
                           "Plan Width": 32,
                           "Relation Name": "category_encrypted_1000000",
                           "Startup Cost": 0.0,
-                          "Total Cost": 50663.31
+                          "Total Cost": 50663.29
                         }
                       ],
-                      "Startup Cost": 51704.97,
+                      "Startup Cost": 51704.94,
                       "Strategy": "Hashed",
-                      "Total Cost": 51708.1
+                      "Total Cost": 51708.07
                     }
                   ],
                   "Sort Key": [
                     "((((category_encrypted_1000000.value).data ->> 'hm'::text))::eql_v2.hmac_256)"
                   ],
-                  "Startup Cost": 51718.05,
-                  "Total Cost": 51718.68
+                  "Startup Cost": 51718.03,
+                  "Total Cost": 51718.65
                 }
               ],
-              "Startup Cost": 52718.08,
-              "Total Cost": 52776.41,
+              "Startup Cost": 52718.05,
+              "Total Cost": 52776.39,
               "Workers Planned": 2
             }
           ],
-          "Startup Cost": 52718.08,
-          "Total Cost": 52778.29
+          "Startup Cost": 52718.05,
+          "Total Cost": 52778.26
         }
       ],
-      "Startup Cost": 52781.41,
+      "Startup Cost": 52781.39,
       "Strategy": "Plain",
-      "Total Cost": 52781.42
+      "Total Cost": 52781.4
     }
   }
 ]
@@ -413,8 +413,8 @@ SELECT count(*) FROM (SELECT 1 FROM {TABLE} GROUP BY value) g
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
 | 10,000 | 1 | 1.51ms | N/A |
-| 100,000 | 1 | 9.69ms | N/A |
-| 1,000,000 | 1 | 40.15ms | N/A |
+| 100,000 | 1 | 9.88ms | N/A |
+| 1,000,000 | 1 | 35.63ms | N/A |
 | 10,000,000 | 1 | ⚠️ 430.47ms | N/A |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
@@ -799,8 +799,8 @@ ON category_encrypted_10000 using hash (
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
 | 10,000 | 10 | 2.87ms | N/A |
-| 100,000 | 10 | 27.79ms | N/A |
-| 1,000,000 | 10 | 95.87ms | N/A |
+| 100,000 | 10 | 29.15ms | N/A |
+| 1,000,000 | 10 | ⚠️ 153.20ms | N/A |
 | 10,000,000 | 10 | ⚠️ 1.312s | N/A |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
@@ -1035,44 +1035,44 @@ Full `EXPLAIN (FORMAT JSON)`:
                               "Node Type": "Seq Scan",
                               "Parallel Aware": true,
                               "Parent Relationship": "Outer",
-                              "Plan Rows": 416665,
+                              "Plan Rows": 416663,
                               "Plan Width": 32,
                               "Relation Name": "category_encrypted_1000000",
                               "Startup Cost": 0.0,
-                              "Total Cost": 50663.31
+                              "Total Cost": 50663.29
                             }
                           ],
-                          "Startup Cost": 52746.63,
+                          "Startup Cost": 52746.6,
                           "Strategy": "Hashed",
-                          "Total Cost": 52749.76
+                          "Total Cost": 52749.73
                         }
                       ],
                       "Sort Key": [
                         "((((value).data ->> 'hm'::text))::eql_v2.hmac_256)"
                       ],
-                      "Startup Cost": 52759.72,
-                      "Total Cost": 52760.34
+                      "Startup Cost": 52759.68,
+                      "Total Cost": 52760.31
                     }
                   ],
-                  "Startup Cost": 53759.74,
-                  "Total Cost": 53818.08,
+                  "Startup Cost": 53759.71,
+                  "Total Cost": 53818.05,
                   "Workers Planned": 2
                 }
               ],
-              "Startup Cost": 53759.74,
+              "Startup Cost": 53759.71,
               "Strategy": "Sorted",
-              "Total Cost": 53823.7
+              "Total Cost": 53823.67
             }
           ],
           "Sort Key": [
             "(count(*)) DESC"
           ],
-          "Startup Cost": 53829.1,
-          "Total Cost": 53829.73
+          "Startup Cost": 53829.07,
+          "Total Cost": 53829.7
         }
       ],
-      "Startup Cost": 53829.1,
-      "Total Cost": 53829.13
+      "Startup Cost": 53829.07,
+      "Total Cost": 53829.1
     }
   }
 ]
@@ -1236,8 +1236,8 @@ SELECT value, count(*) FROM {TABLE} GROUP BY 1 ORDER BY count(*) DESC LIMIT 10
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
 | 10,000 | 10 | 1.61ms | N/A |
-| 100,000 | 10 | 10.15ms | N/A |
-| 1,000,000 | 10 | 38.71ms | N/A |
+| 100,000 | 10 | 10.65ms | N/A |
+| 1,000,000 | 10 | 47.69ms | N/A |
 | 10,000,000 | 10 | ⚠️ 461.75ms | N/A |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._

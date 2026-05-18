@@ -65,9 +65,9 @@ pub async fn sample_plaintext_string(
         .next()
         .ok_or_else(|| anyhow::anyhow!("decrypt_eql returned empty Vec for {}", table_name))?;
     match &pt {
-        Plaintext::Utf8Str(Some(s)) => Ok(s.clone()),
+        Plaintext::Text(Some(s)) => Ok(s.clone()),
         other => anyhow::bail!(
-            "expected Utf8Str sample from {}, got {:?}",
+            "expected Text sample from {}, got {:?}",
             table_name,
             other
         ),
@@ -269,11 +269,7 @@ pub struct WrappedJson(pub serde_json::Value);
 
 impl From<WrappedJson> for Plaintext {
     fn from(WrappedJson(value): WrappedJson) -> Self {
-        // cipherstash-client renamed `Plaintext::Json` → `Plaintext::JsonB`
-        // between alpha.4 (crates.io) and the suite-1 main branch we're
-        // currently pinned to. Use the new name here; revert if/when we
-        // move back to a published cipherstash-client.
-        Plaintext::JsonB(Some(value))
+        Plaintext::Json(Some(value))
     }
 }
 

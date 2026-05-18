@@ -40,7 +40,7 @@ async fn main() -> Result<()> {
         .identifier(Identifier::new("json_large_encrypted", "value"))
         .column_config(
             // No searchable indexes — pure encryption-and-ingest baseline.
-            ColumnConfig::build("value").casts_as(ColumnType::JsonB),
+            ColumnConfig::build("value").casts_as(ColumnType::Json),
         )
         .build()?
         .ingest::<WrappedJson, _>(FakeJsonLarge)

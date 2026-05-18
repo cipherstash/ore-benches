@@ -20,7 +20,7 @@ use anyhow::Result;
 use cipherstash_client::{
     eql::Identifier,
     schema::{
-        column::{ArrayIndexMode, Index, IndexType},
+        column::{ArrayIndexMode, Index, IndexType, SteVecMode},
         ColumnConfig, ColumnType,
     },
 };
@@ -45,12 +45,14 @@ async fn main() -> Result<()> {
         .identifier(Identifier::new("json_large_encrypted", "value"))
         .column_config(
             ColumnConfig::build("value")
-                .casts_as(ColumnType::JsonB)
+                .casts_as(ColumnType::Json)
                 // FIXME: There is no convenience method for SteVec yet on Index
                 .add_index(Index::new(IndexType::SteVec {
                     prefix: "value".to_string(),
                     term_filters: Default::default(),
                     array_index_mode: ArrayIndexMode::default(),
+                    // Standard mode → `oc` (ORE CLLW). Mirror small binary.
+                    mode: SteVecMode::Standard,
                 })),
         )
         .build()?

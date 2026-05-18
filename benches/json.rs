@@ -50,22 +50,22 @@
 //      field_order/functional
 //        SELECT id FROM tbl ORDER BY <ore_extractor>(value -> '<sel>'::text) LIMIT 10
 //        Direct ORE extractor. <ore_extractor> is selected at startup based
-//        on which ORE tag the chosen sv element carries:
-//          ocf -> eql_v2.ore_cllw_u64_8     (CLLW fixed,   ints)
-//          ocv -> eql_v2.ore_cllw_var_8     (CLLW variable, strings)
-//          ob  -> eql_v2.ore_block_u64_8_256 (block ORE — post-James-unification)
+//        on which orderable tag the chosen sv element carries:
+//          oc -> eql_v2.ore_cllw            (Standard mode, ORE CLLW)
+//          op -> eql_v2.ope_cllw            (Compat  mode, OPE CLLW)
+//          ob -> eql_v2.ore_block_u64_8_256 (Block ORE — root scalars only)
 //
 // Needle / selector picking happens once at startup against the target
-// table. The bench picks one sv element with an ORE tag (for the order
+// table. The bench picks one sv element with an orderable tag (for the order
 // scenarios) and falls through to sv[0] otherwise — a single chosen
 // selector is reused across all scenarios so the comparison is consistent.
 //
-// Shape compatibility: scenarios in (2) depend on the post-2.3 ste_vec
-// shape (sv elements emit `hm` rather than `b3`). The cipherstash-client
-// version pinned in benches/main currently emits the pre-2.3 shape, so the
-// hm-dependent scenarios are skipped at startup with a clear message and
-// will start producing numbers once the upstream change lands and the
-// table is re-ingested.
+// Shape compatibility: post-EQL 2.3 ste_vec elements emit `hm` for equality
+// and one of `oc` (Standard) / `op` (Compat) for orderable terms. Pre-2.3
+// columns carrying `b3` / `ocf` / `ocv` / `opf` / `opv` no longer satisfy
+// the new extractor functions and the hm-dependent or order-dependent
+// scenarios will skip at startup. Re-ingest under the new format to
+// engage the bench.
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use dbbenches::{bench_assert, extract_indexes_used, write_metadata_file, ScenarioMetadata};
@@ -75,109 +75,165 @@ use sqlx::types::Json;
 use sqlx::Row;
 use tokio::runtime::Runtime;
 
-/// Sampled needles, picked once at startup.
+/// Sampled needles, picked once at startup. The picker scans the first
+/// row's `sv` array twice: once for an `hm`-bearing element (drives
+/// field_eq/* scenarios) and once for an orderable-bearing element (drives
+/// field_order/*). Each scenario family uses the selector that's actually
+/// addressable for it — in the post-#1955 wire format these are typically
+/// disjoint (`hm` on the array-prefix selector lookup element, `oc`/`op`
+/// on value elements).
 #[derive(Debug)]
 struct Needles {
-    /// Deterministic selector hash for the chosen field (inlined into SQL
-    /// strings, not bound — the planner needs it as a literal for any
-    /// functional index to match).
-    selector: String,
-    /// Whole-row value (for the containment needle).
+    /// Whole-row value (for the containment needle). No selector needed.
     sample_value: JsonValue,
-    /// `value -> '<selector>'` for the chosen selector (for the field_eq
-    /// needles).
-    sample_field_value: JsonValue,
-    /// `[{"s":"<sel>","hm":"<hash>"}]` for the field_eq/extractor scenario.
-    /// None when the chosen sv element lacks `hm` (pre-2.3 shape).
-    hmac_term: Option<String>,
-    /// ORE tag on the chosen sv element ("ob"/"ocf"/"ocv"), or None.
-    /// Drives `ore_extractor_for` to pick the matching extractor for the
-    /// field_order/functional scenario.
-    ore_term: Option<String>,
+    /// Selector + payload for the field_eq/* scenarios. None when no
+    /// sv element carries `hm` (pre-2.3 / Compat-mode-without-hmac).
+    hm_pick: Option<HmPick>,
+    /// Selector + tag for the field_order/* scenarios. None when no
+    /// sv element carries an orderable term.
+    ore_pick: Option<OrePick>,
 }
 
-/// Map an sv-element ORE tag to the EQL extractor function that returns
-/// the matching ORE typed value. The extractor accepts an
+#[derive(Debug)]
+struct HmPick {
+    /// Deterministic selector hash for the `hm`-bearing field (inlined
+    /// into SQL strings, not bound — the planner needs it as a literal
+    /// for any functional index to match).
+    selector: String,
+    /// `value -> '<selector>'` for the chosen selector (for the
+    /// field_eq/bare needle).
+    sample_field_value: JsonValue,
+    /// `[{"s":"<sel>","hm":"<hash>"}]` for the field_eq/extractor scenario.
+    hmac_term: String,
+}
+
+#[derive(Debug)]
+struct OrePick {
+    /// Deterministic selector hash for the orderable-bearing field.
+    selector: String,
+    /// `value -> '<selector>'` for the chosen selector (for the
+    /// field_order/bare needle).
+    sample_field_value: JsonValue,
+    /// Orderable tag on the chosen sv element ("ob" / "oc" / "op").
+    /// Drives `ore_extractor_for` to pick the matching extractor for the
+    /// field_order/functional scenario.
+    ore_term: String,
+}
+
+/// Map an sv-element orderable tag to the EQL extractor function that
+/// returns the matching typed value. The extractor accepts an
 /// eql_v2_encrypted argument.
 fn ore_extractor_for(tag: &str) -> Option<&'static str> {
     match tag {
         "ob" => Some("eql_v2.ore_block_u64_8_256"),
-        "ocf" => Some("eql_v2.ore_cllw_u64_8"),
-        "ocv" => Some("eql_v2.ore_cllw_var_8"),
+        "oc" => Some("eql_v2.ore_cllw"),
+        "op" => Some("eql_v2.ope_cllw"),
         _ => None,
     }
 }
 
 async fn sample_needles(pool: &sqlx::PgPool, table: &str) -> Needles {
-    // Prefer an sv element with an ORE tag — the field_order scenarios
-    // depend on ORE being present. Fall back to sv[0] if no ORE-bearing
-    // element exists. We sample one row first (so the SRF expansion below
-    // unfolds over a single row's sv array), then unfold the sv array via
-    // LATERAL jsonb_array_elements ... WITH ORDINALITY to get each
-    // element and its index so we can rank them.
-    let row = sqlx::query(&format!(
-        "SELECT sel, hmac, sv_elem, sample_value FROM (
-           SELECT elem ->> 's'  AS sel,
-                  elem ->> 'hm' AS hmac,
-                  elem          AS sv_elem,
-                  sample_value,
-                  (elem ? 'ob' OR elem ? 'ocf' OR elem ? 'ocv') AS has_ore,
-                  ord
-           FROM (
-             SELECT value::jsonb AS sample_value,
-                    (value).data -> 'sv' AS sv_array
-             FROM {table}
-             LIMIT 1
-           ) source,
-           LATERAL jsonb_array_elements(sv_array) WITH ORDINALITY AS j(elem, ord)
-         ) ranked
-         ORDER BY has_ore DESC, ord ASC
-         LIMIT 1"
-    ))
-    .fetch_optional(pool)
-    .await
-    .expect("query for sample selector failed")
-    .unwrap_or_else(|| panic!("table `{table}` is empty"));
-
-    let selector: String = row.get("sel");
-    let hmac: Option<String> = row.get("hmac");
-    let sample_value: Json<JsonValue> = row.get("sample_value");
-    let sv_elem: Json<JsonValue> = row.get("sv_elem");
-
-    let ore_term = sv_elem
-        .0
-        .as_object()
-        .and_then(|m| ["ob", "ocf", "ocv"].iter().find(|t| m.contains_key(**t)))
-        .map(|t| (*t).to_string());
-
-    // Pull `value -> 'sel'` separately — the result is an eql_v2_encrypted
-    // whose top-level fields are the sv element's fields (s, hm, b3, ocf,
-    // etc.), wrapped with the source row's meta (i, v, ...).
-    // Explicit ::text cast on the selector: eql_v2."->" has multiple
-    // overloads (text, eql_v2_encrypted, integer) and PostgreSQL's
-    // assignment-cast resolution will otherwise try to coerce the literal
-    // string into eql_v2_encrypted (a composite type), producing
+    // Sample one row's sv array, then pick (independently) the first
+    // hm-bearing element for the field_eq/* scenarios and the first
+    // orderable-bearing element for field_order/*. Post-#1955 these are
+    // typically disjoint: the array-prefix selector lookup element carries
+    // `hm`, the value elements carry `oc` (Standard) or `op` (Compat).
+    //
+    // `value -> 'sel'::text` separately because the result type is
+    // eql_v2_encrypted (with sv element fields hoisted to root + source
+    // row's meta `i`, `v`). Explicit ::text cast on the selector literal:
+    // eql_v2."->" has multiple overloads (text, eql_v2_encrypted, integer)
+    // and PostgreSQL's assignment-cast resolution will otherwise try to
+    // coerce the literal into eql_v2_encrypted, producing
     // "malformed record literal".
-    let field_row = sqlx::query(&format!(
-        "SELECT (value -> '{selector}'::text)::jsonb AS sample_field_value
-         FROM {table}
-         LIMIT 1"
+    let rows = sqlx::query(&format!(
+        "SELECT elem ->> 's'  AS sel,
+                elem ->> 'hm' AS hmac,
+                elem          AS sv_elem,
+                sample_value,
+                ord
+         FROM (
+           SELECT value::jsonb AS sample_value,
+                  (value).data -> 'sv' AS sv_array
+           FROM {table}
+           LIMIT 1
+         ) source,
+         LATERAL jsonb_array_elements(sv_array) WITH ORDINALITY AS j(elem, ord)
+         ORDER BY ord"
     ))
-    .fetch_one(pool)
+    .fetch_all(pool)
     .await
-    .expect("query for sample field value failed");
-    let sample_field_value: Json<JsonValue> = field_row.get("sample_field_value");
+    .expect("query for sv elements failed");
 
-    let hmac_term = hmac
-        .as_ref()
-        .map(|h| format!(r#"[{{"s":"{}","hm":"{}"}}]"#, selector, h));
+    if rows.is_empty() {
+        panic!("table `{table}` is empty");
+    }
+
+    let sample_value: Json<JsonValue> = rows[0].get("sample_value");
+
+    let mut hm_pick: Option<HmPick> = None;
+    let mut ore_pick: Option<OrePick> = None;
+
+    for row in &rows {
+        let sel: String = row.get("sel");
+        let hmac: Option<String> = row.get("hmac");
+        let sv_elem: Json<JsonValue> = row.get("sv_elem");
+
+        let ore_tag = sv_elem
+            .0
+            .as_object()
+            .and_then(|m| ["ob", "oc", "op"].iter().find(|t| m.contains_key(**t)))
+            .map(|t| (*t).to_string());
+
+        if hm_pick.is_none() {
+            if let Some(h) = hmac {
+                let field_row = sqlx::query(&format!(
+                    "SELECT (value -> '{sel}'::text)::jsonb AS sample_field_value
+                     FROM {table}
+                     LIMIT 1"
+                ))
+                .fetch_one(pool)
+                .await
+                .expect("query for hm sample field value failed");
+                let sample_field_value: Json<JsonValue> =
+                    field_row.get("sample_field_value");
+                hm_pick = Some(HmPick {
+                    selector: sel.clone(),
+                    sample_field_value: sample_field_value.0,
+                    hmac_term: format!(r#"[{{"s":"{}","hm":"{}"}}]"#, sel, h),
+                });
+            }
+        }
+
+        if ore_pick.is_none() {
+            if let Some(tag) = ore_tag {
+                let field_row = sqlx::query(&format!(
+                    "SELECT (value -> '{sel}'::text)::jsonb AS sample_field_value
+                     FROM {table}
+                     LIMIT 1"
+                ))
+                .fetch_one(pool)
+                .await
+                .expect("query for ore sample field value failed");
+                let sample_field_value: Json<JsonValue> =
+                    field_row.get("sample_field_value");
+                ore_pick = Some(OrePick {
+                    selector: sel.clone(),
+                    sample_field_value: sample_field_value.0,
+                    ore_term: tag,
+                });
+            }
+        }
+
+        if hm_pick.is_some() && ore_pick.is_some() {
+            break;
+        }
+    }
 
     Needles {
-        selector,
         sample_value: sample_value.0,
-        sample_field_value: sample_field_value.0,
-        hmac_term,
-        ore_term,
+        hm_pick,
+        ore_pick,
     }
 }
 
@@ -204,11 +260,18 @@ fn criterion_benchmark(c: &mut Criterion) {
 
         let needles = sample_needles(&pool, &table_name).await;
         eprintln!(
-            "json bench picked selector `{}` from `{}` (hm: {}, ore: {})",
-            &needles.selector,
+            "json bench picked from `{}` — hm: {} | ore: {}",
             &table_name,
-            needles.hmac_term.is_some(),
-            needles.ore_term.as_deref().unwrap_or("<none>"),
+            needles
+                .hm_pick
+                .as_ref()
+                .map(|p| p.selector.as_str())
+                .unwrap_or("<none>"),
+            needles
+                .ore_pick
+                .as_ref()
+                .map(|p| format!("{} ({})", p.selector, p.ore_term))
+                .unwrap_or_else(|| "<none>".to_string()),
         );
         (pool, needles)
     });
@@ -217,10 +280,14 @@ fn criterion_benchmark(c: &mut Criterion) {
     // text and cast to ::jsonb / ::eql_v2_encrypted in the SQL).
     let sample_value_json =
         serde_json::to_string(&needles.sample_value).expect("serialise sample value");
-    let sample_field_value_json =
-        serde_json::to_string(&needles.sample_field_value).expect("serialise sample field value");
-
-    let selector = &needles.selector;
+    let hm_field_value_json = needles
+        .hm_pick
+        .as_ref()
+        .map(|p| serde_json::to_string(&p.sample_field_value).expect("serialise hm field value"));
+    let ore_field_value_json = needles
+        .ore_pick
+        .as_ref()
+        .map(|p| serde_json::to_string(&p.sample_field_value).expect("serialise ore field value"));
 
     // --- Query strings ---
 
@@ -230,42 +297,54 @@ fn criterion_benchmark(c: &mut Criterion) {
              @> eql_v2.ste_vec($1::jsonb::eql_v2_encrypted) LIMIT 10"
     );
 
-    let q_field_eq_bare = format!(
-        "SELECT id FROM {table_name} \
-         WHERE (value -> '{selector}'::text) = $1::jsonb::eql_v2_encrypted LIMIT 10"
-    );
+    let q_field_eq_bare = needles.hm_pick.as_ref().map(|p| {
+        let selector = &p.selector;
+        format!(
+            "SELECT id FROM {table_name} \
+             WHERE (value -> '{selector}'::text) = $1::jsonb::eql_v2_encrypted LIMIT 10"
+        )
+    });
 
-    let q_field_eq_extractor = format!(
-        "SELECT id FROM {table_name} \
-         WHERE eql_v2.hmac_256_terms(value) @> $1::jsonb LIMIT 10"
-    );
+    let q_field_eq_extractor = if needles.hm_pick.is_some() {
+        Some(format!(
+            "SELECT id FROM {table_name} \
+             WHERE eql_v2.hmac_256_terms(value) @> $1::jsonb LIMIT 10"
+        ))
+    } else {
+        None
+    };
 
-    let q_field_eq_functional = format!(
-        "SELECT id FROM {table_name} \
-         WHERE eql_v2.hmac_256(value, '{selector}') \
-             = eql_v2.hmac_256($1::jsonb::eql_v2_encrypted) LIMIT 10"
-    );
+    let q_field_eq_functional = needles.hm_pick.as_ref().map(|p| {
+        let selector = &p.selector;
+        format!(
+            "SELECT id FROM {table_name} \
+             WHERE eql_v2.hmac_256(value, '{selector}') \
+                 = eql_v2.hmac_256($1::jsonb::eql_v2_encrypted) LIMIT 10"
+        )
+    });
 
-    let q_field_order_bare = format!(
-        "SELECT id FROM {table_name} \
-         ORDER BY (value -> '{selector}'::text) LIMIT 10"
-    );
+    let q_field_order_bare = needles.ore_pick.as_ref().map(|p| {
+        let selector = &p.selector;
+        format!(
+            "SELECT id FROM {table_name} \
+             ORDER BY (value -> '{selector}'::text) LIMIT 10"
+        )
+    });
 
-    let q_field_order_functional = needles
-        .ore_term
-        .as_deref()
-        .and_then(ore_extractor_for)
-        .map(|fn_name| {
+    let q_field_order_functional = needles.ore_pick.as_ref().and_then(|p| {
+        let selector = &p.selector;
+        ore_extractor_for(&p.ore_term).map(|fn_name| {
             format!(
                 "SELECT id FROM {table_name} \
                  ORDER BY {fn_name}(value -> '{selector}'::text) LIMIT 10"
             )
-        });
+        })
+    });
 
     // --- Metadata sidecar ---
 
-    let has_hm = needles.hmac_term.is_some();
-    let has_ore = needles.ore_term.is_some();
+    let has_hm = needles.hm_pick.is_some();
+    let has_ore = needles.ore_pick.is_some();
 
     let metadata = rt.block_on(async {
         let mut out: Vec<ScenarioMetadata> = Vec::with_capacity(6);
@@ -328,13 +407,22 @@ fn criterion_benchmark(c: &mut Criterion) {
             .await,
         );
 
-        if has_hm {
+        if let (Some(hm_pick), Some(q_bare), Some(q_extractor), Some(q_functional)) = (
+            needles.hm_pick.as_ref(),
+            q_field_eq_bare.as_deref(),
+            q_field_eq_extractor.as_deref(),
+            q_field_eq_functional.as_deref(),
+        ) {
+            let hm_field = hm_field_value_json
+                .as_deref()
+                .expect("hm_field_value_json present when hm_pick is Some");
+
             out.push(
                 capture(
                     &pool,
                     format!("JSON/json/field_eq/bare/{}", target_rows),
-                    &q_field_eq_bare,
-                    Some(&sample_field_value_json),
+                    q_bare,
+                    Some(hm_field),
                 )
                 .await,
             );
@@ -343,8 +431,8 @@ fn criterion_benchmark(c: &mut Criterion) {
                 capture(
                     &pool,
                     format!("JSON/json/field_eq/extractor/{}", target_rows),
-                    &q_field_eq_extractor,
-                    needles.hmac_term.as_deref(),
+                    q_extractor,
+                    Some(hm_pick.hmac_term.as_str()),
                 )
                 .await,
             );
@@ -353,27 +441,26 @@ fn criterion_benchmark(c: &mut Criterion) {
                 capture(
                     &pool,
                     format!("JSON/json/field_eq/functional/{}", target_rows),
-                    &q_field_eq_functional,
-                    Some(&sample_field_value_json),
+                    q_functional,
+                    Some(hm_field),
                 )
                 .await,
             );
         } else {
             eprintln!(
-                "json bench: skipping field_eq/* scenarios — sv element on selector `{}` \
-                 has no `hm` term (cipherstash-client emitting pre-2.3 shape). Bump the \
-                 suite pin to a version that emits `hm` and re-ingest via \
-                 `mise run prepare:json_ste_vec_small <rows>` to enable these.",
-                &needles.selector
+                "json bench: skipping field_eq/* scenarios — no sv element on the sampled \
+                 row carries `hm`. Re-ingest with a cipherstash-client release that emits \
+                 `hm` at sv-element level (post-#1955)."
             );
         }
 
-        if has_ore {
+        if let (Some(_), Some(q_bare)) = (needles.ore_pick.as_ref(), q_field_order_bare.as_deref())
+        {
             out.push(
                 capture(
                     &pool,
                     format!("JSON/json/field_order/bare/{}", target_rows),
-                    &q_field_order_bare,
+                    q_bare,
                     None,
                 )
                 .await,
@@ -392,9 +479,8 @@ fn criterion_benchmark(c: &mut Criterion) {
             }
         } else {
             eprintln!(
-                "json bench: skipping field_order/* scenarios — sv element on selector `{}` \
-                 carries no ORE term (no ob / ocf / ocv). Try a selector that has ORE.",
-                &needles.selector
+                "json bench: skipping field_order/* scenarios — no sv element on the \
+                 sampled row carries an orderable term (no ob / oc / op)."
             );
         }
 
@@ -424,10 +510,19 @@ fn criterion_benchmark(c: &mut Criterion) {
     }
 
     if has_hm {
-        {
+        let hm_field = hm_field_value_json
+            .clone()
+            .expect("hm_field_value_json present when has_hm");
+        let hmac_term = needles
+            .hm_pick
+            .as_ref()
+            .expect("hm_pick present when has_hm")
+            .hmac_term
+            .clone();
+
+        if let Some(q) = q_field_eq_bare.clone() {
             let id = format!("JSON/json/field_eq/bare/{}", target_rows);
-            let q = q_field_eq_bare.clone();
-            let needle = sample_field_value_json.clone();
+            let needle = hm_field.clone();
             group.bench_function(format!("json/field_eq/bare/{}", target_rows), |b| {
                 b.to_async(&rt).iter(|| async {
                     let rows = bench_assert(
@@ -439,13 +534,9 @@ fn criterion_benchmark(c: &mut Criterion) {
             });
         }
 
-        {
+        if let Some(q) = q_field_eq_extractor.clone() {
             let id = format!("JSON/json/field_eq/extractor/{}", target_rows);
-            let q = q_field_eq_extractor.clone();
-            let needle = needles
-                .hmac_term
-                .clone()
-                .expect("hmac_term present when has_hm");
+            let needle = hmac_term.clone();
             group.bench_function(format!("json/field_eq/extractor/{}", target_rows), |b| {
                 b.to_async(&rt).iter(|| async {
                     let rows = bench_assert(
@@ -457,10 +548,9 @@ fn criterion_benchmark(c: &mut Criterion) {
             });
         }
 
-        {
+        if let Some(q) = q_field_eq_functional.clone() {
             let id = format!("JSON/json/field_eq/functional/{}", target_rows);
-            let q = q_field_eq_functional.clone();
-            let needle = sample_field_value_json.clone();
+            let needle = hm_field.clone();
             group.bench_function(format!("json/field_eq/functional/{}", target_rows), |b| {
                 b.to_async(&rt).iter(|| async {
                     let rows = bench_assert(
@@ -474,9 +564,8 @@ fn criterion_benchmark(c: &mut Criterion) {
     }
 
     if has_ore {
-        {
+        if let Some(q) = q_field_order_bare.clone() {
             let id = format!("JSON/json/field_order/bare/{}", target_rows);
-            let q = q_field_order_bare.clone();
             group.bench_function(format!("json/field_order/bare/{}", target_rows), |b| {
                 b.to_async(&rt).iter(|| async {
                     let rows = bench_assert(
@@ -504,6 +593,11 @@ fn criterion_benchmark(c: &mut Criterion) {
             );
         }
     }
+
+    // Silence unused-variable warning when ore_field_value_json isn't bound
+    // by any scenario (currently only used for parity with hm_field; reserved
+    // for future field_order scenarios that bind the orderable sample).
+    let _ = ore_field_value_json;
 
     group.finish();
 }
