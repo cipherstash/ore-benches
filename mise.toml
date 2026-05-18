@@ -606,7 +606,7 @@ echo "Benchmark complete! Results written to $OUTPUT_FILE"
 """
 
 [tasks."bench:query:json"]
-description = "Run JSON / ste_vec query benchmark (field equality / extraction / GROUP BY)"
+description = "Run JSON / ste_vec query benchmark (containment, selector+equality, selector+ORDER BY — bare vs functional forms)"
 run = """
 #!/usr/bin/env bash
 set -e
