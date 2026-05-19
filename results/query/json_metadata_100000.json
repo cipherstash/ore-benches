@@ -224,40 +224,29 @@
             "Plan Width": 36,
             "Plans": [
               {
+                "Alias": "json_ste_vec_small_encrypted_100000",
                 "Async Capable": false,
-                "Node Type": "Sort",
+                "Index Name": "json_ste_vec_small_encrypted_100000_oc_9a2d817b8ec7abe623a1fcb",
+                "Node Type": "Index Scan",
                 "Parallel Aware": false,
                 "Parent Relationship": "Outer",
                 "Plan Rows": 100000,
                 "Plan Width": 36,
-                "Plans": [
-                  {
-                    "Alias": "json_ste_vec_small_encrypted_100000",
-                    "Async Capable": false,
-                    "Node Type": "Seq Scan",
-                    "Parallel Aware": false,
-                    "Parent Relationship": "Outer",
-                    "Plan Rows": 100000,
-                    "Plan Width": 36,
-                    "Relation Name": "json_ste_vec_small_encrypted_100000",
-                    "Startup Cost": 0.0,
-                    "Total Cost": 51890.0
-                  }
-                ],
-                "Sort Key": [
-                  "(eql_v2.ore_cllw(((value -> '9a2d817b8ec7abe623a1fcb4d9681003'::text)).data))"
-                ],
-                "Startup Cost": 54050.96,
-                "Total Cost": 54300.96
+                "Relation Name": "json_ste_vec_small_encrypted_100000",
+                "Scan Direction": "Forward",
+                "Startup Cost": 0.42,
+                "Total Cost": 60652.4
               }
             ],
-            "Startup Cost": 54050.96,
-            "Total Cost": 54050.99
+            "Startup Cost": 0.42,
+            "Total Cost": 6.48
           }
         }
       ],
       "id": "JSON/json/field_order/functional/100000",
-      "indexes_used": [],
+      "indexes_used": [
+        "json_ste_vec_small_encrypted_100000_oc_9a2d817b8ec7abe623a1fcb"
+      ],
       "parameters": [],
       "query": "SELECT id FROM json_ste_vec_small_encrypted_100000 ORDER BY eql_v2.ore_cllw(value -> '9a2d817b8ec7abe623a1fcb4d9681003'::text) LIMIT 10",
       "rows_returned": 10

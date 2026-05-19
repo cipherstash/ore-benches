@@ -107,7 +107,7 @@
                 "Node Type": "Seq Scan",
                 "Parallel Aware": false,
                 "Parent Relationship": "Outer",
-                "Plan Rows": 10000,
+                "Plan Rows": 1000000,
                 "Plan Width": 4,
                 "Relation Name": "json_ste_vec_small_encrypted_1000000",
                 "Startup Cost": 0.0,
@@ -115,7 +115,7 @@
               }
             ],
             "Startup Cost": 0.0,
-            "Total Cost": 271.39
+            "Total Cost": 2.71
           }
         }
       ],
@@ -238,15 +238,6 @@
     {
       "explain": [
         {
-          "JIT": {
-            "Functions": 3,
-            "Options": {
-              "Deforming": true,
-              "Expressions": true,
-              "Inlining": false,
-              "Optimization": false
-            }
-          },
           "Plan": {
             "Async Capable": false,
             "Node Type": "Limit",
@@ -255,53 +246,29 @@
             "Plan Width": 36,
             "Plans": [
               {
+                "Alias": "json_ste_vec_small_encrypted_1000000",
                 "Async Capable": false,
-                "Node Type": "Gather Merge",
+                "Index Name": "json_ste_vec_small_encrypted_1000000_oc_9a2d817b8ec7abe623a1fcb",
+                "Node Type": "Index Scan",
                 "Parallel Aware": false,
                 "Parent Relationship": "Outer",
-                "Plan Rows": 833334,
+                "Plan Rows": 1000000,
                 "Plan Width": 36,
-                "Plans": [
-                  {
-                    "Async Capable": false,
-                    "Node Type": "Sort",
-                    "Parallel Aware": false,
-                    "Parent Relationship": "Outer",
-                    "Plan Rows": 416667,
-                    "Plan Width": 36,
-                    "Plans": [
-                      {
-                        "Alias": "json_ste_vec_small_encrypted_1000000",
-                        "Async Capable": false,
-                        "Node Type": "Seq Scan",
-                        "Parallel Aware": true,
-                        "Parent Relationship": "Outer",
-                        "Plan Rows": 416667,
-                        "Plan Width": 36,
-                        "Relation Name": "json_ste_vec_small_encrypted_1000000",
-                        "Startup Cost": 0.0,
-                        "Total Cost": 221393.17
-                      }
-                    ],
-                    "Sort Key": [
-                      "(eql_v2.ore_cllw(((value -> '9a2d817b8ec7abe623a1fcb4d9681003'::text)).data))"
-                    ],
-                    "Startup Cost": 230397.19,
-                    "Total Cost": 231438.86
-                  }
-                ],
-                "Startup Cost": 231397.21,
-                "Total Cost": 328626.3,
-                "Workers Planned": 2
+                "Relation Name": "json_ste_vec_small_encrypted_1000000",
+                "Scan Direction": "Forward",
+                "Startup Cost": 0.55,
+                "Total Cost": 606426.08
               }
             ],
-            "Startup Cost": 231397.21,
-            "Total Cost": 231398.38
+            "Startup Cost": 0.55,
+            "Total Cost": 6.61
           }
         }
       ],
       "id": "JSON/json/field_order/functional/1000000",
-      "indexes_used": [],
+      "indexes_used": [
+        "json_ste_vec_small_encrypted_1000000_oc_9a2d817b8ec7abe623a1fcb"
+      ],
       "parameters": [],
       "query": "SELECT id FROM json_ste_vec_small_encrypted_1000000 ORDER BY eql_v2.ore_cllw(value -> '9a2d817b8ec7abe623a1fcb4d9681003'::text) LIMIT 10",
       "rows_returned": 10
