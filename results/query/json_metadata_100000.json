@@ -175,55 +175,6 @@
             "Plan Width": 36,
             "Plans": [
               {
-                "Async Capable": false,
-                "Node Type": "Sort",
-                "Parallel Aware": false,
-                "Parent Relationship": "Outer",
-                "Plan Rows": 100000,
-                "Plan Width": 36,
-                "Plans": [
-                  {
-                    "Alias": "json_ste_vec_small_encrypted_100000",
-                    "Async Capable": false,
-                    "Node Type": "Seq Scan",
-                    "Parallel Aware": false,
-                    "Parent Relationship": "Outer",
-                    "Plan Rows": 100000,
-                    "Plan Width": 36,
-                    "Relation Name": "json_ste_vec_small_encrypted_100000",
-                    "Startup Cost": 0.0,
-                    "Total Cost": 26890.0
-                  }
-                ],
-                "Sort Key": [
-                  "((value -> '9a2d817b8ec7abe623a1fcb4d9681003'::text))"
-                ],
-                "Startup Cost": 29050.96,
-                "Total Cost": 29300.96
-              }
-            ],
-            "Startup Cost": 29050.96,
-            "Total Cost": 29050.99
-          }
-        }
-      ],
-      "id": "JSON/json/field_order/bare/100000",
-      "indexes_used": [],
-      "parameters": [],
-      "query": "SELECT id FROM json_ste_vec_small_encrypted_100000 ORDER BY (value -> '9a2d817b8ec7abe623a1fcb4d9681003'::text) LIMIT 10",
-      "rows_returned": 10
-    },
-    {
-      "explain": [
-        {
-          "Plan": {
-            "Async Capable": false,
-            "Node Type": "Limit",
-            "Parallel Aware": false,
-            "Plan Rows": 10,
-            "Plan Width": 36,
-            "Plans": [
-              {
                 "Alias": "json_ste_vec_small_encrypted_100000",
                 "Async Capable": false,
                 "Index Name": "json_ste_vec_small_encrypted_100000_oc_9a2d817b8ec7abe623a1fcb",

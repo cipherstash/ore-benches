@@ -42,9 +42,9 @@ ON json_ste_vec_small_encrypted_10000 USING GIN (
 
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
-| 10,000 | 1 | 659.59μs | N/A |
-| 100,000 | 1 | 636.05μs | N/A |
-| 1,000,000 | 1 | 675.27μs | N/A |
+| 10,000 | 1 | 626.30μs | N/A |
+| 100,000 | 1 | 609.98μs | N/A |
+| 1,000,000 | 1 | 775.22μs | N/A |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
 
@@ -256,9 +256,9 @@ ON json_ste_vec_small_encrypted_10000 USING GIN (
 
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
-| 10,000 | 10 | 1.26ms | N/A |
-| 100,000 | 10 | 1.35ms | N/A |
-| 1,000,000 | 10 | 1.85ms | N/A |
+| 10,000 | 10 | 1.25ms | N/A |
+| 100,000 | 10 | 1.41ms | N/A |
+| 1,000,000 | 10 | 1.24ms | N/A |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
 
@@ -425,9 +425,9 @@ ON json_ste_vec_small_encrypted_10000 USING GIN (
 
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
-| 10,000 | 10 | 613.14μs | N/A |
-| 100,000 | 10 | 621.38μs | N/A |
-| 1,000,000 | 10 | 794.60μs | N/A |
+| 10,000 | 10 | 603.73μs | N/A |
+| 100,000 | 10 | 655.19μs | N/A |
+| 1,000,000 | 10 | 620.23μs | N/A |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
 
@@ -594,9 +594,9 @@ ON json_ste_vec_small_encrypted_10000 USING GIN (
 
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
-| 10,000 | 10 | 650.95μs | N/A |
-| 100,000 | 10 | 680.60μs | N/A |
-| 1,000,000 | 10 | 687.83μs | N/A |
+| 10,000 | 10 | 646.27μs | N/A |
+| 100,000 | 10 | 615.39μs | N/A |
+| 1,000,000 | 10 | 614.17μs | N/A |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
 
@@ -727,243 +727,6 @@ Full `EXPLAIN (FORMAT JSON)`:
 
 ![Query Performance - JSON/field_eq/functional](query_json_field_eq_functional_chart.png)
 
-## field_order/bare
-
-**Description:** Field-level ORDER BY via `ORDER BY value -> 'sel'` (no index)
-
-**SQL Query:**
-```sql
-SELECT id FROM {TABLE} ORDER BY (value -> '<selector-hash>'::text) LIMIT 10
-```
-
-**Table: `json_ste_vec_small_encrypted_{rows}`. Same `->` non-inlining problem as `field_eq/bare`. ORDER BY on `eql_v2_encrypted` uses ORE under the hood, but the planner can't see through `->` to engage any functional ORE index. Forces Seq Scan + Top-N sort.**
-
-**Indexes available on the table:**
-```sql
-CREATE INDEX
-json_ste_vec_small_encrypted_10000_ste_vec_index
-ON json_ste_vec_small_encrypted_10000 USING GIN (
-    eql_v2.ste_vec(value)
-);
-
-CREATE INDEX
-json_ste_vec_small_encrypted_10000_hmac_terms_index
-ON json_ste_vec_small_encrypted_10000 USING GIN (
-    eql_v2.hmac_256_terms(value)
-);
-```
-
-**Indexes used by the planner (per data set size):**
-
-- 10,000: _none — planner picked a sequential / hash-aggregate / sort plan_
-- 100,000: _none — planner picked a sequential / hash-aggregate / sort plan_
-- 1,000,000: _none — planner picked a sequential / hash-aggregate / sort plan_
-
-*⚠️ = Query time exceeds 100ms*
-
-| Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
-|---------------|---------------|-------------------------|---------------------------|
-| 10,000 | 10 | ⚠️ 544.86ms | N/A |
-| 100,000 | 10 | ⚠️ 5.664s | N/A |
-| 1,000,000 | 10 | ⚠️ 21.300s | N/A |
-
-_Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
-
-<details>
-<summary>EXPLAIN plans (per data set size)</summary>
-
-**10,000 rows**
-
-```
-Limit
-  Sort
-    Seq Scan on json_ste_vec_small_encrypted_10000
-```
-
-Full `EXPLAIN (FORMAT JSON)`:
-
-```json
-[
-  {
-    "Plan": {
-      "Async Capable": false,
-      "Node Type": "Limit",
-      "Parallel Aware": false,
-      "Plan Rows": 10,
-      "Plan Width": 36,
-      "Plans": [
-        {
-          "Async Capable": false,
-          "Node Type": "Sort",
-          "Parallel Aware": false,
-          "Parent Relationship": "Outer",
-          "Plan Rows": 10000,
-          "Plan Width": 36,
-          "Plans": [
-            {
-              "Alias": "json_ste_vec_small_encrypted_10000",
-              "Async Capable": false,
-              "Node Type": "Seq Scan",
-              "Parallel Aware": false,
-              "Parent Relationship": "Outer",
-              "Plan Rows": 10000,
-              "Plan Width": 36,
-              "Relation Name": "json_ste_vec_small_encrypted_10000",
-              "Startup Cost": 0.0,
-              "Total Cost": 2694.0
-            }
-          ],
-          "Sort Key": [
-            "((value -> '9a2d817b8ec7abe623a1fcb4d9681003'::text))"
-          ],
-          "Startup Cost": 2910.1,
-          "Total Cost": 2935.1
-        }
-      ],
-      "Startup Cost": 2910.1,
-      "Total Cost": 2910.12
-    }
-  }
-]
-```
-
-**100,000 rows**
-
-```
-Limit
-  Sort
-    Seq Scan on json_ste_vec_small_encrypted_100000
-```
-
-Full `EXPLAIN (FORMAT JSON)`:
-
-```json
-[
-  {
-    "Plan": {
-      "Async Capable": false,
-      "Node Type": "Limit",
-      "Parallel Aware": false,
-      "Plan Rows": 10,
-      "Plan Width": 36,
-      "Plans": [
-        {
-          "Async Capable": false,
-          "Node Type": "Sort",
-          "Parallel Aware": false,
-          "Parent Relationship": "Outer",
-          "Plan Rows": 100000,
-          "Plan Width": 36,
-          "Plans": [
-            {
-              "Alias": "json_ste_vec_small_encrypted_100000",
-              "Async Capable": false,
-              "Node Type": "Seq Scan",
-              "Parallel Aware": false,
-              "Parent Relationship": "Outer",
-              "Plan Rows": 100000,
-              "Plan Width": 36,
-              "Relation Name": "json_ste_vec_small_encrypted_100000",
-              "Startup Cost": 0.0,
-              "Total Cost": 26890.0
-            }
-          ],
-          "Sort Key": [
-            "((value -> '9a2d817b8ec7abe623a1fcb4d9681003'::text))"
-          ],
-          "Startup Cost": 29050.96,
-          "Total Cost": 29300.96
-        }
-      ],
-      "Startup Cost": 29050.96,
-      "Total Cost": 29050.99
-    }
-  }
-]
-```
-
-**1,000,000 rows**
-
-```
-Limit
-  Gather Merge
-    Sort
-      Seq Scan on json_ste_vec_small_encrypted_1000000
-```
-
-Full `EXPLAIN (FORMAT JSON)`:
-
-```json
-[
-  {
-    "JIT": {
-      "Functions": 3,
-      "Options": {
-        "Deforming": true,
-        "Expressions": true,
-        "Inlining": false,
-        "Optimization": false
-      }
-    },
-    "Plan": {
-      "Async Capable": false,
-      "Node Type": "Limit",
-      "Parallel Aware": false,
-      "Plan Rows": 10,
-      "Plan Width": 36,
-      "Plans": [
-        {
-          "Async Capable": false,
-          "Node Type": "Gather Merge",
-          "Parallel Aware": false,
-          "Parent Relationship": "Outer",
-          "Plan Rows": 833334,
-          "Plan Width": 36,
-          "Plans": [
-            {
-              "Async Capable": false,
-              "Node Type": "Sort",
-              "Parallel Aware": false,
-              "Parent Relationship": "Outer",
-              "Plan Rows": 416667,
-              "Plan Width": 36,
-              "Plans": [
-                {
-                  "Alias": "json_ste_vec_small_encrypted_1000000",
-                  "Async Capable": false,
-                  "Node Type": "Seq Scan",
-                  "Parallel Aware": true,
-                  "Parent Relationship": "Outer",
-                  "Plan Rows": 416667,
-                  "Plan Width": 36,
-                  "Relation Name": "json_ste_vec_small_encrypted_1000000",
-                  "Startup Cost": 0.0,
-                  "Total Cost": 117226.42
-                }
-              ],
-              "Sort Key": [
-                "((value -> '9a2d817b8ec7abe623a1fcb4d9681003'::text))"
-              ],
-              "Startup Cost": 126230.44,
-              "Total Cost": 127272.11
-            }
-          ],
-          "Startup Cost": 127230.46,
-          "Total Cost": 224459.55,
-          "Workers Planned": 2
-        }
-      ],
-      "Startup Cost": 127230.46,
-      "Total Cost": 127231.63
-    }
-  }
-]
-```
-
-</details>
-
-![Query Performance - JSON/field_order/bare](query_json_field_order_bare_chart.png)
-
 ## field_order/functional
 
 **Description:** Field-level ORDER BY via ORE extractor on `value -> 'sel'`
@@ -1002,9 +765,9 @@ ON json_ste_vec_small_encrypted_10000 USING GIN (
 
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
-| 10,000 | 10 | 1.33ms | N/A |
-| 100,000 | 10 | 1.36ms | N/A |
-| 1,000,000 | 10 | 1.55ms | N/A |
+| 10,000 | 10 | 1.27ms | N/A |
+| 100,000 | 10 | 1.37ms | N/A |
+| 1,000,000 | 10 | 1.24ms | N/A |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
 

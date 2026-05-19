@@ -42,11 +42,6 @@
 //        showing the cost of the per-selector recipe without a matching index.
 //
 //   3. JSON selector + ORDER BY (`->` then ORDER BY)
-//      field_order/bare
-//        SELECT id FROM tbl ORDER BY (value -> '<sel>'::text) LIMIT 10
-//        Same `->` non-inlining problem as field_eq/bare. ORDER BY on
-//        eql_v2_encrypted uses ORE under the hood, but the planner can't
-//        see through `->` to engage any functional ORE index.
 //      field_order/functional
 //        SELECT id FROM tbl ORDER BY <ore_extractor>(value -> '<sel>'::text) LIMIT 10
 //        Direct ORE extractor. <ore_extractor> is selected at startup based
@@ -54,6 +49,14 @@
 //          oc -> eql_v2.ore_cllw            (Standard mode, ORE CLLW)
 //          op -> eql_v2.ope_cllw            (Compat  mode, OPE CLLW)
 //          ob -> eql_v2.ore_block_u64_8_256 (Block ORE — root scalars only)
+//
+//      No `field_order/bare` scenario. The bare form
+//      `ORDER BY value -> '<sel>'` can't engage the functional ORE index
+//      (eql_v2."->" is plpgsql so the planner can't see through it), so
+//      the plan is always Seq Scan + Top-N sort — linear in table size.
+//      The extractor form is the canonical recipe; see §4 of the EQL
+//      query performance guide. Same precedent as ORE's natural-form
+//      ORDER BY scenario which was also removed.
 //
 // Needle / selector picking happens once at startup against the target
 // table. The bench picks one sv element with an orderable tag (for the order
@@ -323,13 +326,14 @@ fn criterion_benchmark(c: &mut Criterion) {
         )
     });
 
-    let q_field_order_bare = needles.ore_pick.as_ref().map(|p| {
-        let selector = &p.selector;
-        format!(
-            "SELECT id FROM {table_name} \
-             ORDER BY (value -> '{selector}'::text) LIMIT 10"
-        )
-    });
+    // Note: a `field_order/bare` scenario (`ORDER BY value -> '<sel>' LIMIT n`)
+    // is deliberately omitted. The bare form can't engage the functional ORE
+    // index — `eql_v2."->"` is plpgsql, so the planner has no way to match
+    // the sort key against the indexed expression — and the resulting Seq
+    // Scan + Top-N sort scales linearly with table size. The extractor form
+    // below is the canonical recipe, documented in §4 of the EQL query
+    // performance guide (`docs/reference/query-performance.md`). Measuring
+    // both would just inflate the run cost without surfacing new behaviour.
 
     let q_field_order_functional = needles.ore_pick.as_ref().and_then(|p| {
         let selector = &p.selector;
@@ -454,18 +458,7 @@ fn criterion_benchmark(c: &mut Criterion) {
             );
         }
 
-        if let (Some(_), Some(q_bare)) = (needles.ore_pick.as_ref(), q_field_order_bare.as_deref())
-        {
-            out.push(
-                capture(
-                    &pool,
-                    format!("JSON/json/field_order/bare/{}", target_rows),
-                    q_bare,
-                    None,
-                )
-                .await,
-            );
-
+        if needles.ore_pick.is_some() {
             if let Some(q) = q_field_order_functional.as_deref() {
                 out.push(
                     capture(
@@ -479,7 +472,7 @@ fn criterion_benchmark(c: &mut Criterion) {
             }
         } else {
             eprintln!(
-                "json bench: skipping field_order/* scenarios — no sv element on the \
+                "json bench: skipping field_order/functional — no sv element on the \
                  sampled row carries an orderable term (no ob / oc / op)."
             );
         }
@@ -564,18 +557,6 @@ fn criterion_benchmark(c: &mut Criterion) {
     }
 
     if has_ore {
-        if let Some(q) = q_field_order_bare.clone() {
-            let id = format!("JSON/json/field_order/bare/{}", target_rows);
-            group.bench_function(format!("json/field_order/bare/{}", target_rows), |b| {
-                b.to_async(&rt).iter(|| async {
-                    let rows = bench_assert(
-                        sqlx::query(&q).fetch_all(&pool).await,
-                        &id,
-                    );
-                    black_box(rows.len())
-                })
-            });
-        }
 
         if let Some(q) = q_field_order_functional.clone() {
             let id = format!("JSON/json/field_order/functional/{}", target_rows);
