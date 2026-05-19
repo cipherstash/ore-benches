@@ -294,17 +294,34 @@ fn criterion_benchmark(c: &mut Criterion) {
 
     // --- Query strings ---
 
+    // Post-EQL-2.3 typed-StEVec path (PR cipherstash/eql#223):
+    //   - `->` returns `eql_v2.ste_vec_entry` (was `eql_v2_encrypted`),
+    //     so RHS literals cast to `::eql_v2.ste_vec_entry` not
+    //     `::eql_v2_encrypted`. Bare field equality uses the
+    //     `ste_vec_entry × ste_vec_entry` `=` operator, which inlines
+    //     to `eq_term(a) = eq_term(b)`.
+    //   - The fused `eql_v2.hmac_256(eql_v2_encrypted, text)` was
+    //     removed; the functional recipe shifts to
+    //     `eql_v2.eq_term(value -> 'sel'::text)`.
+    //   - For containment, `eql_v2.ste_vec(col) @> ...` no longer
+    //     builds a GIN index against the strict-compare contract
+    //     (#211) because GIN-on-array uses the default btree opclass
+    //     on the element type, which raises on missing `ob`. Switch
+    //     to the canonical `eql_v2.jsonb_array(col) @>` recipe used
+    //     by the EQL test suite — same containment semantics, jsonb[]
+    //     element type bypasses the broken compare.
+
     let q_contains_functional = format!(
         "SELECT id FROM {table_name} \
-         WHERE eql_v2.ste_vec(value) \
-             @> eql_v2.ste_vec($1::jsonb::eql_v2_encrypted) LIMIT 10"
+         WHERE eql_v2.jsonb_array(value) \
+             @> eql_v2.jsonb_array($1::jsonb::eql_v2_encrypted) LIMIT 10"
     );
 
     let q_field_eq_bare = needles.hm_pick.as_ref().map(|p| {
         let selector = &p.selector;
         format!(
             "SELECT id FROM {table_name} \
-             WHERE (value -> '{selector}'::text) = $1::jsonb::eql_v2_encrypted LIMIT 10"
+             WHERE (value -> '{selector}'::text) = $1::jsonb::eql_v2.ste_vec_entry LIMIT 10"
         )
     });
 
@@ -321,8 +338,8 @@ fn criterion_benchmark(c: &mut Criterion) {
         let selector = &p.selector;
         format!(
             "SELECT id FROM {table_name} \
-             WHERE eql_v2.hmac_256(value, '{selector}') \
-                 = eql_v2.hmac_256($1::jsonb::eql_v2_encrypted) LIMIT 10"
+             WHERE eql_v2.eq_term(value -> '{selector}'::text) \
+                 = eql_v2.eq_term($1::jsonb::eql_v2.ste_vec_entry) LIMIT 10"
         )
     });
 
@@ -338,26 +355,15 @@ fn criterion_benchmark(c: &mut Criterion) {
     let q_field_order_functional = needles.ore_pick.as_ref().and_then(|p| {
         let selector = &p.selector;
         ore_extractor_for(&p.ore_term).map(|fn_name| {
-            // Post-EQL 2.3 strict separation (#219): the (eql_v2_encrypted)
-            // overload of `eql_v2.ore_cllw` was removed. Two typed
-            // replacements exist: (eql_v2.ste_vec_entry) and (jsonb). The
-            // domain has a CHECK that requires `s` + `c` + `hm` on every
-            // sv element; that's a tighter contract than what the current
-            // cipherstash-client emits — orderable-only sv elements carry
-            // `oc` without `hm`, so the cast `.data::eql_v2.ste_vec_entry`
-            // raises check-constraint violations against real data. Use
-            // the raw (jsonb) overload — `value -> 'sel'` returns
-            // eql_v2_encrypted, `.data` is the jsonb payload, and
-            // `eql_v2.ore_cllw(jsonb)` reads `?? 'oc'` directly with no
-            // shape gating. Functional index match still works because
-            // the planner compares expressions structurally.
-            //
-            // TODO(eql): the DOMAIN's `s` + `c` + `hm` requirement is
-            // stricter than the cipherstash-client emission pattern.
-            // Track this for a future relax.
+            // Post-PR cipherstash/eql#223: `->` returns
+            // `eql_v2.ste_vec_entry` (a domain over jsonb), and
+            // `eql_v2.ore_cllw` has an overload accepting that domain
+            // directly — no `.data` cast needed. The `eql_v2.ore_cllw_ops`
+            // btree opclass (DEFAULT FOR TYPE — #221) wires
+            // functional-index match on the expression.
             format!(
                 "SELECT id FROM {table_name} \
-                 ORDER BY {fn_name}((value -> '{selector}'::text).data) LIMIT 10"
+                 ORDER BY {fn_name}(value -> '{selector}'::text) LIMIT 10"
             )
         })
     });
