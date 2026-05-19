@@ -199,7 +199,7 @@
         "json_ste_vec_small_encrypted_10000_oc_9a2d817b8ec7abe623a1fcb"
       ],
       "parameters": [],
-      "query": "SELECT id FROM json_ste_vec_small_encrypted_10000 ORDER BY eql_v2.ore_cllw(value -> '9a2d817b8ec7abe623a1fcb4d9681003'::text) LIMIT 10",
+      "query": "SELECT id FROM json_ste_vec_small_encrypted_10000 ORDER BY eql_v2.ore_cllw((value -> '9a2d817b8ec7abe623a1fcb4d9681003'::text).data) LIMIT 10",
       "rows_returned": 10
     }
   ],

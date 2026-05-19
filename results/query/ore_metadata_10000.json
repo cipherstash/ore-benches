@@ -7,30 +7,34 @@
             "Async Capable": false,
             "Node Type": "Limit",
             "Parallel Aware": false,
-            "Plan Rows": 10,
+            "Plan Rows": 1,
             "Plan Width": 36,
             "Plans": [
               {
                 "Alias": "integer_encrypted_10000",
                 "Async Capable": false,
-                "Filter": "(eql_v2.ore_block_u64_8_256(value) > '(\"{\"\"(\\\\\"\"\\\\\\\\\\\\\\\\x818181813d3ba05650f0e2e50041a4028946d3b901f2227b9f40ca2d24ae4855610af3b93ab3fb03fb06a17df7471b16a573428a9f4c92b3cc79a164992485a18ab87494b45830f48144b2318d70dbf219e5ccc1d1871c3b4249148392b5dab99ef56f446d7e2b2ee6e9f2875635d6b2b1b5c167a713e05cee6d388100bab0f678d763ff3cbe16bcc2c2749bd0925af8a1e22d6cd6dd2b577ae66c9f5ec71e25204fe69cb73a23de2d39cc53bed70de952d7477e8c4369458561074500cfdce659e0a6f0ceb09988c237d66b709c3d4a5b21c05a57d512b315c5592404aac5a03209c6c6a6c491e7eb9b4660441593231030a8a49d986610a059b88c06d243b56df2ce84ace36c07627660c8dfde46e6a0b78c9524710b734fc09b553a8f6e363b00ac83ac28e91bc40f38ab43895df0c841ed6912f80ee497b9e4ff804099c4f0b40d961dbd53410a2772ec7907aa412108f07ea53b16895f84df2c2cff957289f0ddc60b608177f55b385a1b33fa1cc12ddfbba680fe97ae7a255f87746e3bf74b9abe093496b4d0a96cb34ebc626d546f54f643bded4b\\\\\"\")\"\"}\")'::eql_v2.ore_block_u64_8_256)",
-                "Node Type": "Seq Scan",
+                "Index Cond": "(eql_v2.ore_block_u64_8_256(value) > '(\"{\"\"(\\\\\"\"\\\\\\\\\\\\\\\\x4a4a4a4a7b75d35a800cfa2ff43dcd1b62771a15e33d22e69fda6d34f8e7f8be158e580893b02f753ecf7644fb8c1aba4adf0b01dd621fb107b51a023311e9484b76a975afea7fd7f7d3e6c4a96effd0ce52df7af438bca65a7cbad28e493fef601c3bf913156337fff25712e92fcecde5fdf2c4c33b0dcf6407e8b578be07e00aad33c3a870cb2880ab8dff4e902cd42f1f78e2a00cd45ef86778be080fc3efff00d742aefd8a5fce6c9afbbeba6a66336d9a6d59594f98f041e5a088784066aeb96e0338f9ab0233d852c7e76bd15bdb7503c53de6cfd7300736ce33bb85a9c41d126fc1210208442157094a709942bb76509ac8bd93f7cdea9eaa4d12b7a92afc94010cd12a57998777d9098b88f8cbb68626b8638da7bb9209e63dad0e8399f9c60e9ebe5913c586f7cde03f334684050bc52a4b2a11994ff55ce6f37b7ad1be166b1900bb512647ce3fe98788aa62aa22a14e9a6b1c130e2c3153cb6eaf6d20342a93f01851a3d7d705e8574cb503552b3d4d1ac7234e31b9289e4673ed102417ae4254de47ef07d92021f993b4023fca8baa7eee13\\\\\"\")\"\"}\")'::eql_v2.ore_block_u64_8_256)",
+                "Index Name": "integer_encrypted_10000_ore_index",
+                "Node Type": "Index Scan",
                 "Parallel Aware": false,
                 "Parent Relationship": "Outer",
-                "Plan Rows": 4950,
+                "Plan Rows": 1,
                 "Plan Width": 36,
                 "Relation Name": "integer_encrypted_10000",
-                "Startup Cost": 0.0,
-                "Total Cost": 7766.5
+                "Scan Direction": "Forward",
+                "Startup Cost": 0.54,
+                "Total Cost": 8.8
               }
             ],
-            "Startup Cost": 0.0,
-            "Total Cost": 15.69
+            "Startup Cost": 0.54,
+            "Total Cost": 8.8
           }
         }
       ],
       "id": "ORE/ore/range_gt_10/10000",
-      "indexes_used": [],
+      "indexes_used": [
+        "integer_encrypted_10000_ore_index"
+      ],
       "parameters": [
         {
           "i": {
@@ -38,13 +42,13 @@
             "t": "integer_encrypted_10000"
           },
           "ob": [
-            "818181813d3ba05650f0e2e50041a4028946d3b901f2227b9f40ca2d24ae4855610af3b93ab3fb03fb06a17df7471b16a573428a9f4c92b3cc79a164992485a18ab87494b45830f48144b2318d70dbf219e5ccc1d1871c3b4249148392b5dab99ef56f446d7e2b2ee6e9f2875635d6b2b1b5c167a713e05cee6d388100bab0f678d763ff3cbe16bcc2c2749bd0925af8a1e22d6cd6dd2b577ae66c9f5ec71e25204fe69cb73a23de2d39cc53bed70de952d7477e8c4369458561074500cfdce659e0a6f0ceb09988c237d66b709c3d4a5b21c05a57d512b315c5592404aac5a03209c6c6a6c491e7eb9b4660441593231030a8a49d986610a059b88c06d243b56df2ce84ace36c07627660c8dfde46e6a0b78c9524710b734fc09b553a8f6e363b00ac83ac28e91bc40f38ab43895df0c841ed6912f80ee497b9e4ff804099c4f0b40d961dbd53410a2772ec7907aa412108f07ea53b16895f84df2c2cff957289f0ddc60b608177f55b385a1b33fa1cc12ddfbba680fe97ae7a255f87746e3bf74b9abe093496b4d0a96cb34ebc626d546f54f643bded4b"
+            "4a4a4a4a7b75d35a800cfa2ff43dcd1b62771a15e33d22e69fda6d34f8e7f8be158e580893b02f753ecf7644fb8c1aba4adf0b01dd621fb107b51a023311e9484b76a975afea7fd7f7d3e6c4a96effd0ce52df7af438bca65a7cbad28e493fef601c3bf913156337fff25712e92fcecde5fdf2c4c33b0dcf6407e8b578be07e00aad33c3a870cb2880ab8dff4e902cd42f1f78e2a00cd45ef86778be080fc3efff00d742aefd8a5fce6c9afbbeba6a66336d9a6d59594f98f041e5a088784066aeb96e0338f9ab0233d852c7e76bd15bdb7503c53de6cfd7300736ce33bb85a9c41d126fc1210208442157094a709942bb76509ac8bd93f7cdea9eaa4d12b7a92afc94010cd12a57998777d9098b88f8cbb68626b8638da7bb9209e63dad0e8399f9c60e9ebe5913c586f7cde03f334684050bc52a4b2a11994ff55ce6f37b7ad1be166b1900bb512647ce3fe98788aa62aa22a14e9a6b1c130e2c3153cb6eaf6d20342a93f01851a3d7d705e8574cb503552b3d4d1ac7234e31b9289e4673ed102417ae4254de47ef07d92021f993b4023fca8baa7eee13"
           ],
           "v": 2
         }
       ],
       "query": "SELECT id,value::jsonb FROM integer_encrypted_10000 WHERE value > $1 LIMIT 10",
-      "rows_returned": 10
+      "rows_returned": 0
     },
     {
       "explain": [
@@ -59,19 +63,19 @@
               {
                 "Alias": "integer_encrypted_10000",
                 "Async Capable": false,
-                "Filter": "(eql_v2.ore_block_u64_8_256(value) > '(\"{\"\"(\\\\\"\"\\\\\\\\\\\\\\\\x818181813d3ba05650f0e2e50041a4028946d3b901f2227b9f40ca2d24ae4855610af3b93ab3fb03fb06a17df7471b16a573428a9f4c92b3cc79a164992485a18ab87494b45830f48144b2318d70dbf219e5ccc1d1871c3b4249148392b5dab99ef56f446d7e2b2ee6e9f2875635d6b2b1b5c167a713e05cee6d388100bab0f678d763ff3cbe16bcc89f2e59736df1517ce83c9dad584086c97d362ba74d07444e1ca0e9f2bd84cfe15f14f530fc1f192cccc87521cd4b7358b978e9d81c719216bd8ae6ac822c03ba0fa77e5785403f37e71edf6d3b83e5bc235ce6a77c8e91e19d1060218fa1d860c7c1bae56d7282f80cf289f3feac2953c11f1ba860cd29f44c5a482c60ed147244a6bf5f771b0c711c0b54366feaa0a744e31eb37ca1d3c53a8e9ab313a7fd0506efd35ada098adf665fa2f6e69edf8d206fac45052e57c3a6687643cd0434580fdaeeb7977380c39ace21dafc2945d42294e48c793f4522debac27cc383dbc28f31c8b2eea99e239f07fd5521079e915d6b209e136a44ef1ff855a503682ef717c970b8edf95099ebf89a97d4c04a\\\\\"\")\"\"}\")'::eql_v2.ore_block_u64_8_256)",
+                "Filter": "(eql_v2.ore_block_u64_8_256(value) > '(\"{\"\"(\\\\\"\"\\\\\\\\\\\\\\\\x4a4a4a4a7b75d35a800cfa2ff43dcd1b62771a15e33d22e69fda6d34f8e7f8be158e580893b02f753ecf7644fb8c1aba4adf0b01dd621fb107b51a023311e9484b76a975afea7fd7f7d3e6c4a96effd0ce52df7af438bca65a7cbad28e493fef601c3bf913156337fff25712e92fcecde5fdf2c4c33b0dcf6407e8b578be07e00aad33c3a870cb28c3de831b580bad7b43591631d23328ad696fd611935e2bca21f57607b2575507a3fdbebfbff5375b676422984bd68289b44cc2c336e281f9422c3bc1816bc9d9c9973e43528fd3eabcb1cef47301c102eee6b32979d2fa979a6ebd7254cf165e853bd650b7c35c75c82f2974cab5a499cdcea693b6aa963c3b700859ac7a0babde09819a9be82c670981ed28a4a8d463824f7916ab96d880f8073234c0971736d6bf359914abfc4b6f7e23600c643002fabe55013d2b633854b1622e606bece9d68824af9935ef296212789b9b90c935fab697912e2a3cbf2d25f93c3149f77bdfe742f6a8930c8e8bea21ad317f13fcc376f67ddcf89a6934ac767b08e6a4a21a1b6781fa508350d8b6dc3b5261c3d9\\\\\"\")\"\"}\")'::eql_v2.ore_block_u64_8_256)",
                 "Node Type": "Seq Scan",
                 "Parallel Aware": false,
                 "Parent Relationship": "Outer",
-                "Plan Rows": 4950,
+                "Plan Rows": 10000,
                 "Plan Width": 36,
                 "Relation Name": "integer_encrypted_10000",
                 "Startup Cost": 0.0,
-                "Total Cost": 7766.5
+                "Total Cost": 9029.0
               }
             ],
             "Startup Cost": 0.0,
-            "Total Cost": 156.9
+            "Total Cost": 90.29
           }
         }
       ],
@@ -84,7 +88,7 @@
             "t": "integer_encrypted_10000"
           },
           "ob": [
-            "818181813d3ba05650f0e2e50041a4028946d3b901f2227b9f40ca2d24ae4855610af3b93ab3fb03fb06a17df7471b16a573428a9f4c92b3cc79a164992485a18ab87494b45830f48144b2318d70dbf219e5ccc1d1871c3b4249148392b5dab99ef56f446d7e2b2ee6e9f2875635d6b2b1b5c167a713e05cee6d388100bab0f678d763ff3cbe16bcc89f2e59736df1517ce83c9dad584086c97d362ba74d07444e1ca0e9f2bd84cfe15f14f530fc1f192cccc87521cd4b7358b978e9d81c719216bd8ae6ac822c03ba0fa77e5785403f37e71edf6d3b83e5bc235ce6a77c8e91e19d1060218fa1d860c7c1bae56d7282f80cf289f3feac2953c11f1ba860cd29f44c5a482c60ed147244a6bf5f771b0c711c0b54366feaa0a744e31eb37ca1d3c53a8e9ab313a7fd0506efd35ada098adf665fa2f6e69edf8d206fac45052e57c3a6687643cd0434580fdaeeb7977380c39ace21dafc2945d42294e48c793f4522debac27cc383dbc28f31c8b2eea99e239f07fd5521079e915d6b209e136a44ef1ff855a503682ef717c970b8edf95099ebf89a97d4c04a"
+            "4a4a4a4a7b75d35a800cfa2ff43dcd1b62771a15e33d22e69fda6d34f8e7f8be158e580893b02f753ecf7644fb8c1aba4adf0b01dd621fb107b51a023311e9484b76a975afea7fd7f7d3e6c4a96effd0ce52df7af438bca65a7cbad28e493fef601c3bf913156337fff25712e92fcecde5fdf2c4c33b0dcf6407e8b578be07e00aad33c3a870cb28c3de831b580bad7b43591631d23328ad696fd611935e2bca21f57607b2575507a3fdbebfbff5375b676422984bd68289b44cc2c336e281f9422c3bc1816bc9d9c9973e43528fd3eabcb1cef47301c102eee6b32979d2fa979a6ebd7254cf165e853bd650b7c35c75c82f2974cab5a499cdcea693b6aa963c3b700859ac7a0babde09819a9be82c670981ed28a4a8d463824f7916ab96d880f8073234c0971736d6bf359914abfc4b6f7e23600c643002fabe55013d2b633854b1622e606bece9d68824af9935ef296212789b9b90c935fab697912e2a3cbf2d25f93c3149f77bdfe742f6a8930c8e8bea21ad317f13fcc376f67ddcf89a6934ac767b08e6a4a21a1b6781fa508350d8b6dc3b5261c3d9"
           ],
           "v": 2
         }
@@ -99,30 +103,34 @@
             "Async Capable": false,
             "Node Type": "Limit",
             "Parallel Aware": false,
-            "Plan Rows": 10,
+            "Plan Rows": 1,
             "Plan Width": 36,
             "Plans": [
               {
                 "Alias": "integer_encrypted_10000",
                 "Async Capable": false,
-                "Filter": "(eql_v2.ore_block_u64_8_256(value) < '(\"{\"\"(\\\\\"\"\\\\\\\\\\\\\\\\x818181813d3ba05650f0e2e50041a4028946d3b901f2227b9f40ca2d24ae4855610af3b93ab3fb03fb06a17df7471b16a573428a9f4c92b3cc79a164992485a18ab87494b45830f48144b2318d70dbf219e5ccc1d1871c3b4249148392b5dab99ef56f446d7e2b2ee6e9f2875635d6b2b1b5c167a713e05cee6d388100bab0f678d763ff3cbe16bc960442414fab64531ffb3af196f9b683ee277ae2cc66b24c3846af58d5492611f16edcfb9b4cc30d9918cef6b7eddb43f7df9c91c7c183eaedc4e06faba167723eb03e8629945c6eb8a4184629665e714f998856cd940615b66b8045fa5ebee3689a7c62772de1cd5934c1c4578b0ea37fff3bc5847d74bbb9a32b0e65b97ebf20b0ecf2e4ee1ea556321e496d33c4205eb62436815bb586dc17b1a11be4c7e5a62d90c01188ec3d64cd7eb27dac9041c49c5e3c04eedc790ae52c375774d155226515bd445da46c85a086f4bf01305ef94fe59a4e796f47b37cebb0ec8977e3eaa7651dc0e20a3eb6d5fb96a71f9ede5fd0a38d3c6841b76ec3416e7e5a8f54c0b821f65617012cd5d4582ae267591d\\\\\"\")\"\"}\")'::eql_v2.ore_block_u64_8_256)",
-                "Node Type": "Seq Scan",
+                "Index Cond": "(eql_v2.ore_block_u64_8_256(value) < '(\"{\"\"(\\\\\"\"\\\\\\\\\\\\\\\\x4a4a4a4a7b75d35a800cfa2ff43dcd1b62771a15e33d22e69fda6d34f8e7f8be158e580893b02f753ecf7644fb8c1aba4adf0b01dd621fb107b51a023311e9484b76a975afea7fd7f7d3e6c4a96effd0ce52df7af438bca65a7cbad28e493fef601c3bf913156337fff25712e92fcecde5fdf2c4c33b0dcf6407e8b578be07e00aad33c3a870cb28941644d8d3a4994c58134945c5f833fc307e7d4de7f7c61f9cb7d438482f3574a4c65461cb1caedf2c4f88dd068ce731888354176b771ff8b26ec72f6edc81d3b74b8b88a15346abccfd2e0447ec8985cb0b597a5c6f9d5a71f8601ad2c533c12d63705959e3279d92f66e67787109b8f4492e3ec80f5b7eecaa05a412b57e622df7ff94ce47821355b333a1b10cf1d3dd21775eb0abea45c67c342b9224589cb52299263d18d9cba2d8bdbbcdc7f443d9cff8627980bb76a72c9be9ff683cb4719d7adc3a2f4791c0be62f9970c8199a96db7e65116b22b073552d852ce8afdd4d066850c723dd5752e1e7fc49e48f6dda20e3aa56e5f7b240e85c913cbeb4db780f02a8c3b108832f83189d88572e6\\\\\"\")\"\"}\")'::eql_v2.ore_block_u64_8_256)",
+                "Index Name": "integer_encrypted_10000_ore_index",
+                "Node Type": "Index Scan",
                 "Parallel Aware": false,
                 "Parent Relationship": "Outer",
-                "Plan Rows": 5049,
+                "Plan Rows": 1,
                 "Plan Width": 36,
                 "Relation Name": "integer_encrypted_10000",
-                "Startup Cost": 0.0,
-                "Total Cost": 7791.25
+                "Scan Direction": "Forward",
+                "Startup Cost": 0.54,
+                "Total Cost": 8.8
               }
             ],
-            "Startup Cost": 0.0,
-            "Total Cost": 15.43
+            "Startup Cost": 0.54,
+            "Total Cost": 8.8
           }
         }
       ],
       "id": "ORE/ore/range_lt_10/10000",
-      "indexes_used": [],
+      "indexes_used": [
+        "integer_encrypted_10000_ore_index"
+      ],
       "parameters": [
         {
           "i": {
@@ -130,13 +138,13 @@
             "t": "integer_encrypted_10000"
           },
           "ob": [
-            "818181813d3ba05650f0e2e50041a4028946d3b901f2227b9f40ca2d24ae4855610af3b93ab3fb03fb06a17df7471b16a573428a9f4c92b3cc79a164992485a18ab87494b45830f48144b2318d70dbf219e5ccc1d1871c3b4249148392b5dab99ef56f446d7e2b2ee6e9f2875635d6b2b1b5c167a713e05cee6d388100bab0f678d763ff3cbe16bc960442414fab64531ffb3af196f9b683ee277ae2cc66b24c3846af58d5492611f16edcfb9b4cc30d9918cef6b7eddb43f7df9c91c7c183eaedc4e06faba167723eb03e8629945c6eb8a4184629665e714f998856cd940615b66b8045fa5ebee3689a7c62772de1cd5934c1c4578b0ea37fff3bc5847d74bbb9a32b0e65b97ebf20b0ecf2e4ee1ea556321e496d33c4205eb62436815bb586dc17b1a11be4c7e5a62d90c01188ec3d64cd7eb27dac9041c49c5e3c04eedc790ae52c375774d155226515bd445da46c85a086f4bf01305ef94fe59a4e796f47b37cebb0ec8977e3eaa7651dc0e20a3eb6d5fb96a71f9ede5fd0a38d3c6841b76ec3416e7e5a8f54c0b821f65617012cd5d4582ae267591d"
+            "4a4a4a4a7b75d35a800cfa2ff43dcd1b62771a15e33d22e69fda6d34f8e7f8be158e580893b02f753ecf7644fb8c1aba4adf0b01dd621fb107b51a023311e9484b76a975afea7fd7f7d3e6c4a96effd0ce52df7af438bca65a7cbad28e493fef601c3bf913156337fff25712e92fcecde5fdf2c4c33b0dcf6407e8b578be07e00aad33c3a870cb28941644d8d3a4994c58134945c5f833fc307e7d4de7f7c61f9cb7d438482f3574a4c65461cb1caedf2c4f88dd068ce731888354176b771ff8b26ec72f6edc81d3b74b8b88a15346abccfd2e0447ec8985cb0b597a5c6f9d5a71f8601ad2c533c12d63705959e3279d92f66e67787109b8f4492e3ec80f5b7eecaa05a412b57e622df7ff94ce47821355b333a1b10cf1d3dd21775eb0abea45c67c342b9224589cb52299263d18d9cba2d8bdbbcdc7f443d9cff8627980bb76a72c9be9ff683cb4719d7adc3a2f4791c0be62f9970c8199a96db7e65116b22b073552d852ce8afdd4d066850c723dd5752e1e7fc49e48f6dda20e3aa56e5f7b240e85c913cbeb4db780f02a8c3b108832f83189d88572e6"
           ],
           "v": 2
         }
       ],
       "query": "SELECT id,value::jsonb FROM integer_encrypted_10000 WHERE value < $1 LIMIT 10",
-      "rows_returned": 10
+      "rows_returned": 0
     },
     {
       "explain": [
@@ -151,19 +159,19 @@
               {
                 "Alias": "integer_encrypted_10000",
                 "Async Capable": false,
-                "Filter": "(eql_v2.ore_block_u64_8_256(value) < '(\"{\"\"(\\\\\"\"\\\\\\\\\\\\\\\\x818181813d3ba05650f0e2e50041a4028946d3b901f2227b9f40ca2d24ae4855610af3b93ab3fb03fb06a17df7471b16a573428a9f4c92b3cc79a164992485a18ab87494b45830f48144b2318d70dbf219e5ccc1d1871c3b4249148392b5dab99ef56f446d7e2b2ee6e9f2875635d6b2b1b5c167a713e05cee6d388100bab0f678d763ff3cbe16bc09519b020541fab20be4f380297be2b1da521ab1778e1214a6b8b2a5d240b6607afd30f3fb0ccc2df68e5d28aa699477f699fbc3cbc508518817d0636bd6ff08e1f1c9967b3bc4eee442af295f800602612c6b8104bcc1aa81b2dc59f2dbe0c0c13de104bb46496a72190b86fc5b9dda1133acea4a4c3876d1bdc2123479dd5fc6fefdac3ceec871c8aaaa157eec5c8c43de349393f6185c3e964a09a20752a5eb7c7b9e9fc6709bb72ab8cac536d32b66d896e12a5c59da280a7d169991fa93ae72e4766fc84c36eb372c1ea07cc1fb5b325de8be13603abbb2009808599acb695ddc773439e09374aece38b9c79c53dc6be6d528dcc5547319a93bee9a8a0a35314d5159d0a867ed8b70f7a116fb8c\\\\\"\")\"\"}\")'::eql_v2.ore_block_u64_8_256)",
+                "Filter": "(eql_v2.ore_block_u64_8_256(value) < '(\"{\"\"(\\\\\"\"\\\\\\\\\\\\\\\\x4a4a4a4a7b75d35a800cfa2ff43dcd1b62771a15e33d22e69fda6d34f8e7f8be158e580893b02f753ecf7644fb8c1aba4adf0b01dd621fb107b51a023311e9484b76a975afea7fd7f7d3e6c4a96effd0ce52df7af438bca65a7cbad28e493fef601c3bf913156337fff25712e92fcecde5fdf2c4c33b0dcf6407e8b578be07e00aad33c3a870cb28522882daf72c57b9c3c0af8fbfda15bcff6095fc79cb613370a518e49f471f70341355e3409b911bdf8e08dc1101a2e9ff724e67b7de5a0d778d7877f3dc384758eefc956402f31b612e7b2ac2ab2246bb5952fbcbf0a2d7623b7920cc13eee3ebf138a41a49e47feb542eb9e1dd74ce46a76c869719787580e87995bb759d2e55ab43405b8841ef50bf940432afac206cc315c21684d7cb49c6f880b30b0a9415e2b41941d5db3f13cc43e89a7e68c78ffa44bba39210e22a38160b0d9b8cd6a922b7800e5385a80f239b1ada0da1b4310603bc1ae677e8960a85aa0acae574f190dbd93fadb2caac1729d419ac92422d54c55e12cf65a1f5d01ef6d168bfc67c92bd175918e339dbc72d1a0351e2b9\\\\\"\")\"\"}\")'::eql_v2.ore_block_u64_8_256)",
                 "Node Type": "Seq Scan",
                 "Parallel Aware": false,
                 "Parent Relationship": "Outer",
-                "Plan Rows": 5049,
+                "Plan Rows": 10000,
                 "Plan Width": 36,
                 "Relation Name": "integer_encrypted_10000",
                 "Startup Cost": 0.0,
-                "Total Cost": 7791.25
+                "Total Cost": 9029.0
               }
             ],
             "Startup Cost": 0.0,
-            "Total Cost": 154.31
+            "Total Cost": 90.29
           }
         }
       ],
@@ -176,7 +184,7 @@
             "t": "integer_encrypted_10000"
           },
           "ob": [
-            "818181813d3ba05650f0e2e50041a4028946d3b901f2227b9f40ca2d24ae4855610af3b93ab3fb03fb06a17df7471b16a573428a9f4c92b3cc79a164992485a18ab87494b45830f48144b2318d70dbf219e5ccc1d1871c3b4249148392b5dab99ef56f446d7e2b2ee6e9f2875635d6b2b1b5c167a713e05cee6d388100bab0f678d763ff3cbe16bc09519b020541fab20be4f380297be2b1da521ab1778e1214a6b8b2a5d240b6607afd30f3fb0ccc2df68e5d28aa699477f699fbc3cbc508518817d0636bd6ff08e1f1c9967b3bc4eee442af295f800602612c6b8104bcc1aa81b2dc59f2dbe0c0c13de104bb46496a72190b86fc5b9dda1133acea4a4c3876d1bdc2123479dd5fc6fefdac3ceec871c8aaaa157eec5c8c43de349393f6185c3e964a09a20752a5eb7c7b9e9fc6709bb72ab8cac536d32b66d896e12a5c59da280a7d169991fa93ae72e4766fc84c36eb372c1ea07cc1fb5b325de8be13603abbb2009808599acb695ddc773439e09374aece38b9c79c53dc6be6d528dcc5547319a93bee9a8a0a35314d5159d0a867ed8b70f7a116fb8c"
+            "4a4a4a4a7b75d35a800cfa2ff43dcd1b62771a15e33d22e69fda6d34f8e7f8be158e580893b02f753ecf7644fb8c1aba4adf0b01dd621fb107b51a023311e9484b76a975afea7fd7f7d3e6c4a96effd0ce52df7af438bca65a7cbad28e493fef601c3bf913156337fff25712e92fcecde5fdf2c4c33b0dcf6407e8b578be07e00aad33c3a870cb28522882daf72c57b9c3c0af8fbfda15bcff6095fc79cb613370a518e49f471f70341355e3409b911bdf8e08dc1101a2e9ff724e67b7de5a0d778d7877f3dc384758eefc956402f31b612e7b2ac2ab2246bb5952fbcbf0a2d7623b7920cc13eee3ebf138a41a49e47feb542eb9e1dd74ce46a76c869719787580e87995bb759d2e55ab43405b8841ef50bf940432afac206cc315c21684d7cb49c6f880b30b0a9415e2b41941d5db3f13cc43e89a7e68c78ffa44bba39210e22a38160b0d9b8cd6a922b7800e5385a80f239b1ada0da1b4310603bc1ae677e8960a85aa0acae574f190dbd93fadb2caac1729d419ac92422d54c55e12cf65a1f5d01ef6d168bfc67c92bd175918e339dbc72d1a0351e2b9"
           ],
           "v": 2
         }
@@ -191,39 +199,27 @@
             "Async Capable": false,
             "Node Type": "Limit",
             "Parallel Aware": false,
-            "Plan Rows": 50,
+            "Plan Rows": 1,
             "Plan Width": 36,
             "Plans": [
               {
                 "Alias": "integer_encrypted_10000",
                 "Async Capable": false,
-                "Node Type": "Bitmap Heap Scan",
+                "Index Cond": "(eql_v2.ore_block_u64_8_256(value) > '(\"{\"\"(\\\\\"\"\\\\\\\\\\\\\\\\x4a4a4a4af3965ab3800cfa2ff43dcd1b62771a15e33d22e69fda6d34f8e7f8be158e580893b02f753ecf7644fb8c1aba4adf0b01dd621fb107b51a023311e9484b76a975afea7fd7009e9d384e0a1948ba24bd23106f78839e5375b93148d2c7258c7c5b10da6baaf6161425134bf7a220b78fc411dc6f7124f9da3212acff12515e2eed9100ed1b4280e3d3961c13898602c093a707a14570ff56bf4ec0d23c2e10a45c1039f553bfaa0c7969e7482ae98f92fff3cbddbde1e0dc62e117a7431dcaeedf4c42c70270ed74776ad9988af1c22205895b9eb0b96965056e4ecd835134078248f83f56f879022bd0c7c93d64b13be59fa670e2c7bb58400602953228f4e796e389a615041a3c41ea78ee638dc518d330be516eefd3cb27ea400215157f25309fa6e560c260ef6a1087dc9ef678d626ca45390fa4bbf3d26cdfb8c878d326fa24fcac61a0a3ff57ddbcdd536bbc87e6d9c7f67d9f7a0931c3d502c7dd00a189f7d7d8d93e2a3e0eafedaac128a00bf37aaa709f3ebc6e13e1f16e7228542afc89a85de927655b12125d638623dd1ba6b5725849\\\\\"\")\"\"}\")'::eql_v2.ore_block_u64_8_256)",
+                "Index Name": "integer_encrypted_10000_ore_index",
+                "Node Type": "Index Scan",
                 "Parallel Aware": false,
                 "Parent Relationship": "Outer",
-                "Plan Rows": 50,
+                "Plan Rows": 1,
                 "Plan Width": 36,
-                "Plans": [
-                  {
-                    "Async Capable": false,
-                    "Index Cond": "(eql_v2.ore_block_u64_8_256(value) > '(\"{\"\"(\\\\\"\"\\\\\\\\\\\\\\\\x818181819c54c4cd50f0e2e50041a4028946d3b901f2227b9f40ca2d24ae4855610af3b93ab3fb03fb06a17df7471b16a573428a9f4c92b3cc79a164992485a18ab87494b45830f40b0aaa51599711df6ba2dcc070bb9c12bbb0bd496b07fcd3fb5f6023b99f693a88b0a0e8c51a1c10c2af20a0e7cfc0a7e40c25d147a0ac4821b8eae3d8d762b9dece8e0ecfa8a6c14c02abb2332348480784c2fb9e5561393dd442ae16a503e904bcbd32025a1a6b1d28dbd8cace19473d56f3f796ede4afc4ebcf6d9e49a78ee44267dd0528c4a720844cd487ef7f3635eef619988aa586c23466c69bd87c752d99af8c02aaa207fddd10c1001f3967fc3f88b0ba6e9d084b224f7338eb78a9b61796d04396d96d1509fad43372c6b60eb36a9a793cdbf7251691aefac22a97caad0465ff6244e94e2067d0addece162b9d1000a2b514c98d756e4a2a1cab43b518c9c6dba8d9fd3147eb7ac4ff4ab50cbabf5713819bb92f4a7da869ef37dfc264ff48b528b65d16aa2262f326fa9949cad2c8d90d600baf8ecc61f6d3f236eb439b950018334a3fbf06fa1e143a5a\\\\\"\")\"\"}\")'::eql_v2.ore_block_u64_8_256)",
-                    "Index Name": "integer_encrypted_10000_ore_index",
-                    "Node Type": "Bitmap Index Scan",
-                    "Parallel Aware": false,
-                    "Parent Relationship": "Outer",
-                    "Plan Rows": 50,
-                    "Plan Width": 0,
-                    "Startup Cost": 0.0,
-                    "Total Cost": 16.91
-                  }
-                ],
-                "Recheck Cond": "(eql_v2.ore_block_u64_8_256(value) > '(\"{\"\"(\\\\\"\"\\\\\\\\\\\\\\\\x818181819c54c4cd50f0e2e50041a4028946d3b901f2227b9f40ca2d24ae4855610af3b93ab3fb03fb06a17df7471b16a573428a9f4c92b3cc79a164992485a18ab87494b45830f40b0aaa51599711df6ba2dcc070bb9c12bbb0bd496b07fcd3fb5f6023b99f693a88b0a0e8c51a1c10c2af20a0e7cfc0a7e40c25d147a0ac4821b8eae3d8d762b9dece8e0ecfa8a6c14c02abb2332348480784c2fb9e5561393dd442ae16a503e904bcbd32025a1a6b1d28dbd8cace19473d56f3f796ede4afc4ebcf6d9e49a78ee44267dd0528c4a720844cd487ef7f3635eef619988aa586c23466c69bd87c752d99af8c02aaa207fddd10c1001f3967fc3f88b0ba6e9d084b224f7338eb78a9b61796d04396d96d1509fad43372c6b60eb36a9a793cdbf7251691aefac22a97caad0465ff6244e94e2067d0addece162b9d1000a2b514c98d756e4a2a1cab43b518c9c6dba8d9fd3147eb7ac4ff4ab50cbabf5713819bb92f4a7da869ef37dfc264ff48b528b65d16aa2262f326fa9949cad2c8d90d600baf8ecc61f6d3f236eb439b950018334a3fbf06fa1e143a5a\\\\\"\")\"\"}\")'::eql_v2.ore_block_u64_8_256)",
                 "Relation Name": "integer_encrypted_10000",
-                "Startup Cost": 16.92,
-                "Total Cost": 226.86
+                "Scan Direction": "Forward",
+                "Startup Cost": 0.54,
+                "Total Cost": 8.8
               }
             ],
-            "Startup Cost": 16.92,
-            "Total Cost": 226.86
+            "Startup Cost": 0.54,
+            "Total Cost": 8.8
           }
         }
       ],
@@ -238,13 +234,13 @@
             "t": "integer_encrypted_10000"
           },
           "ob": [
-            "818181819c54c4cd50f0e2e50041a4028946d3b901f2227b9f40ca2d24ae4855610af3b93ab3fb03fb06a17df7471b16a573428a9f4c92b3cc79a164992485a18ab87494b45830f40b0aaa51599711df6ba2dcc070bb9c12bbb0bd496b07fcd3fb5f6023b99f693a88b0a0e8c51a1c10c2af20a0e7cfc0a7e40c25d147a0ac4821b8eae3d8d762b9dece8e0ecfa8a6c14c02abb2332348480784c2fb9e5561393dd442ae16a503e904bcbd32025a1a6b1d28dbd8cace19473d56f3f796ede4afc4ebcf6d9e49a78ee44267dd0528c4a720844cd487ef7f3635eef619988aa586c23466c69bd87c752d99af8c02aaa207fddd10c1001f3967fc3f88b0ba6e9d084b224f7338eb78a9b61796d04396d96d1509fad43372c6b60eb36a9a793cdbf7251691aefac22a97caad0465ff6244e94e2067d0addece162b9d1000a2b514c98d756e4a2a1cab43b518c9c6dba8d9fd3147eb7ac4ff4ab50cbabf5713819bb92f4a7da869ef37dfc264ff48b528b65d16aa2262f326fa9949cad2c8d90d600baf8ecc61f6d3f236eb439b950018334a3fbf06fa1e143a5a"
+            "4a4a4a4af3965ab3800cfa2ff43dcd1b62771a15e33d22e69fda6d34f8e7f8be158e580893b02f753ecf7644fb8c1aba4adf0b01dd621fb107b51a023311e9484b76a975afea7fd7009e9d384e0a1948ba24bd23106f78839e5375b93148d2c7258c7c5b10da6baaf6161425134bf7a220b78fc411dc6f7124f9da3212acff12515e2eed9100ed1b4280e3d3961c13898602c093a707a14570ff56bf4ec0d23c2e10a45c1039f553bfaa0c7969e7482ae98f92fff3cbddbde1e0dc62e117a7431dcaeedf4c42c70270ed74776ad9988af1c22205895b9eb0b96965056e4ecd835134078248f83f56f879022bd0c7c93d64b13be59fa670e2c7bb58400602953228f4e796e389a615041a3c41ea78ee638dc518d330be516eefd3cb27ea400215157f25309fa6e560c260ef6a1087dc9ef678d626ca45390fa4bbf3d26cdfb8c878d326fa24fcac61a0a3ff57ddbcdd536bbc87e6d9c7f67d9f7a0931c3d502c7dd00a189f7d7d8d93e2a3e0eafedaac128a00bf37aaa709f3ebc6e13e1f16e7228542afc89a85de927655b12125d638623dd1ba6b5725849"
           ],
           "v": 2
         }
       ],
       "query": "SELECT id,value::jsonb FROM integer_encrypted_10000 WHERE value > $1 LIMIT 100",
-      "rows_returned": 21
+      "rows_returned": 0
     },
     {
       "explain": [
@@ -259,28 +255,24 @@
               {
                 "Alias": "integer_encrypted_10000",
                 "Async Capable": false,
-                "Index Cond": "(eql_v2.ore_block_u64_8_256(value) > '(\"{\"\"(\\\\\"\"\\\\\\\\\\\\\\\\x818181819c74696450f0e2e50041a4028946d3b901f2227b9f40ca2d24ae4855610af3b93ab3fb03fb06a17df7471b16a573428a9f4c92b3cc79a164992485a18ab87494b45830f40b0aaa51599711df6ba2dcc070bb9c12000c1ce2da49187443be7a630b7bba4e4c788d889b7eef636659fb4d6b64dbab777c3973caa72a76ec3c372074623e3652385cd3dc827654132a695c2e8a8246ecc06d7f20d0562e21033dde5f0c6064a74a7501ff283533269cc8b24e32bf679cbac014f931928b288a995ad31ecffe781857ddfa997dd77f063d471147e23fe59aa48ae1f044fa81c2ec73bebf0fe2238465edb18fa21f7a41ad55d01b29517508e1f4544815367080575de594574f9a342579c89a007576bf0a4ffe4d6a91233d3e6ad47a22e3caa40df6970790274bef8d814d380277c5097d356aa13ce9a7d3851da718638a0f52bb722332107d412236dc6da859bafc807bf04383ee6a2a5a61e748ae982531a2b997d56daa216da0296b8e42fa576f55ed66b6eb9088a5efb0a926826525212315f2eed11d82f58e6f20f7c88326c9cc69086db1c406\\\\\"\")\"\"}\")'::eql_v2.ore_block_u64_8_256)",
-                "Index Name": "integer_encrypted_10000_ore_index",
-                "Node Type": "Index Scan",
+                "Filter": "(eql_v2.ore_block_u64_8_256(value) > '(\"{\"\"(\\\\\"\"\\\\\\\\\\\\\\\\x4a4a4a4af391252a800cfa2ff43dcd1b62771a15e33d22e69fda6d34f8e7f8be158e580893b02f753ecf7644fb8c1aba4adf0b01dd621fb107b51a023311e9484b76a975afea7fd7009e9d384e0a1948ba24bd23106f78832bb9ab1c62d6173375d24578f37a3a1894af5fffa9bb07282f385b6a950f871d007ea7bab7ad6a555492b307b4323b6a25d75ceaf20ddc596c7267156affd29704f5f5b9c040071d583c42fdfcc71527bdf272af9b4a9412ad858265f2863f7484a51dfccd9d4dd35def93a744be6304cd6347772169f619910f6ae1e680435bae042825490b64f60d907abe00970c6b38d34dd123169dc36753cc7dbdc0746404777de951fc9bf518cc6af9f7d603eb2d90f1af30b2a4912f9bf43325fc4407df8041b7ba831056d7b98003eacd08563b81f62dfc4f881929a183caff2a6e8a3eeda4e75ebcaacc6c938fd5094424880edb7c7cc283c1591e11f6c149678c8bb97a58c85cb8bcfdc01dd55e9ed2f9705e810cd4fd6b21e902d6e0e04ba59b65fdde52f4e8802008a87b7cdc4c8aedffe50796e6258110c5d4173a24d5ca9475\\\\\"\")\"\"}\")'::eql_v2.ore_block_u64_8_256)",
+                "Node Type": "Seq Scan",
                 "Parallel Aware": false,
                 "Parent Relationship": "Outer",
-                "Plan Rows": 50,
+                "Plan Rows": 10000,
                 "Plan Width": 36,
                 "Relation Name": "integer_encrypted_10000",
-                "Scan Direction": "Forward",
-                "Startup Cost": 0.54,
-                "Total Cost": 229.9
+                "Startup Cost": 0.0,
+                "Total Cost": 9029.0
               }
             ],
-            "Startup Cost": 0.54,
-            "Total Cost": 46.41
+            "Startup Cost": 0.0,
+            "Total Cost": 9.03
           }
         }
       ],
       "id": "ORE/ore/range_highly_selective_gt_10/10000",
-      "indexes_used": [
-        "integer_encrypted_10000_ore_index"
-      ],
+      "indexes_used": [],
       "parameters": [
         {
           "i": {
@@ -288,13 +280,13 @@
             "t": "integer_encrypted_10000"
           },
           "ob": [
-            "818181819c74696450f0e2e50041a4028946d3b901f2227b9f40ca2d24ae4855610af3b93ab3fb03fb06a17df7471b16a573428a9f4c92b3cc79a164992485a18ab87494b45830f40b0aaa51599711df6ba2dcc070bb9c12000c1ce2da49187443be7a630b7bba4e4c788d889b7eef636659fb4d6b64dbab777c3973caa72a76ec3c372074623e3652385cd3dc827654132a695c2e8a8246ecc06d7f20d0562e21033dde5f0c6064a74a7501ff283533269cc8b24e32bf679cbac014f931928b288a995ad31ecffe781857ddfa997dd77f063d471147e23fe59aa48ae1f044fa81c2ec73bebf0fe2238465edb18fa21f7a41ad55d01b29517508e1f4544815367080575de594574f9a342579c89a007576bf0a4ffe4d6a91233d3e6ad47a22e3caa40df6970790274bef8d814d380277c5097d356aa13ce9a7d3851da718638a0f52bb722332107d412236dc6da859bafc807bf04383ee6a2a5a61e748ae982531a2b997d56daa216da0296b8e42fa576f55ed66b6eb9088a5efb0a926826525212315f2eed11d82f58e6f20f7c88326c9cc69086db1c406"
+            "4a4a4a4af391252a800cfa2ff43dcd1b62771a15e33d22e69fda6d34f8e7f8be158e580893b02f753ecf7644fb8c1aba4adf0b01dd621fb107b51a023311e9484b76a975afea7fd7009e9d384e0a1948ba24bd23106f78832bb9ab1c62d6173375d24578f37a3a1894af5fffa9bb07282f385b6a950f871d007ea7bab7ad6a555492b307b4323b6a25d75ceaf20ddc596c7267156affd29704f5f5b9c040071d583c42fdfcc71527bdf272af9b4a9412ad858265f2863f7484a51dfccd9d4dd35def93a744be6304cd6347772169f619910f6ae1e680435bae042825490b64f60d907abe00970c6b38d34dd123169dc36753cc7dbdc0746404777de951fc9bf518cc6af9f7d603eb2d90f1af30b2a4912f9bf43325fc4407df8041b7ba831056d7b98003eacd08563b81f62dfc4f881929a183caff2a6e8a3eeda4e75ebcaacc6c938fd5094424880edb7c7cc283c1591e11f6c149678c8bb97a58c85cb8bcfdc01dd55e9ed2f9705e810cd4fd6b21e902d6e0e04ba59b65fdde52f4e8802008a87b7cdc4c8aedffe50796e6258110c5d4173a24d5ca9475"
           ],
           "v": 2
         }
       ],
       "query": "SELECT id,value::jsonb FROM integer_encrypted_10000 WHERE value > $1 LIMIT 10",
-      "rows_returned": 3
+      "rows_returned": 10
     },
     {
       "explain": [
@@ -309,21 +301,21 @@
               {
                 "Alias": "integer_encrypted_10000",
                 "Async Capable": false,
-                "Index Cond": "(eql_v2.ore_block_u64_8_256(value) < '(\"{\"\"(\\\\\"\"\\\\\\\\\\\\\\\\x818181813d3ba05650f0e2e50041a4028946d3b901f2227b9f40ca2d24ae4855610af3b93ab3fb03fb06a17df7471b16a573428a9f4c92b3cc79a164992485a18ab87494b45830f48144b2318d70dbf219e5ccc1d1871c3b4249148392b5dab99ef56f446d7e2b2ee6e9f2875635d6b2b1b5c167a713e05cee6d388100bab0f678d763ff3cbe16bcd38d312b6884dc96718bc0647378a22783061454526ef63c21086a3b89dcc5106da9f3659a6d4b8d1db331e4e9d2193ba866a75de1d85217ada1e3efb000dc57c77dcd6a1bc4261cd3c86d72fa65a2529a5fe1b9ff0cfe255c70e2987810bc59f32fff16c4d0e7bc8baad8d7b22472754ba0b9a3c8326a32d38243fd2ecc6fd5d0e667767f7e91704202beb1e3336c205fc05ae5e63a511a34354924f7df78ef7795b18f7b9692f6c797674d64684d5e205cabfa6dfcd7313c6de376bebbc6f6cecb01fd5be1780c1522af593783c73d2abd50068965d3dd14c5bd3ecc6de96ee8f6f9614c05c5f234f956e9161296609e826d89343cac0ea1f4bca53c34e585be46b85c32df6dfec0044e6800e6bd8a\\\\\"\")\"\"}\")'::eql_v2.ore_block_u64_8_256)",
+                "Index Cond": "(eql_v2.ore_block_u64_8_256(value) < '(\"{\"\"(\\\\\"\"\\\\\\\\\\\\\\\\x4a4a4a4a7b75d35a800cfa2ff43dcd1b62771a15e33d22e69fda6d34f8e7f8be158e580893b02f753ecf7644fb8c1aba4adf0b01dd621fb107b51a023311e9484b76a975afea7fd7f7d3e6c4a96effd0ce52df7af438bca65a7cbad28e493fef601c3bf913156337fff25712e92fcecde5fdf2c4c33b0dcf6407e8b578be07e00aad33c3a870cb285614c7fee89ebbdc42f08bc04253660e74a559e1eb81a2953bbecbec379afa5d5a98e7f7554cb27e3ccfe1c13fbc4062ff72aa27edd27e55fcf011ea5cb75a0b2622ebb815c54cf4a80161079cf1e8f7b2e052b02690cf578c064ebcd03ae672a371fb796d4eb44477fb9d1057b157eeffab22ac110fddb77b80007be155769ba97f61ec2469172343575d4ce312d03495ef1dbb7b00948c0e3ae8181c93c3410d400df21dc1b822b46118311c4e718064424d4e82b928c8428d964ff3f311fe60f1e1ef2bc4cf8752f462d3e79fded63c5350b0392dc94f245975513b76754f598bdd8f119b78cea392cef7f0df337bdf92bdfc50d1616ed3dd0838079f460aaa9cca50f86789883d79db6becc49a86\\\\\"\")\"\"}\")'::eql_v2.ore_block_u64_8_256)",
                 "Index Name": "integer_encrypted_10000_ore_index",
                 "Node Type": "Index Scan",
                 "Parallel Aware": false,
                 "Parent Relationship": "Outer",
-                "Plan Rows": 5049,
+                "Plan Rows": 10000,
                 "Plan Width": 68,
                 "Relation Name": "integer_encrypted_10000",
                 "Scan Direction": "Forward",
                 "Startup Cost": 0.54,
-                "Total Cost": 9909.19
+                "Total Cost": 14019.36
               }
             ],
             "Startup Cost": 0.54,
-            "Total Cost": 20.16
+            "Total Cost": 14.55
           }
         }
       ],
@@ -338,86 +330,12 @@
             "t": "integer_encrypted_10000"
           },
           "ob": [
-            "818181813d3ba05650f0e2e50041a4028946d3b901f2227b9f40ca2d24ae4855610af3b93ab3fb03fb06a17df7471b16a573428a9f4c92b3cc79a164992485a18ab87494b45830f48144b2318d70dbf219e5ccc1d1871c3b4249148392b5dab99ef56f446d7e2b2ee6e9f2875635d6b2b1b5c167a713e05cee6d388100bab0f678d763ff3cbe16bcd38d312b6884dc96718bc0647378a22783061454526ef63c21086a3b89dcc5106da9f3659a6d4b8d1db331e4e9d2193ba866a75de1d85217ada1e3efb000dc57c77dcd6a1bc4261cd3c86d72fa65a2529a5fe1b9ff0cfe255c70e2987810bc59f32fff16c4d0e7bc8baad8d7b22472754ba0b9a3c8326a32d38243fd2ecc6fd5d0e667767f7e91704202beb1e3336c205fc05ae5e63a511a34354924f7df78ef7795b18f7b9692f6c797674d64684d5e205cabfa6dfcd7313c6de376bebbc6f6cecb01fd5be1780c1522af593783c73d2abd50068965d3dd14c5bd3ecc6de96ee8f6f9614c05c5f234f956e9161296609e826d89343cac0ea1f4bca53c34e585be46b85c32df6dfec0044e6800e6bd8a"
+            "4a4a4a4a7b75d35a800cfa2ff43dcd1b62771a15e33d22e69fda6d34f8e7f8be158e580893b02f753ecf7644fb8c1aba4adf0b01dd621fb107b51a023311e9484b76a975afea7fd7f7d3e6c4a96effd0ce52df7af438bca65a7cbad28e493fef601c3bf913156337fff25712e92fcecde5fdf2c4c33b0dcf6407e8b578be07e00aad33c3a870cb285614c7fee89ebbdc42f08bc04253660e74a559e1eb81a2953bbecbec379afa5d5a98e7f7554cb27e3ccfe1c13fbc4062ff72aa27edd27e55fcf011ea5cb75a0b2622ebb815c54cf4a80161079cf1e8f7b2e052b02690cf578c064ebcd03ae672a371fb796d4eb44477fb9d1057b157eeffab22ac110fddb77b80007be155769ba97f61ec2469172343575d4ce312d03495ef1dbb7b00948c0e3ae8181c93c3410d400df21dc1b822b46118311c4e718064424d4e82b928c8428d964ff3f311fe60f1e1ef2bc4cf8752f462d3e79fded63c5350b0392dc94f245975513b76754f598bdd8f119b78cea392cef7f0df337bdf92bdfc50d1616ed3dd0838079f460aaa9cca50f86789883d79db6becc49a86"
           ],
           "v": 2
         }
       ],
       "query": "SELECT id,value::jsonb FROM integer_encrypted_10000 WHERE value < $1 ORDER BY eql_v2.ore_block_u64_8_256(value) LIMIT 10",
-      "rows_returned": 10
-    },
-    {
-      "explain": [
-        {
-          "Plan": {
-            "Async Capable": false,
-            "Node Type": "Limit",
-            "Parallel Aware": false,
-            "Plan Rows": 10,
-            "Plan Width": 36,
-            "Plans": [
-              {
-                "Async Capable": false,
-                "Node Type": "Gather Merge",
-                "Parallel Aware": false,
-                "Parent Relationship": "Outer",
-                "Plan Rows": 2970,
-                "Plan Width": 36,
-                "Plans": [
-                  {
-                    "Async Capable": false,
-                    "Node Type": "Sort",
-                    "Parallel Aware": false,
-                    "Parent Relationship": "Outer",
-                    "Plan Rows": 2970,
-                    "Plan Width": 36,
-                    "Plans": [
-                      {
-                        "Alias": "integer_encrypted_10000",
-                        "Async Capable": false,
-                        "Filter": "(eql_v2.ore_block_u64_8_256(value) < '(\"{\"\"(\\\\\"\"\\\\\\\\\\\\\\\\x818181813d3ba05650f0e2e50041a4028946d3b901f2227b9f40ca2d24ae4855610af3b93ab3fb03fb06a17df7471b16a573428a9f4c92b3cc79a164992485a18ab87494b45830f48144b2318d70dbf219e5ccc1d1871c3b4249148392b5dab99ef56f446d7e2b2ee6e9f2875635d6b2b1b5c167a713e05cee6d388100bab0f678d763ff3cbe16bcfc0b15d2c4887920050c7851f381c46fb6e466211f9e9a83b784830fd2e6904c44a07245577fe87ddf04f12e3305f5de5ef78a8d81a78829ad70c131337b7c5def9be9d051f7a63dedcfc7810353caacdd6ea9982da8aa83e3c4b24f63be7c18616527bd6927a5d61208362cdb6e53b210da2afdce43ef59e8609ca3cd5de92898be409689f1024ef3898d8aced4f284e111ca242d45e70a8e35adeea8dfd5540e5a52f37a52039f13f16906c21f53822047a19035828a43f5938b6c544f9c928488d870b704af33a60489fd8622e396b2e0887c33e3c28c7ee8e92435daf84af4747134b1ebcbfe2334e58f2837bd3e39125518ed192584c109215ae6ca62f639563dc6825086d14af4ef029ea72791\\\\\"\")\"\"}\")'::eql_v2.ore_block_u64_8_256)",
-                        "Node Type": "Seq Scan",
-                        "Parallel Aware": true,
-                        "Parent Relationship": "Outer",
-                        "Plan Rows": 2970,
-                        "Plan Width": 36,
-                        "Relation Name": "integer_encrypted_10000",
-                        "Startup Cost": 0.0,
-                        "Total Cost": 5171.5
-                      }
-                    ],
-                    "Sort Key": [
-                      "((value)::jsonb)"
-                    ],
-                    "Startup Cost": 5235.68,
-                    "Total Cost": 5243.11
-                  }
-                ],
-                "Startup Cost": 6235.69,
-                "Total Cost": 6577.24,
-                "Workers Planned": 1
-              }
-            ],
-            "Startup Cost": 6235.69,
-            "Total Cost": 6236.84
-          }
-        }
-      ],
-      "id": "ORE/ore/range_lt_natural_ordered_10/10000",
-      "indexes_used": [],
-      "parameters": [
-        {
-          "i": {
-            "c": "value",
-            "t": "integer_encrypted_10000"
-          },
-          "ob": [
-            "818181813d3ba05650f0e2e50041a4028946d3b901f2227b9f40ca2d24ae4855610af3b93ab3fb03fb06a17df7471b16a573428a9f4c92b3cc79a164992485a18ab87494b45830f48144b2318d70dbf219e5ccc1d1871c3b4249148392b5dab99ef56f446d7e2b2ee6e9f2875635d6b2b1b5c167a713e05cee6d388100bab0f678d763ff3cbe16bcfc0b15d2c4887920050c7851f381c46fb6e466211f9e9a83b784830fd2e6904c44a07245577fe87ddf04f12e3305f5de5ef78a8d81a78829ad70c131337b7c5def9be9d051f7a63dedcfc7810353caacdd6ea9982da8aa83e3c4b24f63be7c18616527bd6927a5d61208362cdb6e53b210da2afdce43ef59e8609ca3cd5de92898be409689f1024ef3898d8aced4f284e111ca242d45e70a8e35adeea8dfd5540e5a52f37a52039f13f16906c21f53822047a19035828a43f5938b6c544f9c928488d870b704af33a60489fd8622e396b2e0887c33e3c28c7ee8e92435daf84af4747134b1ebcbfe2334e58f2837bd3e39125518ed192584c109215ae6ca62f639563dc6825086d14af4ef029ea72791"
-          ],
-          "v": 2
-        }
-      ],
-      "query": "SELECT id,value::jsonb FROM integer_encrypted_10000 WHERE value < $1 ORDER BY value LIMIT 10",
       "rows_returned": 10
     },
     {
@@ -434,34 +352,22 @@
               {
                 "Alias": "integer_encrypted_10000",
                 "Async Capable": false,
-                "Node Type": "Bitmap Heap Scan",
+                "Index Cond": "(eql_v2.ore_block_u64_8_256(value) > '(\"{\"\"(\\\\\"\"\\\\\\\\\\\\\\\\x4a4a4a4af3965ab3800cfa2ff43dcd1b62771a15e33d22e69fda6d34f8e7f8be158e580893b02f753ecf7644fb8c1aba4adf0b01dd621fb107b51a023311e9484b76a975afea7fd7009e9d384e0a1948ba24bd23106f78839e5375b93148d2c7258c7c5b10da6baaf6161425134bf7a220b78fc411dc6f7124f9da3212acff12515e2eed9100ed1bd6f9384acddd76ad8c88951993f14b116f32d6d93c617a8e0f6ca6250be06e08d8d85b5673154a00edc5ac9d17e612a8e933a22ca7459329736a0ba1e16b2b6ed05d30eb49c383657e5b5c4a96797ba4883fdfe7432c70604ca53ee491f4eaee58fc56d1bf38e0fd45b7a125ecf0dd129f8cd1e16da016c5206a9ad8abc6f144948a02196a7f0eb6e15b5e9640303f88689e9166176ad4ef52749d6d5aab02644d2f310a1a4e36d6b3d76c4a8f66a2d25483f08e08b73a043e6f737358b2c22b6c97915b42ba5872e103f37d05197e2fce563f7ed16fd40618a2da2a79f1a7bab11c2b16e7de435167ab3653cdd2108f158cad73220801330733a8542ce5332ad873f510a8c987aea4f43260debac1d4\\\\\"\")\"\"}\")'::eql_v2.ore_block_u64_8_256)",
+                "Index Name": "integer_encrypted_10000_ore_index",
+                "Node Type": "Index Scan",
                 "Parallel Aware": false,
                 "Parent Relationship": "Outer",
-                "Plan Rows": 50,
+                "Plan Rows": 1,
                 "Plan Width": 0,
-                "Plans": [
-                  {
-                    "Async Capable": false,
-                    "Index Cond": "(eql_v2.ore_block_u64_8_256(value) > '(\"{\"\"(\\\\\"\"\\\\\\\\\\\\\\\\x818181819c54c4cd50f0e2e50041a4028946d3b901f2227b9f40ca2d24ae4855610af3b93ab3fb03fb06a17df7471b16a573428a9f4c92b3cc79a164992485a18ab87494b45830f40b0aaa51599711df6ba2dcc070bb9c12bbb0bd496b07fcd3fb5f6023b99f693a88b0a0e8c51a1c10c2af20a0e7cfc0a7e40c25d147a0ac4821b8eae3d8d762b9179c10c60e1216365ac1d416fcedd9ae1d1809705315ba05401e7611813fa199cc653d8af58c1312389e9d0d8698ae6ad3509eb5c0c89de66aa202ab6a78ae72aa254ba67c0b5dee7fa7c56f39fbbf3ed5d5e97c89a1338ee0b30f5c69bb4cb1add975027fbe4628471b59671c72212c6861a912a4094941bf73ad9494d184a61c0dd3b80a47fcf941a2b88f78588e52283cf4fcea8d3a78172021ff01b58727cace7d1409754bc1ad0ce95980825628eb1af1b7fa0432c958d7608f21e4af00761743655faaaa3e1136c64ca87ba09cb0fd41a514a943b8be8172bde2059ec8877f79f85af2a47513e9de528be5cdbddfa4d90d2426025420da421a9cbec9ecc35ae9422e216bd297f6db5efeb790fe\\\\\"\")\"\"}\")'::eql_v2.ore_block_u64_8_256)",
-                    "Index Name": "integer_encrypted_10000_ore_index",
-                    "Node Type": "Bitmap Index Scan",
-                    "Parallel Aware": false,
-                    "Parent Relationship": "Outer",
-                    "Plan Rows": 50,
-                    "Plan Width": 0,
-                    "Startup Cost": 0.0,
-                    "Total Cost": 16.91
-                  }
-                ],
-                "Recheck Cond": "(eql_v2.ore_block_u64_8_256(value) > '(\"{\"\"(\\\\\"\"\\\\\\\\\\\\\\\\x818181819c54c4cd50f0e2e50041a4028946d3b901f2227b9f40ca2d24ae4855610af3b93ab3fb03fb06a17df7471b16a573428a9f4c92b3cc79a164992485a18ab87494b45830f40b0aaa51599711df6ba2dcc070bb9c12bbb0bd496b07fcd3fb5f6023b99f693a88b0a0e8c51a1c10c2af20a0e7cfc0a7e40c25d147a0ac4821b8eae3d8d762b9179c10c60e1216365ac1d416fcedd9ae1d1809705315ba05401e7611813fa199cc653d8af58c1312389e9d0d8698ae6ad3509eb5c0c89de66aa202ab6a78ae72aa254ba67c0b5dee7fa7c56f39fbbf3ed5d5e97c89a1338ee0b30f5c69bb4cb1add975027fbe4628471b59671c72212c6861a912a4094941bf73ad9494d184a61c0dd3b80a47fcf941a2b88f78588e52283cf4fcea8d3a78172021ff01b58727cace7d1409754bc1ad0ce95980825628eb1af1b7fa0432c958d7608f21e4af00761743655faaaa3e1136c64ca87ba09cb0fd41a514a943b8be8172bde2059ec8877f79f85af2a47513e9de528be5cdbddfa4d90d2426025420da421a9cbec9ecc35ae9422e216bd297f6db5efeb790fe\\\\\"\")\"\"}\")'::eql_v2.ore_block_u64_8_256)",
                 "Relation Name": "integer_encrypted_10000",
-                "Startup Cost": 16.92,
-                "Total Cost": 214.36
+                "Scan Direction": "Forward",
+                "Startup Cost": 0.54,
+                "Total Cost": 8.55
               }
             ],
-            "Startup Cost": 214.49,
+            "Startup Cost": 8.55,
             "Strategy": "Plain",
-            "Total Cost": 214.5
+            "Total Cost": 8.56
           }
         }
       ],
@@ -476,7 +382,7 @@
             "t": "integer_encrypted_10000"
           },
           "ob": [
-            "818181819c54c4cd50f0e2e50041a4028946d3b901f2227b9f40ca2d24ae4855610af3b93ab3fb03fb06a17df7471b16a573428a9f4c92b3cc79a164992485a18ab87494b45830f40b0aaa51599711df6ba2dcc070bb9c12bbb0bd496b07fcd3fb5f6023b99f693a88b0a0e8c51a1c10c2af20a0e7cfc0a7e40c25d147a0ac4821b8eae3d8d762b9179c10c60e1216365ac1d416fcedd9ae1d1809705315ba05401e7611813fa199cc653d8af58c1312389e9d0d8698ae6ad3509eb5c0c89de66aa202ab6a78ae72aa254ba67c0b5dee7fa7c56f39fbbf3ed5d5e97c89a1338ee0b30f5c69bb4cb1add975027fbe4628471b59671c72212c6861a912a4094941bf73ad9494d184a61c0dd3b80a47fcf941a2b88f78588e52283cf4fcea8d3a78172021ff01b58727cace7d1409754bc1ad0ce95980825628eb1af1b7fa0432c958d7608f21e4af00761743655faaaa3e1136c64ca87ba09cb0fd41a514a943b8be8172bde2059ec8877f79f85af2a47513e9de528be5cdbddfa4d90d2426025420da421a9cbec9ecc35ae9422e216bd297f6db5efeb790fe"
+            "4a4a4a4af3965ab3800cfa2ff43dcd1b62771a15e33d22e69fda6d34f8e7f8be158e580893b02f753ecf7644fb8c1aba4adf0b01dd621fb107b51a023311e9484b76a975afea7fd7009e9d384e0a1948ba24bd23106f78839e5375b93148d2c7258c7c5b10da6baaf6161425134bf7a220b78fc411dc6f7124f9da3212acff12515e2eed9100ed1bd6f9384acddd76ad8c88951993f14b116f32d6d93c617a8e0f6ca6250be06e08d8d85b5673154a00edc5ac9d17e612a8e933a22ca7459329736a0ba1e16b2b6ed05d30eb49c383657e5b5c4a96797ba4883fdfe7432c70604ca53ee491f4eaee58fc56d1bf38e0fd45b7a125ecf0dd129f8cd1e16da016c5206a9ad8abc6f144948a02196a7f0eb6e15b5e9640303f88689e9166176ad4ef52749d6d5aab02644d2f310a1a4e36d6b3d76c4a8f66a2d25483f08e08b73a043e6f737358b2c22b6c97915b42ba5872e103f37d05197e2fce563f7ed16fd40618a2da2a79f1a7bab11c2b16e7de435167ab3653cdd2108f158cad73220801330733a8542ce5332ad873f510a8c987aea4f43260debac1d4"
           ],
           "v": 2
         }
@@ -491,48 +397,60 @@
             "Async Capable": false,
             "Node Type": "Aggregate",
             "Parallel Aware": false,
-            "Partial Mode": "Simple",
+            "Partial Mode": "Finalize",
             "Plan Rows": 1,
             "Plan Width": 8,
             "Plans": [
               {
-                "Alias": "integer_encrypted_10000",
                 "Async Capable": false,
-                "Node Type": "Bitmap Heap Scan",
+                "Node Type": "Gather",
                 "Parallel Aware": false,
                 "Parent Relationship": "Outer",
-                "Plan Rows": 50,
-                "Plan Width": 0,
+                "Plan Rows": 1,
+                "Plan Width": 8,
                 "Plans": [
                   {
                     "Async Capable": false,
-                    "Index Cond": "(eql_v2.ore_block_u64_8_256(value) > '(\"{\"\"(\\\\\"\"\\\\\\\\\\\\\\\\x818181819c74696450f0e2e50041a4028946d3b901f2227b9f40ca2d24ae4855610af3b93ab3fb03fb06a17df7471b16a573428a9f4c92b3cc79a164992485a18ab87494b45830f40b0aaa51599711df6ba2dcc070bb9c12000c1ce2da49187443be7a630b7bba4e4c788d889b7eef636659fb4d6b64dbab777c3973caa72a76ec3c372074623e3600b6b20699b5a15937ccc4647acddb22060132addf24d95e78e82a55eaae02c671b5a72924030ba15b2282d6fd9ff9226cc1f7b6d1cb491e01e3254a40bd8eceb3f25fab018e83755e380666c6842ed61d4b1fbdcd6e290e91c7b779ff4abf85e53f5707f030b3319e6be730c68bf900ffc10caaa9f9464dcf4b062a863e4108c660fca347ca4e5a01c4c8a536bb94d0e3fc85ecaa3831e48786c3e128de42b2dd168de5330db09f2eeeddf86c0862f2be3988222d09799241e27bd791c59de8e9d10213358c4df16e10abe15c871adf42f8d4ccbd75755af81c3ff7c2e00315babd2d638a30d6b0d21fb0dcab909856f0d823686a588911fafd385dd284c2c20c9f817f5ebf4e8b37c98243e1132aca\\\\\"\")\"\"}\")'::eql_v2.ore_block_u64_8_256)",
-                    "Index Name": "integer_encrypted_10000_ore_index",
-                    "Node Type": "Bitmap Index Scan",
+                    "Node Type": "Aggregate",
                     "Parallel Aware": false,
                     "Parent Relationship": "Outer",
-                    "Plan Rows": 50,
-                    "Plan Width": 0,
-                    "Startup Cost": 0.0,
-                    "Total Cost": 16.91
+                    "Partial Mode": "Partial",
+                    "Plan Rows": 1,
+                    "Plan Width": 8,
+                    "Plans": [
+                      {
+                        "Alias": "integer_encrypted_10000",
+                        "Async Capable": false,
+                        "Filter": "(eql_v2.ore_block_u64_8_256(value) > '(\"{\"\"(\\\\\"\"\\\\\\\\\\\\\\\\x4a4a4a4af391252a800cfa2ff43dcd1b62771a15e33d22e69fda6d34f8e7f8be158e580893b02f753ecf7644fb8c1aba4adf0b01dd621fb107b51a023311e9484b76a975afea7fd7009e9d384e0a1948ba24bd23106f78832bb9ab1c62d6173375d24578f37a3a1894af5fffa9bb07282f385b6a950f871d007ea7bab7ad6a555492b307b4323b6aaf9cb36ca7352919fec170cd8e9448fc6dc485008de1b79585d7a6ff96adf150649568f2231289eaf3232913425a962ceddc610264cef4646a4915def9143da4c3c3a40882ed04f9d3ecdf4a359aa524629b45654f896aba6ffc14f3ec8e996c79e095492eb294a03981a754e7b75d3bc7388ca68ced0f71c772367d3bff6f86b3be1748de59948e726692ebf4c5ac03c716af3c65e37a69adcac0839c954e2f48699119a2d0821e023e569b81f773b04b3a549229d533fda64beadfdd9b637a9d55d173b5b967c5cf4b048669d0cffa0d559262d690303546a7af80908d54cea01d3230fa2c22990064ca42e0aef30aaf4ce9be3dd1f4222b84d7a2bb79b235a1d6fb0bd1310052db9e3410d97af610\\\\\"\")\"\"}\")'::eql_v2.ore_block_u64_8_256)",
+                        "Node Type": "Seq Scan",
+                        "Parallel Aware": true,
+                        "Parent Relationship": "Outer",
+                        "Plan Rows": 5882,
+                        "Plan Width": 0,
+                        "Relation Name": "integer_encrypted_10000",
+                        "Startup Cost": 0.0,
+                        "Total Cost": 4429.0
+                      }
+                    ],
+                    "Startup Cost": 4443.7,
+                    "Strategy": "Plain",
+                    "Total Cost": 4443.72
                   }
                 ],
-                "Recheck Cond": "(eql_v2.ore_block_u64_8_256(value) > '(\"{\"\"(\\\\\"\"\\\\\\\\\\\\\\\\x818181819c74696450f0e2e50041a4028946d3b901f2227b9f40ca2d24ae4855610af3b93ab3fb03fb06a17df7471b16a573428a9f4c92b3cc79a164992485a18ab87494b45830f40b0aaa51599711df6ba2dcc070bb9c12000c1ce2da49187443be7a630b7bba4e4c788d889b7eef636659fb4d6b64dbab777c3973caa72a76ec3c372074623e3600b6b20699b5a15937ccc4647acddb22060132addf24d95e78e82a55eaae02c671b5a72924030ba15b2282d6fd9ff9226cc1f7b6d1cb491e01e3254a40bd8eceb3f25fab018e83755e380666c6842ed61d4b1fbdcd6e290e91c7b779ff4abf85e53f5707f030b3319e6be730c68bf900ffc10caaa9f9464dcf4b062a863e4108c660fca347ca4e5a01c4c8a536bb94d0e3fc85ecaa3831e48786c3e128de42b2dd168de5330db09f2eeeddf86c0862f2be3988222d09799241e27bd791c59de8e9d10213358c4df16e10abe15c871adf42f8d4ccbd75755af81c3ff7c2e00315babd2d638a30d6b0d21fb0dcab909856f0d823686a588911fafd385dd284c2c20c9f817f5ebf4e8b37c98243e1132aca\\\\\"\")\"\"}\")'::eql_v2.ore_block_u64_8_256)",
-                "Relation Name": "integer_encrypted_10000",
-                "Startup Cost": 16.92,
-                "Total Cost": 214.36
+                "Single Copy": false,
+                "Startup Cost": 5443.7,
+                "Total Cost": 5443.82,
+                "Workers Planned": 1
               }
             ],
-            "Startup Cost": 214.49,
+            "Startup Cost": 5443.82,
             "Strategy": "Plain",
-            "Total Cost": 214.5
+            "Total Cost": 5443.83
           }
         }
       ],
       "id": "ORE/ore/range_highly_selective_gt_count/10000",
-      "indexes_used": [
-        "integer_encrypted_10000_ore_index"
-      ],
+      "indexes_used": [],
       "parameters": [
         {
           "i": {
@@ -540,7 +458,7 @@
             "t": "integer_encrypted_10000"
           },
           "ob": [
-            "818181819c74696450f0e2e50041a4028946d3b901f2227b9f40ca2d24ae4855610af3b93ab3fb03fb06a17df7471b16a573428a9f4c92b3cc79a164992485a18ab87494b45830f40b0aaa51599711df6ba2dcc070bb9c12000c1ce2da49187443be7a630b7bba4e4c788d889b7eef636659fb4d6b64dbab777c3973caa72a76ec3c372074623e3600b6b20699b5a15937ccc4647acddb22060132addf24d95e78e82a55eaae02c671b5a72924030ba15b2282d6fd9ff9226cc1f7b6d1cb491e01e3254a40bd8eceb3f25fab018e83755e380666c6842ed61d4b1fbdcd6e290e91c7b779ff4abf85e53f5707f030b3319e6be730c68bf900ffc10caaa9f9464dcf4b062a863e4108c660fca347ca4e5a01c4c8a536bb94d0e3fc85ecaa3831e48786c3e128de42b2dd168de5330db09f2eeeddf86c0862f2be3988222d09799241e27bd791c59de8e9d10213358c4df16e10abe15c871adf42f8d4ccbd75755af81c3ff7c2e00315babd2d638a30d6b0d21fb0dcab909856f0d823686a588911fafd385dd284c2c20c9f817f5ebf4e8b37c98243e1132aca"
+            "4a4a4a4af391252a800cfa2ff43dcd1b62771a15e33d22e69fda6d34f8e7f8be158e580893b02f753ecf7644fb8c1aba4adf0b01dd621fb107b51a023311e9484b76a975afea7fd7009e9d384e0a1948ba24bd23106f78832bb9ab1c62d6173375d24578f37a3a1894af5fffa9bb07282f385b6a950f871d007ea7bab7ad6a555492b307b4323b6aaf9cb36ca7352919fec170cd8e9448fc6dc485008de1b79585d7a6ff96adf150649568f2231289eaf3232913425a962ceddc610264cef4646a4915def9143da4c3c3a40882ed04f9d3ecdf4a359aa524629b45654f896aba6ffc14f3ec8e996c79e095492eb294a03981a754e7b75d3bc7388ca68ced0f71c772367d3bff6f86b3be1748de59948e726692ebf4c5ac03c716af3c65e37a69adcac0839c954e2f48699119a2d0821e023e569b81f773b04b3a549229d533fda64beadfdd9b637a9d55d173b5b967c5cf4b048669d0cffa0d559262d690303546a7af80908d54cea01d3230fa2c22990064ca42e0aef30aaf4ce9be3dd1f4222b84d7a2bb79b235a1d6fb0bd1310052db9e3410d97af610"
           ],
           "v": 2
         }

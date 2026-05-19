@@ -338,9 +338,26 @@ fn criterion_benchmark(c: &mut Criterion) {
     let q_field_order_functional = needles.ore_pick.as_ref().and_then(|p| {
         let selector = &p.selector;
         ore_extractor_for(&p.ore_term).map(|fn_name| {
+            // Post-EQL 2.3 strict separation (#219): the (eql_v2_encrypted)
+            // overload of `eql_v2.ore_cllw` was removed. Two typed
+            // replacements exist: (eql_v2.ste_vec_entry) and (jsonb). The
+            // domain has a CHECK that requires `s` + `c` + `hm` on every
+            // sv element; that's a tighter contract than what the current
+            // cipherstash-client emits — orderable-only sv elements carry
+            // `oc` without `hm`, so the cast `.data::eql_v2.ste_vec_entry`
+            // raises check-constraint violations against real data. Use
+            // the raw (jsonb) overload — `value -> 'sel'` returns
+            // eql_v2_encrypted, `.data` is the jsonb payload, and
+            // `eql_v2.ore_cllw(jsonb)` reads `?? 'oc'` directly with no
+            // shape gating. Functional index match still works because
+            // the planner compares expressions structurally.
+            //
+            // TODO(eql): the DOMAIN's `s` + `c` + `hm` requirement is
+            // stricter than the cipherstash-client emission pattern.
+            // Track this for a future relax.
             format!(
                 "SELECT id FROM {table_name} \
-                 ORDER BY {fn_name}(value -> '{selector}'::text) LIMIT 10"
+                 ORDER BY {fn_name}((value -> '{selector}'::text).data) LIMIT 10"
             )
         })
     });

@@ -186,7 +186,7 @@
                 "Relation Name": "json_ste_vec_small_encrypted_1000000",
                 "Scan Direction": "Forward",
                 "Startup Cost": 0.55,
-                "Total Cost": 606426.08
+                "Total Cost": 606430.74
               }
             ],
             "Startup Cost": 0.55,
@@ -199,7 +199,7 @@
         "json_ste_vec_small_encrypted_1000000_oc_9a2d817b8ec7abe623a1fcb"
       ],
       "parameters": [],
-      "query": "SELECT id FROM json_ste_vec_small_encrypted_1000000 ORDER BY eql_v2.ore_cllw(value -> '9a2d817b8ec7abe623a1fcb4d9681003'::text) LIMIT 10",
+      "query": "SELECT id FROM json_ste_vec_small_encrypted_1000000 ORDER BY eql_v2.ore_cllw((value -> '9a2d817b8ec7abe623a1fcb4d9681003'::text).data) LIMIT 10",
       "rows_returned": 10
     }
   ],

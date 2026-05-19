@@ -42,9 +42,9 @@ ON json_ste_vec_small_encrypted_10000 USING GIN (
 
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
-| 10,000 | 1 | 626.30μs | N/A |
-| 100,000 | 1 | 609.98μs | N/A |
-| 1,000,000 | 1 | 775.22μs | N/A |
+| 10,000 | 1 | 597.12μs | N/A |
+| 100,000 | 1 | 550.32μs | N/A |
+| 1,000,000 | 1 | 583.75μs | N/A |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
 
@@ -256,9 +256,9 @@ ON json_ste_vec_small_encrypted_10000 USING GIN (
 
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
-| 10,000 | 10 | 1.25ms | N/A |
-| 100,000 | 10 | 1.41ms | N/A |
-| 1,000,000 | 10 | 1.24ms | N/A |
+| 10,000 | 10 | 1.23ms | N/A |
+| 100,000 | 10 | 1.18ms | N/A |
+| 1,000,000 | 10 | 1.21ms | N/A |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
 
@@ -425,9 +425,9 @@ ON json_ste_vec_small_encrypted_10000 USING GIN (
 
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
-| 10,000 | 10 | 603.73μs | N/A |
-| 100,000 | 10 | 655.19μs | N/A |
-| 1,000,000 | 10 | 620.23μs | N/A |
+| 10,000 | 10 | 620.69μs | N/A |
+| 100,000 | 10 | 553.37μs | N/A |
+| 1,000,000 | 10 | 562.47μs | N/A |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
 
@@ -594,9 +594,9 @@ ON json_ste_vec_small_encrypted_10000 USING GIN (
 
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
-| 10,000 | 10 | 646.27μs | N/A |
-| 100,000 | 10 | 615.39μs | N/A |
-| 1,000,000 | 10 | 614.17μs | N/A |
+| 10,000 | 10 | 586.27μs | N/A |
+| 100,000 | 10 | 531.87μs | N/A |
+| 1,000,000 | 10 | 587.46μs | N/A |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
 
@@ -765,9 +765,9 @@ ON json_ste_vec_small_encrypted_10000 USING GIN (
 
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
-| 10,000 | 10 | 1.27ms | N/A |
-| 100,000 | 10 | 1.37ms | N/A |
-| 1,000,000 | 10 | 1.24ms | N/A |
+| 10,000 | 10 | 1.19ms | N/A |
+| 100,000 | 10 | 1.15ms | N/A |
+| 1,000,000 | 10 | 1.18ms | N/A |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
 
@@ -846,7 +846,7 @@ Full `EXPLAIN (FORMAT JSON)`:
           "Relation Name": "json_ste_vec_small_encrypted_100000",
           "Scan Direction": "Forward",
           "Startup Cost": 0.42,
-          "Total Cost": 60652.4
+          "Total Cost": 60652.36
         }
       ],
       "Startup Cost": 0.42,
@@ -887,7 +887,7 @@ Full `EXPLAIN (FORMAT JSON)`:
           "Relation Name": "json_ste_vec_small_encrypted_1000000",
           "Scan Direction": "Forward",
           "Startup Cost": 0.55,
-          "Total Cost": 606426.08
+          "Total Cost": 606430.74
         }
       ],
       "Startup Cost": 0.55,
