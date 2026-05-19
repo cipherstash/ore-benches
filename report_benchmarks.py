@@ -131,18 +131,25 @@ class BenchmarkReporter:
                     if data.get("reason") != "benchmark-complete":
                         continue
                     
-                    # Parse benchmark ID: "QUERY_TYPE/query_variant/scenario/rows"
+                    # Parse benchmark ID: "QUERY_TYPE/query_variant/scenario.../rows"
+                    # `scenario...` may be one component (most benches) or several
+                    # (e.g. the JSON bench uses `contains/functional`,
+                    # `field_eq/bare`, etc. — variant in parts[-2], scenario
+                    # head in parts[2]). Join everything between parts[2] and
+                    # the trailing row count so multi-part scenario IDs stay
+                    # distinct in the report.
                     bench_id = data.get("id", "")
                     parts = bench_id.split("/")
-                    
-                    if len(parts) < 3:
+
+                    if len(parts) < 4:
                         continue
-                    
+
                     # Determine if this is a decrypt variant
                     decrypt = "decrypt" in parts[1]
-                    
-                    # Get scenario name (e.g., "eql_cast", "range_gt_10")
-                    scenario = parts[2]
+
+                    # Get scenario name (e.g., "eql_cast", "range_gt_10",
+                    # "contains/functional", "field_eq/bare")
+                    scenario = "/".join(parts[2:-1])
                     
                     # Extract mean timing
                     mean_ns = data.get("mean", {}).get("estimate", 0)
@@ -174,10 +181,12 @@ class BenchmarkReporter:
             for s in doc.get("scenarios", []):
                 bench_id = s.get("id", "")
                 parts = bench_id.split("/")
-                if len(parts) < 3:
+                if len(parts) < 4:
                     continue
-                query_type = parts[0]      # "EXACT", "ORE", "GROUP_BY", ...
-                scenario_name = parts[2]   # "eql_cast", "range_gt_10", ...
+                query_type = parts[0]                # "EXACT", "ORE", "JSON", ...
+                # Join `parts[2:-1]` so multi-part scenario IDs (e.g.
+                # `contains/functional`, `field_eq/bare`) stay distinct.
+                scenario_name = "/".join(parts[2:-1])
                 key = (query_type, scenario_name, row_count)
                 self.metadata[key] = ScenarioMetadata(
                     query_type=query_type,
@@ -342,20 +351,39 @@ class BenchmarkReporter:
                 )
             },
             "JSON": {
-                "field_eq": (
+                "contains/functional": (
+                    "SELECT id FROM {TABLE} "
+                    "WHERE eql_v2.ste_vec(value) @> eql_v2.ste_vec($1::jsonb::eql_v2_encrypted) "
+                    "LIMIT 10",
+                    "<sampled-row-value-as-jsonb>"
+                ),
+                "field_eq/bare": (
+                    "SELECT id FROM {TABLE} "
+                    "WHERE (value -> '<selector-hash>'::text) = $1::jsonb::eql_v2_encrypted "
+                    "LIMIT 10",
+                    "<sampled-sv-element-as-jsonb>"
+                ),
+                "field_eq/extractor": (
                     "SELECT id FROM {TABLE} "
                     "WHERE eql_v2.hmac_256_terms(value) @> $1::jsonb "
                     "LIMIT 10",
                     "[{\"s\":\"<selector-hash>\",\"hm\":\"<hmac>\"}]"
                 ),
-                "field_extract": (
-                    "SELECT eql_v2.jsonb_path_query(value, '<selector-hash>') "
-                    "FROM {TABLE} LIMIT 1000",
+                "field_eq/functional": (
+                    "SELECT id FROM {TABLE} "
+                    "WHERE eql_v2.hmac_256(value, '<selector-hash>') "
+                    "= eql_v2.hmac_256($1::eql_v2_encrypted) "
+                    "LIMIT 10",
+                    "<sampled-sv-element-as-eql_v2_encrypted>"
+                ),
+                "field_order/bare": (
+                    "SELECT id FROM {TABLE} "
+                    "ORDER BY (value -> '<selector-hash>'::text) LIMIT 10",
                     ""
                 ),
-                "field_group_by": (
-                    "SELECT eql_v2.hmac_256(value, '<selector-hash>'), count(*) "
-                    "FROM {TABLE} GROUP BY 1",
+                "field_order/functional": (
+                    "SELECT id FROM {TABLE} "
+                    "ORDER BY <ore_extractor>(value -> '<selector-hash>'::text) LIMIT 10",
                     ""
                 )
             }
@@ -577,33 +605,65 @@ class BenchmarkReporter:
                 )
             },
             "JSON": {
-                "field_eq": (
-                    "Field-level equality on an ste_vec document via `hmac_256_terms`",
+                "contains/functional": (
+                    "Whole-document JSON containment via `ste_vec(...) @> ste_vec(...)`",
                     "Table: `json_ste_vec_small_encrypted_{rows}` with encrypted JSON "
                     "documents (small four-field shape — first_name / last_name / age / email). "
-                    "Index: functional GIN on `eql_v2.hmac_256_terms(value)`. One index covers "
-                    "field-level equality across every selector that carries `hm`, vs the "
-                    "per-selector `hash (eql_v2.hmac_256(col, '<selector>'))` recipe which "
-                    "needs one index per hot path. The bench picks a (selector, hmac) pair "
-                    "from `sv[0]` of a sample row at startup; the query body matches the "
-                    "documented EQL recipe."
+                    "Index: functional GIN on `eql_v2.ste_vec(value)`. Both sides of `@>` "
+                    "resolve to `eql_v2_encrypted[]`, which matches the GIN opclass directly. "
+                    "The needle is a sampled row's value, so the query matches at least that "
+                    "source row.\n\n"
+                    "Note: the bare form `WHERE value @> $1::eql_v2_encrypted` does NOT engage "
+                    "the GIN today. `eql_v2.\"@>\"` is marked inlinable SQL but wraps "
+                    "`ste_vec_contains()` which is PL/pgSQL — inlining stops at the wrapper, "
+                    "leaving the planner with a black-box function call and no path to the "
+                    "indexed expression. The bench omits the bare form because it would not "
+                    "complete at the 1M / 10M tiers."
                 ),
-                "field_extract": (
-                    "Sequential field extraction via `eql_v2.jsonb_path_query`",
-                    "Table: `json_ste_vec_small_encrypted_{rows}`. No index — measures the "
-                    "per-row cost of the inlinable `jsonb_path_query` body "
-                    "(`jsonb_array_elements((val).data -> 'sv') WHERE elem ->> 's' = selector`). "
-                    "Inlining means the body folds into the calling query, so each row pays "
-                    "an array walk rather than a plpgsql function call. Query: "
-                    "`SELECT eql_v2.jsonb_path_query(value, '<selector>') FROM tbl LIMIT 1000`."
+                "field_eq/bare": (
+                    "Field-level equality via `value -> 'sel' = $1::eql_v2_encrypted` (no index)",
+                    "Table: `json_ste_vec_small_encrypted_{rows}`. `eql_v2.\"->\"` is plpgsql "
+                    "(not inlinable), so the planner cannot match any functional index against "
+                    "the LHS — forces Seq Scan + per-row sv walk. This is the natural form a "
+                    "JS/ORM caller would write; the bench includes it to show the cost of "
+                    "*not* having an inlinable extractor on `->`."
                 ),
-                "field_group_by": (
-                    "Field-level `GROUP BY` on an ste_vec document",
-                    "Table: `json_ste_vec_small_encrypted_{rows}`. No index — HashAggregate "
-                    "is in-memory. Query: "
-                    "`GROUP BY eql_v2.hmac_256(value, '<selector>')`. Same extractor-form "
-                    "recipe as the top-level GROUP_BY bench, scaled to a single field "
-                    "inside an ste_vec doc."
+                "field_eq/extractor": (
+                    "Field-level equality via `hmac_256_terms @> [{s,hm}]` (functional GIN)",
+                    "Table: `json_ste_vec_small_encrypted_{rows}`. Index: functional GIN on "
+                    "`eql_v2.hmac_256_terms(value)`. One index covers field-level equality "
+                    "across every selector that carries `hm`, vs the per-selector recipe "
+                    "below. The bench picks a (selector, hmac) pair from `sv[0]` of a sample "
+                    "row at startup; needle is `[{\"s\":\"<sel>\",\"hm\":\"<hash>\"}]`."
+                ),
+                "field_eq/functional": (
+                    "Field-level equality via per-selector `hmac_256(col, 'sel')`",
+                    "Table: `json_ste_vec_small_encrypted_{rows}`. Would engage "
+                    "`hash (eql_v2.hmac_256(col, '<sel>'))` if one existed; benches/main "
+                    "only creates the `hmac_256_terms` GIN (one index for all selectors), "
+                    "so this scenario serves as a baseline showing the cost of the "
+                    "per-selector recipe without a matching index."
+                ),
+                "field_order/bare": (
+                    "Field-level ORDER BY via `ORDER BY value -> 'sel'` (no index)",
+                    "Table: `json_ste_vec_small_encrypted_{rows}`. Same `->` non-inlining "
+                    "problem as `field_eq/bare`. ORDER BY on `eql_v2_encrypted` uses ORE "
+                    "under the hood, but the planner can't see through `->` to engage any "
+                    "functional ORE index. Forces Seq Scan + Top-N sort."
+                ),
+                "field_order/functional": (
+                    "Field-level ORDER BY via ORE extractor on `value -> 'sel'`",
+                    "Table: `json_ste_vec_small_encrypted_{rows}`. Index: functional btree on "
+                    "`<ore_extractor>(value -> '<selector>'::text)` using the appropriate "
+                    "opclass for the term type. `<ore_extractor>` is selected at bench startup "
+                    "based on which orderable tag the sampled sv element carries:\n"
+                    "  - `oc` → `eql_v2.ore_cllw` (Standard mode, ORE CLLW — requires the "
+                    "`eql_v2.ore_cllw_ops` btree opclass from EQL #221)\n"
+                    "  - `op` → `eql_v2.ope_cllw` (Compat mode, OPE CLLW)\n"
+                    "  - `ob` → `eql_v2.ore_block_u64_8_256` (Block ORE — root scalars only)\n"
+                    "When the table's `oc` index is present, the plan engages Index Scan + "
+                    "LIMIT (no Sort node). When absent (older bench run / index not yet "
+                    "rebuilt), falls back to Seq Scan + Top-N sort."
                 )
             }
         }
@@ -1133,7 +1193,11 @@ class BenchmarkReporter:
 
         # Generate chart if matplotlib is available
         if HAS_MATPLOTLIB and len(row_counts) > 1:
-            chart_path = self.output_file.parent / f"query_{query_type.lower()}_{query_name}_chart.png"
+            # Sanitise `query_name` for filesystem use — multi-part scenario
+            # IDs (e.g. `contains/functional`, `field_eq/bare`) carry a `/`
+            # which the file system would interpret as a directory separator.
+            safe_name = query_name.replace("/", "_")
+            chart_path = self.output_file.parent / f"query_{query_type.lower()}_{safe_name}_chart.png"
             self._create_query_chart(results, query_type, query_name, chart_path)
             f.write(f"![Query Performance - {query_type}/{query_name}]({chart_path.name})\n\n")
 

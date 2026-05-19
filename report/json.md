@@ -4,11 +4,20 @@
 
 Per-tier query performance. Each scenario lists its SQL, the indexes available on the target table, the indexes the planner actually picked per tier, the timing table, and the full EXPLAIN plan in a collapsed block.
 
-## contains
+## contains/functional
 
-**Description:** Unknown query
+**Description:** Whole-document JSON containment via `ste_vec(...) @> ste_vec(...)`
 
-****
+**SQL Query:**
+```sql
+SELECT id FROM {TABLE} WHERE eql_v2.ste_vec(value) @> eql_v2.ste_vec($1::jsonb::eql_v2_encrypted) LIMIT 10
+```
+
+**Parameter:** `<sampled-row-value-as-jsonb>`
+
+**Table: `json_ste_vec_small_encrypted_{rows}` with encrypted JSON documents (small four-field shape — first_name / last_name / age / email). Index: functional GIN on `eql_v2.ste_vec(value)`. Both sides of `@>` resolve to `eql_v2_encrypted[]`, which matches the GIN opclass directly. The needle is a sampled row's value, so the query matches at least that source row.
+
+Note: the bare form `WHERE value @> $1::eql_v2_encrypted` does NOT engage the GIN today. `eql_v2."@>"` is marked inlinable SQL but wraps `ste_vec_contains()` which is PL/pgSQL — inlining stops at the wrapper, leaving the planner with a black-box function call and no path to the indexed expression. The bench omits the bare form because it would not complete at the 1M / 10M tiers.**
 
 **Indexes available on the table:**
 ```sql
@@ -35,7 +44,7 @@ ON json_ste_vec_small_encrypted_10000 USING GIN (
 |---------------|---------------|-------------------------|---------------------------|
 | 10,000 | 0 | 4.39ms | N/A |
 | 100,000 | 1 | 635.11μs | N/A |
-| 1,000,000 | 1 | 662.41μs | N/A |
+| 1,000,000 | 1 | 675.27μs | N/A |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
 
@@ -209,20 +218,20 @@ Full `EXPLAIN (FORMAT JSON)`:
 
 </details>
 
-![Query Performance - JSON/contains](query_json_contains_chart.png)
+![Query Performance - JSON/contains/functional](query_json_contains_functional_chart.png)
 
-## field_eq
+## field_eq/bare
 
-**Description:** Field-level equality on an ste_vec document via `hmac_256_terms`
+**Description:** Field-level equality via `value -> 'sel' = $1::eql_v2_encrypted` (no index)
 
 **SQL Query:**
 ```sql
-SELECT id FROM {TABLE} WHERE eql_v2.hmac_256_terms(value) @> $1::jsonb LIMIT 10
+SELECT id FROM {TABLE} WHERE (value -> '<selector-hash>'::text) = $1::jsonb::eql_v2_encrypted LIMIT 10
 ```
 
-**Parameter:** `[{"s":"<selector-hash>","hm":"<hmac>"}]`
+**Parameter:** `<sampled-sv-element-as-jsonb>`
 
-**Table: `json_ste_vec_small_encrypted_{rows}` with encrypted JSON documents (small four-field shape — first_name / last_name / age / email). Index: functional GIN on `eql_v2.hmac_256_terms(value)`. One index covers field-level equality across every selector that carries `hm`, vs the per-selector `hash (eql_v2.hmac_256(col, '<selector>'))` recipe which needs one index per hot path. The bench picks a (selector, hmac) pair from `sv[0]` of a sample row at startup; the query body matches the documented EQL recipe.**
+**Table: `json_ste_vec_small_encrypted_{rows}`. `eql_v2."->"` is plpgsql (not inlinable), so the planner cannot match any functional index against the LHS — forces Seq Scan + per-row sv walk. This is the natural form a JS/ORM caller would write; the bench includes it to show the cost of *not* having an inlinable extractor on `->`.**
 
 **Indexes available on the table:**
 ```sql
@@ -247,7 +256,261 @@ ON json_ste_vec_small_encrypted_100000 USING GIN (
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
 | 100,000 | 10 | 1.24ms | N/A |
-| 1,000,000 | 10 | 1.17ms | N/A |
+| 1,000,000 | 10 | 1.85ms | N/A |
+
+_Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
+
+<details>
+<summary>EXPLAIN plans (per data set size)</summary>
+
+**100,000 rows**
+
+```
+Limit
+  Seq Scan on json_ste_vec_small_encrypted_100000
+```
+
+Full `EXPLAIN (FORMAT JSON)`:
+
+```json
+[
+  {
+    "Plan": {
+      "Async Capable": false,
+      "Node Type": "Limit",
+      "Parallel Aware": false,
+      "Plan Rows": 10,
+      "Plan Width": 4,
+      "Plans": [
+        {
+          "Alias": "json_ste_vec_small_encrypted_100000",
+          "Async Capable": false,
+          "Filter": "((((value -> 'cfef1685f0e51a1fe1da955e7ad10044'::text)).data ->> 'hm'::text) = 'fb73e0f40bc991cf4b1090d0801f6447'::text)",
+          "Node Type": "Seq Scan",
+          "Parallel Aware": false,
+          "Parent Relationship": "Outer",
+          "Plan Rows": 500,
+          "Plan Width": 4,
+          "Relation Name": "json_ste_vec_small_encrypted_100000",
+          "Startup Cost": 0.0,
+          "Total Cost": 27390.0
+        }
+      ],
+      "Startup Cost": 0.0,
+      "Total Cost": 547.8
+    }
+  }
+]
+```
+
+**1,000,000 rows**
+
+```
+Limit
+  Seq Scan on json_ste_vec_small_encrypted_1000000
+```
+
+Full `EXPLAIN (FORMAT JSON)`:
+
+```json
+[
+  {
+    "Plan": {
+      "Async Capable": false,
+      "Node Type": "Limit",
+      "Parallel Aware": false,
+      "Plan Rows": 10,
+      "Plan Width": 4,
+      "Plans": [
+        {
+          "Alias": "json_ste_vec_small_encrypted_1000000",
+          "Async Capable": false,
+          "Filter": "((((value -> 'cfef1685f0e51a1fe1da955e7ad10044'::text)).data ->> 'hm'::text) = 'fb73e0f40bc991cf4b1090d0801f6447'::text)",
+          "Node Type": "Seq Scan",
+          "Parallel Aware": false,
+          "Parent Relationship": "Outer",
+          "Plan Rows": 5000,
+          "Plan Width": 4,
+          "Relation Name": "json_ste_vec_small_encrypted_1000000",
+          "Startup Cost": 0.0,
+          "Total Cost": 273893.0
+        }
+      ],
+      "Startup Cost": 0.0,
+      "Total Cost": 547.79
+    }
+  }
+]
+```
+
+</details>
+
+![Query Performance - JSON/field_eq/bare](query_json_field_eq_bare_chart.png)
+
+## field_eq/extractor
+
+**Description:** Field-level equality via `hmac_256_terms @> [{s,hm}]` (functional GIN)
+
+**SQL Query:**
+```sql
+SELECT id FROM {TABLE} WHERE eql_v2.hmac_256_terms(value) @> $1::jsonb LIMIT 10
+```
+
+**Parameter:** `[{"s":"<selector-hash>","hm":"<hmac>"}]`
+
+**Table: `json_ste_vec_small_encrypted_{rows}`. Index: functional GIN on `eql_v2.hmac_256_terms(value)`. One index covers field-level equality across every selector that carries `hm`, vs the per-selector recipe below. The bench picks a (selector, hmac) pair from `sv[0]` of a sample row at startup; needle is `[{"s":"<sel>","hm":"<hash>"}]`.**
+
+**Indexes available on the table:**
+```sql
+CREATE INDEX
+json_ste_vec_small_encrypted_100000_ste_vec_index
+ON json_ste_vec_small_encrypted_100000 USING GIN (
+    eql_v2.ste_vec(value)
+);
+
+CREATE INDEX
+json_ste_vec_small_encrypted_100000_hmac_terms_index
+ON json_ste_vec_small_encrypted_100000 USING GIN (
+    eql_v2.hmac_256_terms(value)
+);
+```
+
+**Indexes used by the planner (per data set size):**
+
+- 100,000: _none — planner picked a sequential / hash-aggregate / sort plan_
+- 1,000,000: _none — planner picked a sequential / hash-aggregate / sort plan_
+
+| Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
+|---------------|---------------|-------------------------|---------------------------|
+| 100,000 | 10 | 632.94μs | N/A |
+| 1,000,000 | 10 | 794.60μs | N/A |
+
+_Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
+
+<details>
+<summary>EXPLAIN plans (per data set size)</summary>
+
+**100,000 rows**
+
+```
+Limit
+  Seq Scan on json_ste_vec_small_encrypted_100000
+```
+
+Full `EXPLAIN (FORMAT JSON)`:
+
+```json
+[
+  {
+    "Plan": {
+      "Async Capable": false,
+      "Node Type": "Limit",
+      "Parallel Aware": false,
+      "Plan Rows": 10,
+      "Plan Width": 4,
+      "Plans": [
+        {
+          "Alias": "json_ste_vec_small_encrypted_100000",
+          "Async Capable": false,
+          "Filter": "(eql_v2.hmac_256_terms(value) @> '[{\"s\": \"cfef1685f0e51a1fe1da955e7ad10044\", \"hm\": \"fb73e0f40bc991cf4b1090d0801f6447\"}]'::jsonb)",
+          "Node Type": "Seq Scan",
+          "Parallel Aware": false,
+          "Parent Relationship": "Outer",
+          "Plan Rows": 100000,
+          "Plan Width": 4,
+          "Relation Name": "json_ste_vec_small_encrypted_100000",
+          "Startup Cost": 0.0,
+          "Total Cost": 27140.0
+        }
+      ],
+      "Startup Cost": 0.0,
+      "Total Cost": 2.71
+    }
+  }
+]
+```
+
+**1,000,000 rows**
+
+```
+Limit
+  Seq Scan on json_ste_vec_small_encrypted_1000000
+```
+
+Full `EXPLAIN (FORMAT JSON)`:
+
+```json
+[
+  {
+    "Plan": {
+      "Async Capable": false,
+      "Node Type": "Limit",
+      "Parallel Aware": false,
+      "Plan Rows": 10,
+      "Plan Width": 4,
+      "Plans": [
+        {
+          "Alias": "json_ste_vec_small_encrypted_1000000",
+          "Async Capable": false,
+          "Filter": "(eql_v2.hmac_256_terms(value) @> '[{\"s\": \"cfef1685f0e51a1fe1da955e7ad10044\", \"hm\": \"fb73e0f40bc991cf4b1090d0801f6447\"}]'::jsonb)",
+          "Node Type": "Seq Scan",
+          "Parallel Aware": false,
+          "Parent Relationship": "Outer",
+          "Plan Rows": 1000000,
+          "Plan Width": 4,
+          "Relation Name": "json_ste_vec_small_encrypted_1000000",
+          "Startup Cost": 0.0,
+          "Total Cost": 271393.0
+        }
+      ],
+      "Startup Cost": 0.0,
+      "Total Cost": 2.71
+    }
+  }
+]
+```
+
+</details>
+
+![Query Performance - JSON/field_eq/extractor](query_json_field_eq_extractor_chart.png)
+
+## field_eq/functional
+
+**Description:** Field-level equality via per-selector `hmac_256(col, 'sel')`
+
+**SQL Query:**
+```sql
+SELECT id FROM {TABLE} WHERE eql_v2.hmac_256(value, '<selector-hash>') = eql_v2.hmac_256($1::eql_v2_encrypted) LIMIT 10
+```
+
+**Parameter:** `<sampled-sv-element-as-eql_v2_encrypted>`
+
+**Table: `json_ste_vec_small_encrypted_{rows}`. Would engage `hash (eql_v2.hmac_256(col, '<sel>'))` if one existed; benches/main only creates the `hmac_256_terms` GIN (one index for all selectors), so this scenario serves as a baseline showing the cost of the per-selector recipe without a matching index.**
+
+**Indexes available on the table:**
+```sql
+CREATE INDEX
+json_ste_vec_small_encrypted_100000_ste_vec_index
+ON json_ste_vec_small_encrypted_100000 USING GIN (
+    eql_v2.ste_vec(value)
+);
+
+CREATE INDEX
+json_ste_vec_small_encrypted_100000_hmac_terms_index
+ON json_ste_vec_small_encrypted_100000 USING GIN (
+    eql_v2.hmac_256_terms(value)
+);
+```
+
+**Indexes used by the planner (per data set size):**
+
+- 100,000: _none — planner picked a sequential / hash-aggregate / sort plan_
+- 1,000,000: _none — planner picked a sequential / hash-aggregate / sort plan_
+
+| Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
+|---------------|---------------|-------------------------|---------------------------|
+| 100,000 | 10 | 610.45μs | N/A |
+| 1,000,000 | 10 | 687.83μs | N/A |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
 
@@ -336,13 +599,18 @@ Full `EXPLAIN (FORMAT JSON)`:
 
 </details>
 
-![Query Performance - JSON/field_eq](query_json_field_eq_chart.png)
+![Query Performance - JSON/field_eq/functional](query_json_field_eq_functional_chart.png)
 
-## field_order
+## field_order/bare
 
-**Description:** Unknown query
+**Description:** Field-level ORDER BY via `ORDER BY value -> 'sel'` (no index)
 
-****
+**SQL Query:**
+```sql
+SELECT id FROM {TABLE} ORDER BY (value -> '<selector-hash>'::text) LIMIT 10
+```
+
+**Table: `json_ste_vec_small_encrypted_{rows}`. Same `->` non-inlining problem as `field_eq/bare`. ORDER BY on `eql_v2_encrypted` uses ORE under the hood, but the planner can't see through `->` to engage any functional ORE index. Forces Seq Scan + Top-N sort.**
 
 **Indexes available on the table:**
 ```sql
@@ -371,7 +639,248 @@ ON json_ste_vec_small_encrypted_10000 USING GIN (
 |---------------|---------------|-------------------------|---------------------------|
 | 10,000 | 10 | ⚠️ 818.41ms | N/A |
 | 100,000 | 10 | ⚠️ 5.498s | N/A |
-| 1,000,000 | 10 | ⚠️ 20.594s | N/A |
+| 1,000,000 | 10 | ⚠️ 21.300s | N/A |
+
+_Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
+
+<details>
+<summary>EXPLAIN plans (per data set size)</summary>
+
+**10,000 rows**
+
+```
+Limit
+  Sort
+    Seq Scan on json_ste_vec_small_encrypted_10000
+```
+
+Full `EXPLAIN (FORMAT JSON)`:
+
+```json
+[
+  {
+    "Plan": {
+      "Async Capable": false,
+      "Node Type": "Limit",
+      "Parallel Aware": false,
+      "Plan Rows": 10,
+      "Plan Width": 36,
+      "Plans": [
+        {
+          "Async Capable": false,
+          "Node Type": "Sort",
+          "Parallel Aware": false,
+          "Parent Relationship": "Outer",
+          "Plan Rows": 10000,
+          "Plan Width": 36,
+          "Plans": [
+            {
+              "Alias": "json_ste_vec_small_encrypted_10000",
+              "Async Capable": false,
+              "Node Type": "Seq Scan",
+              "Parallel Aware": false,
+              "Parent Relationship": "Outer",
+              "Plan Rows": 10000,
+              "Plan Width": 36,
+              "Relation Name": "json_ste_vec_small_encrypted_10000",
+              "Startup Cost": 0.0,
+              "Total Cost": 2815.0
+            }
+          ],
+          "Sort Key": [
+            "((value -> '9a2d817b8ec7abe623a1fcb4d9681003'::text))"
+          ],
+          "Startup Cost": 3031.1,
+          "Total Cost": 3056.1
+        }
+      ],
+      "Startup Cost": 3031.1,
+      "Total Cost": 3031.12
+    }
+  }
+]
+```
+
+**100,000 rows**
+
+```
+Limit
+  Sort
+    Seq Scan on json_ste_vec_small_encrypted_100000
+```
+
+Full `EXPLAIN (FORMAT JSON)`:
+
+```json
+[
+  {
+    "Plan": {
+      "Async Capable": false,
+      "Node Type": "Limit",
+      "Parallel Aware": false,
+      "Plan Rows": 10,
+      "Plan Width": 36,
+      "Plans": [
+        {
+          "Async Capable": false,
+          "Node Type": "Sort",
+          "Parallel Aware": false,
+          "Parent Relationship": "Outer",
+          "Plan Rows": 100000,
+          "Plan Width": 36,
+          "Plans": [
+            {
+              "Alias": "json_ste_vec_small_encrypted_100000",
+              "Async Capable": false,
+              "Node Type": "Seq Scan",
+              "Parallel Aware": false,
+              "Parent Relationship": "Outer",
+              "Plan Rows": 100000,
+              "Plan Width": 36,
+              "Relation Name": "json_ste_vec_small_encrypted_100000",
+              "Startup Cost": 0.0,
+              "Total Cost": 26890.0
+            }
+          ],
+          "Sort Key": [
+            "((value -> '9a2d817b8ec7abe623a1fcb4d9681003'::text))"
+          ],
+          "Startup Cost": 29050.96,
+          "Total Cost": 29300.96
+        }
+      ],
+      "Startup Cost": 29050.96,
+      "Total Cost": 29050.99
+    }
+  }
+]
+```
+
+**1,000,000 rows**
+
+```
+Limit
+  Gather Merge
+    Sort
+      Seq Scan on json_ste_vec_small_encrypted_1000000
+```
+
+Full `EXPLAIN (FORMAT JSON)`:
+
+```json
+[
+  {
+    "JIT": {
+      "Functions": 3,
+      "Options": {
+        "Deforming": true,
+        "Expressions": true,
+        "Inlining": false,
+        "Optimization": false
+      }
+    },
+    "Plan": {
+      "Async Capable": false,
+      "Node Type": "Limit",
+      "Parallel Aware": false,
+      "Plan Rows": 10,
+      "Plan Width": 36,
+      "Plans": [
+        {
+          "Async Capable": false,
+          "Node Type": "Gather Merge",
+          "Parallel Aware": false,
+          "Parent Relationship": "Outer",
+          "Plan Rows": 833334,
+          "Plan Width": 36,
+          "Plans": [
+            {
+              "Async Capable": false,
+              "Node Type": "Sort",
+              "Parallel Aware": false,
+              "Parent Relationship": "Outer",
+              "Plan Rows": 416667,
+              "Plan Width": 36,
+              "Plans": [
+                {
+                  "Alias": "json_ste_vec_small_encrypted_1000000",
+                  "Async Capable": false,
+                  "Node Type": "Seq Scan",
+                  "Parallel Aware": true,
+                  "Parent Relationship": "Outer",
+                  "Plan Rows": 416667,
+                  "Plan Width": 36,
+                  "Relation Name": "json_ste_vec_small_encrypted_1000000",
+                  "Startup Cost": 0.0,
+                  "Total Cost": 117226.42
+                }
+              ],
+              "Sort Key": [
+                "((value -> '9a2d817b8ec7abe623a1fcb4d9681003'::text))"
+              ],
+              "Startup Cost": 126230.44,
+              "Total Cost": 127272.11
+            }
+          ],
+          "Startup Cost": 127230.46,
+          "Total Cost": 224459.55,
+          "Workers Planned": 2
+        }
+      ],
+      "Startup Cost": 127230.46,
+      "Total Cost": 127231.63
+    }
+  }
+]
+```
+
+</details>
+
+![Query Performance - JSON/field_order/bare](query_json_field_order_bare_chart.png)
+
+## field_order/functional
+
+**Description:** Field-level ORDER BY via ORE extractor on `value -> 'sel'`
+
+**SQL Query:**
+```sql
+SELECT id FROM {TABLE} ORDER BY <ore_extractor>(value -> '<selector-hash>'::text) LIMIT 10
+```
+
+**Table: `json_ste_vec_small_encrypted_{rows}`. Index: functional btree on `<ore_extractor>(value -> '<selector>'::text)` using the appropriate opclass for the term type. `<ore_extractor>` is selected at bench startup based on which orderable tag the sampled sv element carries:
+  - `oc` → `eql_v2.ore_cllw` (Standard mode, ORE CLLW — requires the `eql_v2.ore_cllw_ops` btree opclass from EQL #221)
+  - `op` → `eql_v2.ope_cllw` (Compat mode, OPE CLLW)
+  - `ob` → `eql_v2.ore_block_u64_8_256` (Block ORE — root scalars only)
+When the table's `oc` index is present, the plan engages Index Scan + LIMIT (no Sort node). When absent (older bench run / index not yet rebuilt), falls back to Seq Scan + Top-N sort.**
+
+**Indexes available on the table:**
+```sql
+CREATE INDEX
+json_ste_vec_small_encrypted_10000_ste_vec_index
+ON json_ste_vec_small_encrypted_10000 USING GIN (
+    eql_v2.ste_vec(value)
+);
+
+CREATE INDEX
+json_ste_vec_small_encrypted_10000_hmac_terms_index
+ON json_ste_vec_small_encrypted_10000 USING GIN (
+    eql_v2.hmac_256_terms(value)
+);
+```
+
+**Indexes used by the planner (per data set size):**
+
+- 10,000: _none — planner picked a sequential / hash-aggregate / sort plan_
+- 100,000: _none — planner picked a sequential / hash-aggregate / sort plan_
+- 1,000,000: `json_ste_vec_small_encrypted_1000000_oc_9a2d817b8ec7abe623a1fcb`
+
+*⚠️ = Query time exceeds 100ms*
+
+| Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
+|---------------|---------------|-------------------------|---------------------------|
+| 10,000 | 10 | ⚠️ 570.72ms | N/A |
+| 100,000 | 10 | ⚠️ 5.583s | N/A |
+| 1,000,000 | 10 | 1.55ms | N/A |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
 
@@ -492,9 +1001,7 @@ Full `EXPLAIN (FORMAT JSON)`:
 
 ```
 Limit
-  Gather Merge
-    Sort
-      Seq Scan on json_ste_vec_small_encrypted_1000000
+  Index Scan using json_ste_vec_small_encrypted_1000000_oc_9a2d817b8ec7abe623a1fcb on json_ste_vec_small_encrypted_1000000
 ```
 
 Full `EXPLAIN (FORMAT JSON)`:
@@ -502,15 +1009,6 @@ Full `EXPLAIN (FORMAT JSON)`:
 ```json
 [
   {
-    "JIT": {
-      "Functions": 3,
-      "Options": {
-        "Deforming": true,
-        "Expressions": true,
-        "Inlining": false,
-        "Optimization": false
-      }
-    },
     "Plan": {
       "Async Capable": false,
       "Node Type": "Limit",
@@ -519,48 +1017,22 @@ Full `EXPLAIN (FORMAT JSON)`:
       "Plan Width": 36,
       "Plans": [
         {
+          "Alias": "json_ste_vec_small_encrypted_1000000",
           "Async Capable": false,
-          "Node Type": "Gather Merge",
+          "Index Name": "json_ste_vec_small_encrypted_1000000_oc_9a2d817b8ec7abe623a1fcb",
+          "Node Type": "Index Scan",
           "Parallel Aware": false,
           "Parent Relationship": "Outer",
-          "Plan Rows": 833334,
+          "Plan Rows": 1000000,
           "Plan Width": 36,
-          "Plans": [
-            {
-              "Async Capable": false,
-              "Node Type": "Sort",
-              "Parallel Aware": false,
-              "Parent Relationship": "Outer",
-              "Plan Rows": 416667,
-              "Plan Width": 36,
-              "Plans": [
-                {
-                  "Alias": "json_ste_vec_small_encrypted_1000000",
-                  "Async Capable": false,
-                  "Node Type": "Seq Scan",
-                  "Parallel Aware": true,
-                  "Parent Relationship": "Outer",
-                  "Plan Rows": 416667,
-                  "Plan Width": 36,
-                  "Relation Name": "json_ste_vec_small_encrypted_1000000",
-                  "Startup Cost": 0.0,
-                  "Total Cost": 221393.17
-                }
-              ],
-              "Sort Key": [
-                "(eql_v2.ore_cllw(((value -> '9a2d817b8ec7abe623a1fcb4d9681003'::text)).data))"
-              ],
-              "Startup Cost": 230397.19,
-              "Total Cost": 231438.86
-            }
-          ],
-          "Startup Cost": 231397.21,
-          "Total Cost": 328626.3,
-          "Workers Planned": 2
+          "Relation Name": "json_ste_vec_small_encrypted_1000000",
+          "Scan Direction": "Forward",
+          "Startup Cost": 0.55,
+          "Total Cost": 606426.08
         }
       ],
-      "Startup Cost": 231397.21,
-      "Total Cost": 231398.38
+      "Startup Cost": 0.55,
+      "Total Cost": 6.61
     }
   }
 ]
@@ -568,5 +1040,5 @@ Full `EXPLAIN (FORMAT JSON)`:
 
 </details>
 
-![Query Performance - JSON/field_order](query_json_field_order_chart.png)
+![Query Performance - JSON/field_order/functional](query_json_field_order_functional_chart.png)
 

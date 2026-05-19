@@ -714,3 +714,12 @@ python3 report_benchmarks.py --output "$OUTPUT_FILE"
 echo ""
 echo "Report saved to: $OUTPUT_FILE"
 """
+
+[tasks."report:slow"]
+description = "List queries whose median runtime exceeds a threshold (default 100ms)"
+run = """
+#!/usr/bin/env bash
+# Optional first arg is the threshold in milliseconds.
+THRESHOLD_MS="${1:-100}"
+python3 find_slow_queries.py --ms "$THRESHOLD_MS"
+"""
