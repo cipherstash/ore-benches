@@ -6,69 +6,69 @@
 //
 //   1. JSON containment (whole-document)
 //      contains/functional
-//        WHERE eql_v2.ste_vec(value) @> eql_v2.ste_vec($1::jsonb::eql_v2_encrypted)
-//        Engages the documented `GIN (eql_v2.ste_vec(value))` index — both
-//        sides of @> resolve to eql_v2_encrypted[] which matches the GIN
+//        WHERE eql_v2.jsonb_array(value) @> eql_v2.jsonb_array($1::jsonb::eql_v2_encrypted)
+//        Engages the documented `GIN (eql_v2.jsonb_array(value))` index —
+//        both sides of @> resolve to native jsonb[], which matches the GIN
 //        opclass directly. The needle is a sampled row's value, so the
 //        query matches at least that source row.
 //
-//        Note (filed as a follow-up): the bare form
-//        `WHERE value @> $1::eql_v2_encrypted` does NOT engage the GIN
-//        today. eql_v2."@>" is marked inlinable SQL but wraps
-//        ste_vec_contains() which is PL/pgSQL — inlining stops at the
-//        wrapper, leaving the planner with a black-box function call and
-//        no path to the indexed expression. Result: seq scan + per-row
-//        ste_vec_contains, pathologically slow even on 10k rows. The bench
-//        does not include the bare form because it would never complete
-//        at the 1M / 10M tiers; the asymmetry is itself an EQL bug worth
-//        filing.
+//        This is the whole-document recipe: both operands are extracted to
+//        jsonb[] via eql_v2.jsonb_array. For a field-targeted needle the
+//        typed stevec_query path (scenario 2, field_eq/extractor) inlines
+//        to a native jsonb @> and engages its own GIN — prefer it when the
+//        needle addresses specific selectors rather than the whole row.
 //
 //   2. JSON selector + equality (`->` + `=`)
 //      field_eq/bare
-//        WHERE (value -> '<sel>'::text) = $1::jsonb::eql_v2_encrypted LIMIT 10
-//        eql_v2."->" is plpgsql (not inlinable) so the planner cannot match
-//        any functional index against the LHS — forces seq scan + per-row
-//        sv walk. This is the "natural" form a JS/ORM caller would write.
+//        WHERE (value -> '<sel>'::text) = $1::jsonb::eql_v2.ste_vec_entry LIMIT 10
+//        The "natural" JS/ORM form. `->` returns `eql_v2.ste_vec_entry` and
+//        `=` on that domain is inlinable SQL that folds to
+//        `eql_v2.eq_term(a) = eql_v2.eq_term(b)` — structurally the same as
+//        field_eq/functional below. It would match a per-selector
+//        `hash (eql_v2.eq_term(value -> '<sel>'))` index if one existed.
 //      field_eq/extractor
-//        WHERE eql_v2.hmac_256_terms(value) @> $1::jsonb LIMIT 10
-//        Uses the documented `GIN (eql_v2.hmac_256_terms(value))` index — one
-//        index covers field-level equality across every selector with an `hm`
-//        term. Needle is `[{"s":"<sel>","hm":"<hash>"}]`.
+//        WHERE value @> $1::jsonb::eql_v2.stevec_query LIMIT 10
+//        Uses the typed `@>(eql_v2_encrypted, eql_v2.stevec_query)` overload,
+//        which inlines to `eql_v2.to_stevec_query(value)::jsonb @> needle`
+//        and engages the column-wide
+//        `GIN (eql_v2.to_stevec_query(value)::jsonb jsonb_path_ops)` index —
+//        one index covers every selector, XOR-aware (both hm- and oc-bearing).
+//        Needle is `{"sv":[{"s":"<sel>","hm":"<hash>"}]}`.
 //      field_eq/functional
-//        WHERE eql_v2.hmac_256(value, '<sel>') = eql_v2.hmac_256($1::eql_v2_encrypted) LIMIT 10
-//        Per-selector functional form. Would engage `hash (eql_v2.hmac_256(col, '<sel>'))`
-//        if one existed; benches/main only creates the `hmac_256_terms` GIN
-//        (one index for all selectors), so this scenario serves as a baseline
-//        showing the cost of the per-selector recipe without a matching index.
+//        WHERE eql_v2.eq_term(value -> '<sel>') = eql_v2.eq_term($1::eql_v2.ste_vec_entry) LIMIT 10
+//        Per-selector functional form. Would engage
+//        `hash (eql_v2.eq_term(value -> '<sel>'))` if one existed; the bench
+//        setup only creates the column-wide stevec_query GIN, so this
+//        scenario is a baseline showing the per-selector recipe's cost
+//        without a matching index.
 //
 //   3. JSON selector + ORDER BY (`->` then ORDER BY)
 //      field_order/functional
 //        SELECT id FROM tbl ORDER BY <ore_extractor>(value -> '<sel>'::text) LIMIT 10
 //        Direct ORE extractor. <ore_extractor> is selected at startup based
 //        on which orderable tag the chosen sv element carries:
-//          oc -> eql_v2.ore_cllw            (Standard mode, ORE CLLW)
-//          op -> eql_v2.ope_cllw            (Compat  mode, OPE CLLW)
+//          oc -> eql_v2.ore_cllw            (ORE CLLW — sv elements)
 //          ob -> eql_v2.ore_block_u64_8_256 (Block ORE — root scalars only)
+//        `->` returns `eql_v2.ste_vec_entry`, and `eql_v2.ore_cllw` has an
+//        overload on that domain — no `.data` cast needed.
 //
 //      No `field_order/bare` scenario. The bare form
-//      `ORDER BY value -> '<sel>'` can't engage the functional ORE index
-//      (eql_v2."->" is plpgsql so the planner can't see through it), so
-//      the plan is always Seq Scan + Top-N sort — linear in table size.
-//      The extractor form is the canonical recipe; see §4 of the EQL
-//      query performance guide. Same precedent as ORE's natural-form
-//      ORDER BY scenario which was also removed.
+//      `ORDER BY value -> '<sel>'` does not syntactically match the
+//      functional ORE index expression, so the plan is always Seq Scan +
+//      Top-N sort — linear in table size. The extractor form is the
+//      canonical recipe; see §4 of the EQL query performance guide.
 //
 // Needle / selector picking happens once at startup against the target
 // table. The bench picks one sv element with an orderable tag (for the order
 // scenarios) and falls through to sv[0] otherwise — a single chosen
 // selector is reused across all scenarios so the comparison is consistent.
 //
-// Shape compatibility: post-EQL 2.3 ste_vec elements emit `hm` for equality
-// and one of `oc` (Standard) / `op` (Compat) for orderable terms. Pre-2.3
-// columns carrying `b3` / `ocf` / `ocv` / `opf` / `opv` no longer satisfy
-// the new extractor functions and the hm-dependent or order-dependent
-// scenarios will skip at startup. Re-ingest under the new format to
-// engage the bench.
+// Shape compatibility: EQL 2.3 ste_vec elements carry `hm` (equality) and
+// `oc` (ORE CLLW ordering) — exactly one of the two per element, under the
+// XOR contract. Pre-2.3 columns carrying `b3` / `ocf` / `ocv` (or the
+// removed Compat `op` / `opf` / `opv`) no longer satisfy the new extractor
+// functions, so the hm- or order-dependent scenarios skip at startup.
+// Re-ingest under the EQL 2.3 format to engage the bench.
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use dbbenches::{bench_assert, extract_indexes_used, write_metadata_file, ScenarioMetadata};
@@ -83,8 +83,8 @@ use tokio::runtime::Runtime;
 /// field_eq/* scenarios) and once for an orderable-bearing element (drives
 /// field_order/*). Each scenario family uses the selector that's actually
 /// addressable for it — in the post-#1955 wire format these are typically
-/// disjoint (`hm` on the array-prefix selector lookup element, `oc`/`op`
-/// on value elements).
+/// disjoint (`hm` on the array-prefix selector lookup element, `oc` on
+/// value elements).
 #[derive(Debug)]
 struct Needles {
     /// Whole-row value (for the containment needle). No selector needed.
@@ -117,7 +117,7 @@ struct OrePick {
     /// `value -> '<selector>'` for the chosen selector (for the
     /// field_order/bare needle).
     sample_field_value: JsonValue,
-    /// Orderable tag on the chosen sv element ("ob" / "oc" / "op").
+    /// Orderable tag on the chosen sv element ("ob" / "oc").
     /// Drives `ore_extractor_for` to pick the matching extractor for the
     /// field_order/functional scenario.
     ore_term: String,
@@ -130,7 +130,6 @@ fn ore_extractor_for(tag: &str) -> Option<&'static str> {
     match tag {
         "ob" => Some("eql_v2.ore_block_u64_8_256"),
         "oc" => Some("eql_v2.ore_cllw"),
-        "op" => Some("eql_v2.ope_cllw"),
         _ => None,
     }
 }
@@ -140,7 +139,7 @@ async fn sample_needles(pool: &sqlx::PgPool, table: &str) -> Needles {
     // hm-bearing element for the field_eq/* scenarios and the first
     // orderable-bearing element for field_order/*. Post-#1955 these are
     // typically disjoint: the array-prefix selector lookup element carries
-    // `hm`, the value elements carry `oc` (Standard) or `op` (Compat).
+    // `hm`, the value elements carry `oc`.
     //
     // `value -> 'sel'::text` separately because the result type is
     // eql_v2_encrypted (with sv element fields hoisted to root + source
@@ -185,7 +184,7 @@ async fn sample_needles(pool: &sqlx::PgPool, table: &str) -> Needles {
         let ore_tag = sv_elem
             .0
             .as_object()
-            .and_then(|m| ["ob", "oc", "op"].iter().find(|t| m.contains_key(**t)))
+            .and_then(|m| ["ob", "oc"].iter().find(|t| m.contains_key(**t)))
             .map(|t| (*t).to_string());
 
         if hm_pick.is_none() {
@@ -506,7 +505,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         } else {
             eprintln!(
                 "json bench: skipping field_order/functional — no sv element on the \
-                 sampled row carries an orderable term (no ob / oc / op)."
+                 sampled row carries an orderable term (no ob / oc)."
             );
         }
 
