@@ -639,19 +639,39 @@ echo "Benchmark complete! Results written to $OUTPUT_FILE"
 """
 
 [tasks."bench:query:all"]
-description = "Run all query benchmarks with multiple row counts (10k, 100k, 1M, 10M)"
+description = "Run all query benchmarks across row-count tiers (10k, 100k, 1M, 10M). Optional arg caps the largest tier, e.g. `mise run bench:query:all 1000000` stops at 1M."
 run = """
 #!/usr/bin/env bash
 set -e
 
-ROW_COUNTS=(10000 100000 1000000 10000000)
+# Optional arg: cap the largest row-count tier. Without it every tier up
+# to and including 10M runs; `mise run bench:query:all 1000000` stops at
+# 1M (skips the slow 10M tier).
+MAX_ROWS="${1:-}"
+
+if [ -n "$MAX_ROWS" ] && ! [[ "$MAX_ROWS" =~ ^[0-9]+$ ]]; then
+  echo "Error: max row count must be a positive integer"
+  echo "Usage: mise run bench:query:all [max_rows]"
+  exit 1
+fi
+
+ALL_ROW_COUNTS=(10000 100000 1000000 10000000)
+ROW_COUNTS=()
+for ROWS in "${ALL_ROW_COUNTS[@]}"; do
+  if [ -z "$MAX_ROWS" ] || [ "$ROWS" -le "$MAX_ROWS" ]; then
+    ROW_COUNTS+=("$ROWS")
+  fi
+done
+
+if [ ${#ROW_COUNTS[@]} -eq 0 ]; then
+  echo "Error: max_rows=$MAX_ROWS excludes every tier (smallest is 10000)"
+  exit 1
+fi
 
 echo "========================================"
 echo "Starting comprehensive benchmark suite"
 echo "Row counts: ${ROW_COUNTS[*]}"
-echo "Benchmarks: exact, match, ore, group_by, combo"
-echo "(bench:query:json is parked until cipherstash-client emits the"
-echo " post-2.3 ste_vec shape — run it directly when ready.)"
+echo "Benchmarks: exact, match, ore, group_by, combo, json"
 echo "========================================"
 echo ""
 
@@ -663,24 +683,28 @@ for ROWS in "${ROW_COUNTS[@]}"; do
   echo "========================================"
   echo ""
 
-  echo "[1/4] Running EXACT benchmark with $ROWS rows..."
+  echo "[1/6] Running EXACT benchmark with $ROWS rows..."
   mise run bench:query:exact "$ROWS"
   echo ""
 
-  echo "[2/4] Running MATCH benchmark with $ROWS rows..."
+  echo "[2/6] Running MATCH benchmark with $ROWS rows..."
   mise run bench:query:match "$ROWS"
   echo ""
 
-  echo "[3/5] Running ORE benchmark with $ROWS rows..."
+  echo "[3/6] Running ORE benchmark with $ROWS rows..."
   mise run bench:query:ore "$ROWS"
   echo ""
 
-  echo "[4/5] Running GROUP BY benchmark with $ROWS rows..."
+  echo "[4/6] Running GROUP BY benchmark with $ROWS rows..."
   mise run bench:query:group_by "$ROWS"
   echo ""
 
-  echo "[5/5] Running COMBO benchmark with $ROWS rows..."
+  echo "[5/6] Running COMBO benchmark with $ROWS rows..."
   mise run bench:query:combo "$ROWS"
+  echo ""
+
+  echo "[6/6] Running JSON benchmark with $ROWS rows..."
+  mise run bench:query:json "$ROWS"
   echo ""
 
   echo "Completed benchmarks for $ROWS rows"
