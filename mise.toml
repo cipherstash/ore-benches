@@ -737,7 +737,14 @@ echo "========================================"
 """
 
 [tasks.report]
-description = "Generate benchmark report from results"
+description = "Overview of all benchmark results — median runtime per scenario, slowest first"
+run = """
+#!/usr/bin/env bash
+python3 find_slow_queries.py --all
+"""
+
+[tasks."report:build"]
+description = "Build the full benchmark report file (Markdown)"
 run = """
 #!/usr/bin/env bash
 set -e

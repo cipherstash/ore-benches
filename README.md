@@ -106,7 +106,7 @@ mise run bench:query:ore 10000
 mise run bench:query:all
 
 # Generate report
-mise run report
+mise run report:build
 ```
 
 ### Step-by-Step Guide
@@ -182,8 +182,16 @@ Each query bench writes two files to `results/query/` per row-count tier:
 
 #### 6. Generate Report
 
+Quick overview of all results in the terminal — median runtime per scenario, slowest first:
+
 ```bash
 mise run report
+```
+
+Or build the full Markdown report file:
+
+```bash
+mise run report:build
 ```
 
 This generates:
@@ -260,7 +268,7 @@ mise run postgres-stop
 
 ```bash
 # Generate report with custom filename
-mise run report custom_report.md
+mise run report:build custom_report.md
 
 # Or use Python script directly
 python3 report_benchmarks.py --output report/my_report.md

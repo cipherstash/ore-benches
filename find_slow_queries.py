@@ -11,6 +11,7 @@ first.
 Usage:
     python3 find_slow_queries.py                 # default 100 ms threshold
     python3 find_slow_queries.py --ms 250        # 250 ms threshold
+    python3 find_slow_queries.py --all           # every scenario, no threshold
     python3 find_slow_queries.py --results-dir other/path/results
 
 Output is plain text (one row per slow query):
@@ -84,22 +85,32 @@ def main():
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--ms", type=float, default=100.0,
                         help="threshold in milliseconds (default 100)")
+    parser.add_argument("--all", action="store_true",
+                        help="list every scenario, ignoring the threshold")
     parser.add_argument("--results-dir", type=Path, default=Path("results"),
                         help="benchmark results root (default ./results)")
     args = parser.parse_args()
 
-    threshold_ns = args.ms * 1_000_000
+    # --all lists everything; a -inf threshold admits every (positive) median.
+    threshold_ns = float("-inf") if args.all else args.ms * 1_000_000
 
     slow = collect_slow(args.results_dir, threshold_ns)
     # Worst offenders first.
     slow.sort(key=lambda r: r[0], reverse=True)
 
     if not slow:
-        print(f"No queries exceed {args.ms:g} ms.")
+        if args.all:
+            print(f"No benchmark results found under {args.results_dir}/query.")
+        else:
+            print(f"No queries exceed {args.ms:g} ms.")
         return
 
-    print(f"Queries with median runtime > {args.ms:g} ms "
-          f"(scanned {args.results_dir}/query):")
+    if args.all:
+        print(f"All {len(slow)} benchmark scenarios "
+              f"(scanned {args.results_dir}/query), slowest first:")
+    else:
+        print(f"Queries with median runtime > {args.ms:g} ms "
+              f"(scanned {args.results_dir}/query):")
     print()
     print(f"{'median':>13}  {'rows':>12}  scenario")
     print(f"{'-' * 13}  {'-' * 12}  {'-' * 60}")

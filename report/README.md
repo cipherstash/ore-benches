@@ -13,10 +13,13 @@ This directory contains generated benchmark reports and associated charts.
 To generate or update the report:
 
 ```bash
-mise run report
+mise run report:build
 ```
 
 This will create/update `BENCHMARK_REPORT.md` and associated chart images in this directory.
+
+For a quick terminal overview of every scenario's median runtime (no file
+generated), run `mise run report`.
 
 ## Version Control
 
