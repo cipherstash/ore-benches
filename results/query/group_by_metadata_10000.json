@@ -34,17 +34,17 @@
                     "Plan Width": 32,
                     "Relation Name": "category_encrypted_10000",
                     "Startup Cost": 0.0,
-                    "Total Cost": 580.0
+                    "Total Cost": 602.0
                   }
                 ],
-                "Startup Cost": 605.0,
+                "Startup Cost": 627.0,
                 "Strategy": "Hashed",
-                "Total Cost": 608.12
+                "Total Cost": 630.12
               }
             ],
-            "Startup Cost": 611.25,
+            "Startup Cost": 633.25,
             "Strategy": "Plain",
-            "Total Cost": 611.26
+            "Total Cost": 633.26
           }
         }
       ],
@@ -149,23 +149,23 @@
                         "Plan Width": 32,
                         "Relation Name": "category_encrypted_10000",
                         "Startup Cost": 0.0,
-                        "Total Cost": 580.0
+                        "Total Cost": 602.0
                       }
                     ],
-                    "Startup Cost": 630.0,
+                    "Startup Cost": 652.0,
                     "Strategy": "Hashed",
-                    "Total Cost": 633.12
+                    "Total Cost": 655.12
                   }
                 ],
                 "Sort Key": [
                   "(count(*)) DESC"
                 ],
-                "Startup Cost": 638.53,
-                "Total Cost": 639.15
+                "Startup Cost": 660.53,
+                "Total Cost": 661.15
               }
             ],
-            "Startup Cost": 638.53,
-            "Total Cost": 638.55
+            "Startup Cost": 660.53,
+            "Total Cost": 660.55
           }
         }
       ],

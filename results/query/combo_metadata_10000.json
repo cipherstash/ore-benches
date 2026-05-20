@@ -29,7 +29,7 @@
                     "Plans": [
                       {
                         "Async Capable": false,
-                        "Index Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{36,1603,1789,1164,10,1555}'::smallint[])",
+                        "Index Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{1554,91,461,1393,453,1033}'::smallint[])",
                         "Index Name": "combo_encrypted_10000_name_gin_index",
                         "Node Type": "Bitmap Index Scan",
                         "Parallel Aware": false,
@@ -40,7 +40,7 @@
                         "Total Cost": 56.22
                       }
                     ],
-                    "Recheck Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{36,1603,1789,1164,10,1555}'::smallint[])",
+                    "Recheck Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{1554,91,461,1393,453,1033}'::smallint[])",
                     "Relation Name": "combo_encrypted_10000",
                     "Startup Cost": 56.22,
                     "Total Cost": 60.73
@@ -65,22 +65,23 @@
       "parameters": [
         {
           "bf": [
-            36,
-            1603,
-            1789,
-            1164,
-            10,
-            1555
+            1554,
+            91,
+            461,
+            1393,
+            453,
+            1033
           ],
           "i": {
             "c": "name",
             "t": "combo_encrypted_10000"
           },
+          "k": "ct",
           "v": 2
         }
       ],
       "query": "SELECT id FROM combo_encrypted_10000 WHERE name LIKE $1 ORDER BY eql_v2.ore_block_u64_8_256(age) LIMIT 10",
-      "rows_returned": 9
+      "rows_returned": 4
     },
     {
       "explain": [
@@ -115,7 +116,7 @@
                     "Plans": [
                       {
                         "Async Capable": false,
-                        "Index Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{1164,10,1555,1789,1603,36}'::smallint[])",
+                        "Index Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{461,453,1033,1554,1393,91}'::smallint[])",
                         "Index Name": "combo_encrypted_10000_name_gin_index",
                         "Node Type": "Bitmap Index Scan",
                         "Parallel Aware": false,
@@ -126,7 +127,7 @@
                         "Total Cost": 56.22
                       }
                     ],
-                    "Recheck Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{1164,10,1555,1789,1603,36}'::smallint[])",
+                    "Recheck Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{461,453,1033,1554,1393,91}'::smallint[])",
                     "Relation Name": "combo_encrypted_10000",
                     "Startup Cost": 56.22,
                     "Total Cost": 60.49
@@ -152,22 +153,23 @@
       "parameters": [
         {
           "bf": [
-            1164,
-            10,
-            1555,
-            1789,
-            1603,
-            36
+            461,
+            453,
+            1033,
+            1554,
+            1393,
+            91
           ],
           "i": {
             "c": "name",
             "t": "combo_encrypted_10000"
           },
+          "k": "ct",
           "v": 2
         }
       ],
       "query": "SELECT eql_v2.hmac_256(category), count(*) FROM combo_encrypted_10000 WHERE name LIKE $1 GROUP BY 1",
-      "rows_returned": 9
+      "rows_returned": 4
     },
     {
       "explain": [
@@ -218,7 +220,7 @@
                             "Plans": [
                               {
                                 "Async Capable": false,
-                                "Index Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{36,1789,1603,1164,10,1555}'::smallint[])",
+                                "Index Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{461,1393,1554,453,91,1033}'::smallint[])",
                                 "Index Name": "combo_encrypted_10000_name_gin_index",
                                 "Node Type": "Bitmap Index Scan",
                                 "Parallel Aware": false,
@@ -229,7 +231,7 @@
                                 "Total Cost": 56.22
                               }
                             ],
-                            "Recheck Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{36,1789,1603,1164,10,1555}'::smallint[])",
+                            "Recheck Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{461,1393,1554,453,91,1033}'::smallint[])",
                             "Relation Name": "combo_encrypted_10000",
                             "Startup Cost": 56.22,
                             "Total Cost": 60.49
@@ -266,22 +268,23 @@
       "parameters": [
         {
           "bf": [
-            36,
-            1789,
-            1603,
-            1164,
-            10,
-            1555
+            461,
+            1393,
+            1554,
+            453,
+            91,
+            1033
           ],
           "i": {
             "c": "name",
             "t": "combo_encrypted_10000"
           },
+          "k": "ct",
           "v": 2
         }
       ],
       "query": "SELECT eql_v2.hmac_256(category), count(*) FROM combo_encrypted_10000 WHERE name LIKE $1 GROUP BY 1 ORDER BY count(*) DESC LIMIT 10",
-      "rows_returned": 9
+      "rows_returned": 4
     }
   ],
   "target_rows": "10000"
