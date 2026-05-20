@@ -663,7 +663,11 @@ for ROWS in "${ALL_ROW_COUNTS[@]}"; do
   fi
 done
 
-if [ ${#ROW_COUNTS[@]} -eq 0 ]; then
+# Empty-array check via ${ROW_COUNTS[*]} (empty when no tier is selected).
+# The bash array-length form is avoided on purpose: mise renders run
+# scripts through Tera, and the brace/hash pair it contains opens a Tera
+# comment and breaks the render before bash ever sees the script.
+if [ -z "${ROW_COUNTS[*]}" ]; then
   echo "Error: max_rows=$MAX_ROWS excludes every tier (smallest is 10000)"
   exit 1
 fi
