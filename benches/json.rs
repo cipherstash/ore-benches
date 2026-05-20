@@ -23,9 +23,10 @@
 //        WHERE (value -> '<sel>'::text) = $1::jsonb::eql_v2.ste_vec_entry LIMIT 10
 //        The "natural" JS/ORM form. `->` returns `eql_v2.ste_vec_entry` and
 //        `=` on that domain is inlinable SQL that folds to
-//        `eql_v2.eq_term(a) = eql_v2.eq_term(b)` — structurally the same as
-//        field_eq/functional below. It would match a per-selector
-//        `hash (eql_v2.eq_term(value -> '<sel>'))` index if one existed.
+//        `eql_v2.eq_term(a) = eql_v2.eq_term(b)` — structurally identical to
+//        field_eq/functional, so it engages the same per-selector
+//        `hash (eql_v2.eq_term(value -> '<sel>'))` index the bench builds at
+//        startup (see `create_field_indexes`).
 //      field_eq/extractor
 //        WHERE value @> $1::jsonb::eql_v2.stevec_query LIMIT 10
 //        Uses the typed `@>(eql_v2_encrypted, eql_v2.stevec_query)` overload,
@@ -36,11 +37,11 @@
 //        Needle is `{"sv":[{"s":"<sel>","hm":"<hash>"}]}`.
 //      field_eq/functional
 //        WHERE eql_v2.eq_term(value -> '<sel>') = eql_v2.eq_term($1::eql_v2.ste_vec_entry) LIMIT 10
-//        Per-selector functional form. Would engage
-//        `hash (eql_v2.eq_term(value -> '<sel>'))` if one existed; the bench
-//        setup only creates the column-wide stevec_query GIN, so this
-//        scenario is a baseline showing the per-selector recipe's cost
-//        without a matching index.
+//        Per-selector functional form. Engages a
+//        `hash (eql_v2.eq_term(value -> '<sel>'))` index. ste_vec equality is
+//        per-selector, so the index can't live in the static
+//        sql/indexes/*_up.sql — the bench builds it at startup once
+//        sample_needles has picked the selector (see `create_field_indexes`).
 //
 //   3. JSON selector + ORDER BY (`->` then ORDER BY)
 //      field_order/functional
@@ -50,7 +51,11 @@
 //          oc -> eql_v2.ore_cllw            (ORE CLLW — sv elements)
 //          ob -> eql_v2.ore_block_u64_8_256 (Block ORE — root scalars only)
 //        `->` returns `eql_v2.ste_vec_entry`, and `eql_v2.ore_cllw` has an
-//        overload on that domain — no `.data` cast needed.
+//        overload on that domain — no `.data` cast needed. Engages a
+//        `btree (<ore_extractor>(value -> '<sel>'))` index — the
+//        `eql_v2.ore_cllw_ops` opclass (DEFAULT FOR TYPE, EQL #221) makes
+//        `ORDER BY ... LIMIT n` an index scan. Per-selector, so the bench
+//        builds it at startup too (see `create_field_indexes`).
 //
 //      No `field_order/bare` scenario. The bare form
 //      `ORDER BY value -> '<sel>'` does not syntactically match the
@@ -241,6 +246,56 @@ async fn sample_needles(pool: &sqlx::PgPool, table: &str) -> Needles {
     }
 }
 
+/// Build the per-selector functional indexes the `field_eq/functional` and
+/// `field_order/functional` scenarios measure.
+///
+/// ste_vec equality and ordering are per-selector — the index expression
+/// embeds the selector hash — so these indexes cannot be declared in the
+/// static `sql/indexes/*_up.sql`: the selector is only known once
+/// `sample_needles` has picked it. Building them here, before the criterion
+/// loop, is one-time setup and is not part of what criterion measures.
+async fn create_field_indexes(pool: &sqlx::PgPool, table: &str, needles: &Needles) {
+    eprintln!("json bench: building per-selector functional indexes...");
+
+    if let Some(p) = needles.hm_pick.as_ref() {
+        sqlx::query(&format!("DROP INDEX IF EXISTS {table}_field_eq_idx"))
+            .execute(pool)
+            .await
+            .expect("drop stale field_eq index");
+        sqlx::query(&format!(
+            "CREATE INDEX {table}_field_eq_idx ON {table} \
+             USING hash (eql_v2.eq_term(value -> '{}'::text))",
+            p.selector
+        ))
+        .execute(pool)
+        .await
+        .expect("create field_eq functional index");
+    }
+
+    if let Some(p) = needles.ore_pick.as_ref() {
+        if let Some(fn_name) = ore_extractor_for(&p.ore_term) {
+            sqlx::query(&format!("DROP INDEX IF EXISTS {table}_field_order_idx"))
+                .execute(pool)
+                .await
+                .expect("drop stale field_order index");
+            sqlx::query(&format!(
+                "CREATE INDEX {table}_field_order_idx ON {table} \
+                 USING btree ({fn_name}(value -> '{}'::text))",
+                p.selector
+            ))
+            .execute(pool)
+            .await
+            .expect("create field_order functional index");
+        }
+    }
+
+    // Refresh planner statistics so the new indexes are costed correctly.
+    sqlx::query(&format!("ANALYZE {table}"))
+        .execute(pool)
+        .await
+        .expect("ANALYZE after index creation");
+}
+
 fn criterion_benchmark(c: &mut Criterion) {
     let rt = Runtime::new().unwrap();
 
@@ -277,6 +332,9 @@ fn criterion_benchmark(c: &mut Criterion) {
                 .map(|p| format!("{} ({})", p.selector, p.ore_term))
                 .unwrap_or_else(|| "<none>".to_string()),
         );
+
+        create_field_indexes(&pool, &table_name, &needles).await;
+
         (pool, needles)
     });
 
