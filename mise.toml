@@ -94,8 +94,16 @@ until docker exec ore-benches-postgres pg_isready -U postgres > /dev/null 2>&1; 
   sleep 1
 done
 
-echo "Downloading EQL (eql-2.3.0-pre.4)..."
-curl -sLo /tmp/cipherstash-encrypt.sql https://github.com/cipherstash/encrypt-query-language/releases/download/eql-2.3.0-pre.4/cipherstash-encrypt.sql
+# EQL_SQL overrides the released download with a local build — used to test
+# an unreleased EQL fix before a pre-release is cut, e.g.:
+#   EQL_SQL=../encrypt-query-language/release/cipherstash-encrypt.sql mise run setup-db
+if [ -n "${EQL_SQL:-}" ]; then
+  echo "Using local EQL build: $EQL_SQL"
+  cp "$EQL_SQL" /tmp/cipherstash-encrypt.sql
+else
+  echo "Downloading EQL (eql-2.3.0-pre.4)..."
+  curl -sLo /tmp/cipherstash-encrypt.sql https://github.com/cipherstash/encrypt-query-language/releases/download/eql-2.3.0-pre.4/cipherstash-encrypt.sql
+fi
 
 echo "Installing EQL..."
 docker exec -i ore-benches-postgres psql -v ON_ERROR_STOP=1 -U postgres -d postgres < /tmp/cipherstash-encrypt.sql
