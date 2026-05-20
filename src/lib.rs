@@ -1,7 +1,10 @@
 use anyhow::{Context, Result};
 use cipherstash_client::{
     encryption::{Plaintext, QueryOp, ScopedCipher},
-    eql::{decrypt_eql, encrypt_eql, EqlCiphertext, EqlOperation, Identifier, PreparedPlaintext},
+    eql::{
+        decrypt_eql, encrypt_eql, EqlCiphertext, EqlOperation, EqlOutput, EqlQueryPayload,
+        Identifier, PreparedPlaintext,
+    },
     schema::{column::IndexType, ColumnConfig},
     zerokms::{EnvKeyProvider, FallbackKeyProvider, ZeroKMSBuilder},
     AutoStrategy,
@@ -244,7 +247,14 @@ impl IngestOptions {
 
             QueryBuilder::new(format!("INSERT INTO {} (value) ", self.identifier.table()))
                 .push_values(out.into_iter(), |mut b, v| {
-                    b.push_bind(Json(v));
+                    // Every PreparedPlaintext above used EqlOperation::Store, so
+                    // encrypt_eql yields only EqlOutput::Store. alpha.9 split the
+                    // storage and query payload shapes — unwrap the storage
+                    // ciphertext for binding.
+                    let EqlOutput::Store(ciphertext) = v else {
+                        unreachable!("storage batch must yield EqlOutput::Store");
+                    };
+                    b.push_bind(Json(ciphertext));
                 })
                 .build()
                 .execute(&pool)
@@ -440,8 +450,15 @@ impl EncryptedQueryBuilder {
 
         let mut out = encrypt_eql(Arc::clone(&cipher), vec![prepared], &Default::default()).await?;
 
+        // build_query uses EqlOperation::Query, so the single output is always
+        // EqlOutput::Query. alpha.9 split storage / query payloads: a query
+        // carries an EqlQueryPayload (partial payload, no `c` ciphertext).
+        let EqlOutput::Query(eql) = out.remove(0) else {
+            unreachable!("build_query encrypts with EqlOperation::Query");
+        };
+
         Ok(EncryptedQuery {
-            eql: out.remove(0),
+            eql,
             statement: self.statement.context("statement must be set")?,
             scoped_cipher: cipher,
         })
@@ -449,7 +466,7 @@ impl EncryptedQueryBuilder {
 }
 
 pub struct EncryptedQuery {
-    pub eql: EqlCiphertext,
+    pub eql: EqlQueryPayload,
     pub statement: String,
     scoped_cipher: Arc<ScopedCipher<AutoStrategy>>,
 }
@@ -516,7 +533,7 @@ impl EncryptedQuery {
 //                        sqlx at execute time).
 //   * `parameters`     — list of bound values, serialised as JSON. For
 //                        the encrypted benches the parameter is the
-//                        EqlCiphertext payload; for plaintext / json the
+//                        EqlQueryPayload; for plaintext / json the
 //                        list is typically empty.
 //   * `explain`        — output of `EXPLAIN (FORMAT JSON)` against the
 //                        bound query, captured once at startup before

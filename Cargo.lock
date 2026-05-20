@@ -638,8 +638,9 @@ dependencies = [
 
 [[package]]
 name = "cipherstash-client"
-version = "0.34.1-alpha.4"
-source = "git+ssh://git@github.com/cipherstash/cipherstash-suite.git?branch=main#265791487c134d34d8d464c9d32ce3eb774fab8f"
+version = "0.34.1-alpha.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2efb4185bae4c3ff2c1ff022f67895e2da78c11494395ff48875dd81fa6db1b1"
 dependencies = [
  "aes-gcm-siv",
  "anyhow",
@@ -697,8 +698,9 @@ dependencies = [
 
 [[package]]
 name = "cipherstash-config"
-version = "0.34.1-alpha.4"
-source = "git+ssh://git@github.com/cipherstash/cipherstash-suite.git?branch=main#265791487c134d34d8d464c9d32ce3eb774fab8f"
+version = "0.34.1-alpha.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c86749c58896074fd93b1a4d4b2ae78c83229989ed5fd19b865b7e83c2622d7e"
 dependencies = [
  "bitflags 2.11.1",
  "serde",
@@ -708,8 +710,9 @@ dependencies = [
 
 [[package]]
 name = "cipherstash-core"
-version = "0.34.1-alpha.4"
-source = "git+ssh://git@github.com/cipherstash/cipherstash-suite.git?branch=main#265791487c134d34d8d464c9d32ce3eb774fab8f"
+version = "0.34.1-alpha.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a60e15384bf290ec22dbe97a33bbf4970d58acf2937281a402d05d03f0adc47a"
 dependencies = [
  "getrandom 0.2.17",
  "hmac",
@@ -744,8 +747,9 @@ dependencies = [
 
 [[package]]
 name = "cllw-ore"
-version = "0.4.1"
-source = "git+ssh://git@github.com/cipherstash/cipherstash-suite.git?branch=main#265791487c134d34d8d464c9d32ce3eb774fab8f"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4f73a23cbc15404d9b314c03b16a888f798dbc681bceeb2e18674f602f9da02d"
 dependencies = [
  "blake3",
  "chrono",
@@ -1049,8 +1053,9 @@ dependencies = [
 
 [[package]]
 name = "cts-common"
-version = "0.34.1-alpha.4"
-source = "git+ssh://git@github.com/cipherstash/cipherstash-suite.git?branch=main#265791487c134d34d8d464c9d32ce3eb774fab8f"
+version = "0.34.1-alpha.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0477698e2772db08bc06abd0b593cfaaafafbcb4c926574eb0d596883ecf4b74"
 dependencies = [
  "arrayvec",
  "base32",
@@ -3213,8 +3218,9 @@ dependencies = [
 
 [[package]]
 name = "recipher"
-version = "0.2.2"
-source = "git+ssh://git@github.com/cipherstash/cipherstash-suite.git?branch=main#265791487c134d34d8d464c9d32ce3eb774fab8f"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9398dce78ddfce08f93e9d9a3ac64d9b0a4fed478c0a82003c6e4c90dc245125"
 dependencies = [
  "aes",
  "cmac",
@@ -4118,8 +4124,9 @@ checksum = "6ce2be8dc25455e1f91df71bfa12ad37d7af1092ae736f3a6cd0e37bc7810596"
 
 [[package]]
 name = "stack-auth"
-version = "0.34.1-alpha.4"
-source = "git+ssh://git@github.com/cipherstash/cipherstash-suite.git?branch=main#265791487c134d34d8d464c9d32ce3eb774fab8f"
+version = "0.34.1-alpha.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "22c49a991c11f1b4461eda7ffc4dd0bbaa54680e9267f341adacfe2e69c37a29"
 dependencies = [
  "aquamarine",
  "base64",
@@ -4145,8 +4152,9 @@ dependencies = [
 
 [[package]]
 name = "stack-profile"
-version = "0.34.1-alpha.4"
-source = "git+ssh://git@github.com/cipherstash/cipherstash-suite.git?branch=main#265791487c134d34d8d464c9d32ce3eb774fab8f"
+version = "0.34.1-alpha.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c87f3a373a1be886bee0cef64eee2c1a77d4f6316a815f16c4eb64fa1c2d028c"
 dependencies = [
  "dirs",
  "gethostname",
@@ -5199,7 +5207,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.48.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -5797,8 +5805,9 @@ dependencies = [
 
 [[package]]
 name = "zerokms-protocol"
-version = "0.12.9"
-source = "git+ssh://git@github.com/cipherstash/cipherstash-suite.git?branch=main#265791487c134d34d8d464c9d32ce3eb774fab8f"
+version = "0.12.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d4e2bbd92cdc539922f3e34355371538ff43bb96ea472e81e3e70adf07ce8abe"
 dependencies = [
  "base64",
  "cipherstash-config",
