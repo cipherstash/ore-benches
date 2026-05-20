@@ -35,23 +35,22 @@ use tokio::runtime::Runtime;
 // suite because they're the natural form a caller would write, and the
 // timing tells us what that case actually costs.
 //
-// **Selective scenarios with LIMIT** (thresholds 2_140_000_000 / 2_147_000_000
-// — out at the i32 tail). Selectivity drops to ~0.17% and ~0.011% respectively.
-// The planner picks Index Scan at every tier (10k → 10M) when stats are
-// current: walking the b-tree from the top and returning the first LIMIT rows
-// is cheaper than scanning the whole table.
+// **Selective scenarios — all disabled (see EQL issue #230).** A genuinely
+// selective range predicate exposes a planner limitation. The comparison
+// value is a bound parameter, not a plan-time constant, so the planner
+// cannot estimate the selectivity of the encrypted ORE comparison — it falls
+// back to `DEFAULT_INEQ_SEL` (33%) and picks a Seq Scan. That is correct
+// when the predicate really is non-selective, and pathological when it is
+// selective (a near-full scan of the table). `ANALYZE` does not rescue it:
+// the histogram it builds on `eql_v2.ore_block_u64_8_256(value)` is unusable
+// without a constant on the other side of the `>`.
 //
-// **Stats matter.** Without an `ANALYZE` after the table is re-ingested, the
-// planner defaults to `~14%` selectivity for `>` comparisons and picks Seq
-// Scan even for highly selective predicates. The bench's `prepare:_table`
-// task now runs `ANALYZE <table>` after index creation specifically to avoid
-// this silent-fallback failure mode.
-//
-// **Selective scenarios without LIMIT** (`*_count` — `SELECT count(*) WHERE
-// value <op> threshold`). No LIMIT means the planner must process every
-// matching row to compute the count; with a selective predicate this
-// strongly favours Index Scan over Seq Scan at every tier. Companion to the
-// `_LIMIT` variants — removes LIMIT-related cost-model edge cases.
+// Every selective scenario — `range_selective_gt_100`,
+// `range_highly_selective_gt_10`, and both `*_count` variants — is therefore
+// commented out below: at the 10M tier each degrades into a near-full seq
+// scan (seconds per iteration). The count variants are the worst case —
+// no LIMIT to cut the scan short. Re-enable them once #230 lands a
+// selectivity fix: https://github.com/cipherstash/encrypt-query-language/issues/230
 //
 // **Hybrid ordered range** uses extractor ORDER BY (`ORDER BY
 // eql_v2.ore_block_u64_8_256(val)`) matching the functional index expression —
@@ -83,22 +82,29 @@ static QUERY_TEMPLATES: &[(&str, i32, &str)] = &[
         5000,
         "range_lt_100",
     ),
-    // ── Selective predicates (~0.17% / ~0.011% selectivity → Index Scan) ──
-    // 2_140_000_000 sits 7.5M values short of i32::MAX — ~0.17% of the i32
-    // range matches `value > 2_140_000_000` on uniform random data.
-    (
-        "SELECT id,value::jsonb FROM {TABLE} WHERE value > $1 LIMIT 100",
-        2_140_000_000,
-        "range_selective_gt_100",
-    ),
-    // 2_147_000_000 sits 483k values short of i32::MAX — ~0.011% selectivity.
-    // Even at 10k rows this returns ~1 row, but the planner can decide that
-    // before scanning; index engages reliably across tiers.
-    (
-        "SELECT id,value::jsonb FROM {TABLE} WHERE value > $1 LIMIT 10",
-        2_147_000_000,
-        "range_highly_selective_gt_10",
-    ),
+    // ── Selective predicates (i32 tail) ──
+    //
+    // DISABLED — `range_selective_gt_100` (threshold 2_140_000_000, ~0.17%
+    // selectivity). The planner cannot estimate the selectivity of a
+    // selective encrypted ORE range predicate with a bound-parameter
+    // operand, falls back to `DEFAULT_INEQ_SEL` (33%), and picks a Seq Scan
+    // that scans most of the table — ~2 s per iteration at the 10M tier.
+    // Re-enable once EQL issue #230 lands a selectivity fix:
+    // https://github.com/cipherstash/encrypt-query-language/issues/230
+    // (
+    //     "SELECT id,value::jsonb FROM {TABLE} WHERE value > $1 LIMIT 100",
+    //     2_140_000_000,
+    //     "range_selective_gt_100",
+    // ),
+    // DISABLED — `range_highly_selective_gt_10` (threshold 2_147_000_000,
+    // ~0.011% selectivity). Same root cause as `range_selective_gt_100`
+    // above (EQL issue #230): the planner mis-estimates the selective
+    // encrypted predicate and seq-scans most of the table at the 10M tier.
+    // (
+    //     "SELECT id,value::jsonb FROM {TABLE} WHERE value > $1 LIMIT 10",
+    //     2_147_000_000,
+    //     "range_highly_selective_gt_10",
+    // ),
     // ── Hybrid ordered range (extractor in ORDER BY) ──
     // Sort key matches the functional index expression syntactically, so rows
     // stream out of the index already sorted — no Sort node in the plan.
@@ -126,23 +132,26 @@ static QUERY_TEMPLATES: &[(&str, i32, &str)] = &[
     ),
 ];
 
-// Count-style selective scenarios — no LIMIT, so the planner must process
-// every matching row, which strongly favours Index Scan on the functional
-// btree once selectivity is low. These reliably engage the index at every
-// tier (10k → 10M) and are the canonical "yes the ORE index is doing real
-// work" demonstration. SELECT count(*) returns a single row; the bench
-// loop drains it and black_boxes the result.
+// Count-style selective scenarios — `SELECT count(*) WHERE value <op>
+// threshold`, no LIMIT. Both variants (`range_selective_gt_count`,
+// `range_highly_selective_gt_count`) are DISABLED for the same reason as the
+// selective LIMIT scenarios above (EQL issue #230): the planner cannot
+// estimate the encrypted predicate's selectivity, picks a Seq Scan, and
+// scans the whole table — and with no LIMIT to cut it short, a count over
+// the 10M tier is the worst case. The array is left empty (rather than the
+// count machinery removed) so the scenarios restore by un-commenting the
+// tuples once #230 lands a selectivity fix.
 static COUNT_QUERY_TEMPLATES: &[(&str, i32, &str)] = &[
-    (
-        "SELECT count(*) FROM {TABLE} WHERE value > $1",
-        2_140_000_000,
-        "range_selective_gt_count",
-    ),
-    (
-        "SELECT count(*) FROM {TABLE} WHERE value > $1",
-        2_147_000_000,
-        "range_highly_selective_gt_count",
-    ),
+    // (
+    //     "SELECT count(*) FROM {TABLE} WHERE value > $1",
+    //     2_140_000_000,
+    //     "range_selective_gt_count",
+    // ),
+    // (
+    //     "SELECT count(*) FROM {TABLE} WHERE value > $1",
+    //     2_147_000_000,
+    //     "range_highly_selective_gt_count",
+    // ),
 ];
 
 async fn build_query(
