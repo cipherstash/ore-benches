@@ -203,7 +203,9 @@ async fn sample_needles(pool: &sqlx::PgPool, table: &str) -> Needles {
                 hm_pick = Some(HmPick {
                     selector: sel.clone(),
                     sample_field_value: sample_field_value.0,
-                    hmac_term: format!(r#"[{{"s":"{}","hm":"{}"}}]"#, sel, h),
+                    // sv-shaped needle for the typed stevec_query @> recipe
+                    // (post PR cipherstash/eql#223 — hmac_256_terms removed).
+                    hmac_term: format!(r#"{{"sv":[{{"s":"{}","hm":"{}"}}]}}"#, sel, h),
                 });
             }
         }
@@ -326,9 +328,17 @@ fn criterion_benchmark(c: &mut Criterion) {
     });
 
     let q_field_eq_extractor = if needles.hm_pick.is_some() {
+        // Post PR cipherstash/eql#223: `hmac_256_terms` was removed
+        // (structurally wrong under the XOR contract — silently dropped
+        // oc-bearing sv elements). Canonical replacement: the typed
+        // `@>(eql_v2_encrypted, eql_v2.stevec_query)` overload, which
+        // inlines to `eql_v2.to_stevec_query(col)::jsonb @> needle::jsonb`
+        // and engages a functional GIN on the same expression. The new
+        // recipe is XOR-aware (covers both hm- and oc-bearing selectors
+        // with one index).
         Some(format!(
             "SELECT id FROM {table_name} \
-             WHERE eql_v2.hmac_256_terms(value) @> $1::jsonb LIMIT 10"
+             WHERE value @> $1::jsonb::eql_v2.stevec_query LIMIT 10"
         ))
     } else {
         None
