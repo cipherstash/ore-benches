@@ -13,21 +13,21 @@
               {
                 "Alias": "string_encrypted_1000000",
                 "Async Capable": false,
-                "Index Cond": "(((value).data ->> 'hm'::text) = '1246c1084a30cdf8fad11d1b43ea7efa0966d7b8afed182d8041b6138a0cd67f'::text)",
+                "Index Cond": "(((value).data ->> 'hm'::text) = '30906de41a8760c9f4c3a500a5e111c24f8fdde7f8a3bcdbc95cbe76d3697bb3'::text)",
                 "Index Name": "string_encrypted_1000000_hash_index",
                 "Node Type": "Index Scan",
                 "Parallel Aware": false,
                 "Parent Relationship": "Outer",
-                "Plan Rows": 5000,
+                "Plan Rows": 2,
                 "Plan Width": 36,
                 "Relation Name": "string_encrypted_1000000",
                 "Scan Direction": "Forward",
                 "Startup Cost": 0.0,
-                "Total Cost": 21105.5
+                "Total Cost": 12.54
               }
             ],
             "Startup Cost": 0.0,
-            "Total Cost": 4.22
+            "Total Cost": 6.27
           }
         }
       ],
@@ -37,11 +37,12 @@
       ],
       "parameters": [
         {
-          "hm": "1246c1084a30cdf8fad11d1b43ea7efa0966d7b8afed182d8041b6138a0cd67f",
+          "hm": "30906de41a8760c9f4c3a500a5e111c24f8fdde7f8a3bcdbc95cbe76d3697bb3",
           "i": {
             "c": "value",
             "t": "string_encrypted_1000000"
           },
+          "k": "ct",
           "v": 2
         }
       ],
@@ -61,21 +62,21 @@
               {
                 "Alias": "string_encrypted_1000000",
                 "Async Capable": false,
-                "Index Cond": "(((value).data ->> 'hm'::text) = '1246c1084a30cdf8fad11d1b43ea7efa0966d7b8afed182d8041b6138a0cd67f'::text)",
+                "Index Cond": "(((value).data ->> 'hm'::text) = '30906de41a8760c9f4c3a500a5e111c24f8fdde7f8a3bcdbc95cbe76d3697bb3'::text)",
                 "Index Name": "string_encrypted_1000000_hash_index",
                 "Node Type": "Index Scan",
                 "Parallel Aware": false,
                 "Parent Relationship": "Outer",
-                "Plan Rows": 5000,
+                "Plan Rows": 2,
                 "Plan Width": 36,
                 "Relation Name": "string_encrypted_1000000",
                 "Scan Direction": "Forward",
                 "Startup Cost": 0.0,
-                "Total Cost": 21105.5
+                "Total Cost": 12.54
               }
             ],
             "Startup Cost": 0.0,
-            "Total Cost": 4.22
+            "Total Cost": 6.27
           }
         }
       ],
@@ -85,11 +86,12 @@
       ],
       "parameters": [
         {
-          "hm": "1246c1084a30cdf8fad11d1b43ea7efa0966d7b8afed182d8041b6138a0cd67f",
+          "hm": "30906de41a8760c9f4c3a500a5e111c24f8fdde7f8a3bcdbc95cbe76d3697bb3",
           "i": {
             "c": "value",
             "t": "string_encrypted_1000000"
           },
+          "k": "ct",
           "v": 2
         }
       ],

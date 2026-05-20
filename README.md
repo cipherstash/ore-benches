@@ -10,6 +10,25 @@ The latest benchmark results are available in the [`report/`](report/) directory
 - Includes ingest throughput, query performance, SQL statements, and index configurations
 - Performance indicators (⚠️) highlight queries exceeding 100ms
 
+### Headline numbers
+
+Query-only medians (no decrypt) from the latest full run against EQL 2.3, across four row-count tiers. Full per-scenario detail — SQL, planner index choices, EXPLAIN plans — is in [`report/`](report/).
+
+| Family | Scenario | 10k | 100k | 1M | 10M |
+|---|---|--:|--:|--:|--:|
+| **JSON** | contains/functional | 0.66 ms | 0.65 ms | 0.68 ms | 6.8 ms |
+| JSON | field_eq/functional | 0.98 ms | 0.98 ms | 0.90 ms | 0.92 ms |
+| JSON | field_order/functional | 0.74 ms | 0.77 ms | 0.77 ms | 0.84 ms |
+| **ORE** | range_gt_100 | 4.1 ms | 6.7 ms | 6.9 ms | 8.1 ms |
+| ORE | range_lt_hybrid_ordered_10 | — | 1.1 ms | 1.2 ms | 1.2 ms |
+| **EXACT** | eql_hash | 0.43 ms | 0.44 ms | 0.43 ms | 0.46 ms |
+| **MATCH** | eql_bloom | 1.0 ms | 2.5 ms | 18 ms | 216 ms |
+| **GROUP_BY** | low_cardinality — encrypted | 2.7 ms | 28 ms | 179 ms | 1.47 s |
+| GROUP_BY | low_cardinality — plaintext baseline | 1.5 ms | 9.9 ms | 36 ms | 430 ms |
+| **COMBO** | top_n_filtered_group_by | 0.84 ms | 1.1 ms | 5.5 ms | 43 ms |
+
+`range_lt_hybrid_ordered_10` has no 10k entry — the 10k ORE result set predates the scenario. Selective ORE range scenarios are currently disabled (a planner selectivity mis-estimate) — see [encrypt-query-language#230](https://github.com/cipherstash/encrypt-query-language/issues/230).
+
 ## 🔧 Test Setup
 
 ### Hardware & Software
@@ -106,7 +125,7 @@ mise run bench:query:ore 10000
 mise run bench:query:all
 
 # Generate report
-mise run report
+mise run report:build
 ```
 
 ### Step-by-Step Guide
@@ -182,8 +201,16 @@ Each query bench writes two files to `results/query/` per row-count tier:
 
 #### 6. Generate Report
 
+Quick overview of all results in the terminal — median runtime per scenario, slowest first:
+
 ```bash
 mise run report
+```
+
+Or build the full Markdown report file:
+
+```bash
+mise run report:build
 ```
 
 This generates:
@@ -260,7 +287,7 @@ mise run postgres-stop
 
 ```bash
 # Generate report with custom filename
-mise run report custom_report.md
+mise run report:build custom_report.md
 
 # Or use Python script directly
 python3 report_benchmarks.py --output report/my_report.md

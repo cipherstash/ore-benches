@@ -7,7 +7,7 @@ This project includes a Python script to generate comprehensive reports from ben
 Generate a report from existing benchmark results:
 
 ```bash
-mise run report
+mise run report:build
 ```
 
 This will create `report/BENCHMARK_REPORT.md` and associated chart images in the `report/` directory.
@@ -18,10 +18,10 @@ This will create `report/BENCHMARK_REPORT.md` and associated chart images in the
 
 ```bash
 # Generate report with default location (report/BENCHMARK_REPORT.md)
-mise run report
+mise run report:build
 
 # Generate report with custom location
-mise run report custom_dir/my_report.md
+mise run report:build custom_dir/my_report.md
 ```
 
 ### Direct Script Usage

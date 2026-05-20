@@ -20,7 +20,7 @@ use anyhow::Result;
 use cipherstash_client::{
     eql::Identifier,
     schema::{
-        column::{ArrayIndexMode, Index, IndexType},
+        column::{ArrayIndexMode, Index, IndexType, SteVecMode},
         ColumnConfig, ColumnType,
     },
 };
@@ -48,12 +48,17 @@ async fn main() -> Result<()> {
         .identifier(Identifier::new(&table_name, "value"))
         .column_config(
             ColumnConfig::build("value")
-                .casts_as(ColumnType::JsonB)
+                .casts_as(ColumnType::Json)
                 // FIXME: There is no convenience method for SteVec yet on Index
                 .add_index(Index::new(IndexType::SteVec {
                     prefix: "value".to_string(),
                     term_filters: Default::default(),
                     array_index_mode: ArrayIndexMode::default(),
+                    // Standard mode emits `oc` (ORE CLLW) for orderable terms,
+                    // matching the bench's existing ORE-comparison scenarios.
+                    // Switch to Compat (default; `op` / OPE) for the
+                    // Supabase-friendly path in a follow-up.
+                    mode: SteVecMode::Standard,
                 })),
         )
         .build()?

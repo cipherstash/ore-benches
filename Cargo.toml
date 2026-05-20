@@ -14,13 +14,16 @@ ore-rs = "0.7.0"
 hex = "0.4.3"
 hex-literal = "0.3.4"
 rand = "0.8.5"
-# Temporarily pointed at cipherstash-suite branch carrying the
-# RequestFailed Display/source fix (cipherstash-suite#1960) so the
-# benches surface the real ZeroKMS error chain instead of the opaque
-# "Unexpected error" catch-all. Revert to a crates.io version pin once
-# the fix lands in a published cipherstash-client release.
-cipherstash-client = { git = "ssh://git@github.com/cipherstash/cipherstash-suite.git", branch = "dan/zerokms-unexpected-error-context", features = ["tokio"] }
-stack-profile = { git = "ssh://git@github.com/cipherstash/cipherstash-suite.git", branch = "dan/zerokms-unexpected-error-context" }
+# cipherstash-client + stack-profile ship from the same cipherstash-suite
+# workspace and must stay version-locked — cipherstash-client implements
+# `KeyProvider` for stack-profile's `ProfileStore`, so a source/version
+# mismatch produces two incompatible `ProfileStore` types. Pinned to the
+# crates.io pre-release carrying the ste_vec consolidation
+# (cipherstash-suite#1955) plus the follow-up `oc` / `op` field collapse —
+# the payload shape EQL 2.3.0 targets. Bump alongside the EQL release pin
+# in mise.toml's setup-db task.
+cipherstash-client = { version = "=0.34.1-alpha.9", features = ["tokio"] }
+stack-profile = "=0.34.1-alpha.9"
 anyhow = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

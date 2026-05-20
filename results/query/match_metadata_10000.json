@@ -21,7 +21,7 @@
                 "Plans": [
                   {
                     "Async Capable": false,
-                    "Index Cond": "((eql_v2.bloom_filter(value))::smallint[] @> '{36,1603,1164,10,1555,1789}'::smallint[])",
+                    "Index Cond": "((eql_v2.bloom_filter(value))::smallint[] @> '{1393,453,91,461,1033,1554}'::smallint[])",
                     "Index Name": "string_encrypted_10000_gin_index",
                     "Node Type": "Bitmap Index Scan",
                     "Parallel Aware": false,
@@ -32,7 +32,7 @@
                     "Total Cost": 56.22
                   }
                 ],
-                "Recheck Cond": "((eql_v2.bloom_filter(value))::smallint[] @> '{36,1603,1164,10,1555,1789}'::smallint[])",
+                "Recheck Cond": "((eql_v2.bloom_filter(value))::smallint[] @> '{1393,453,91,461,1033,1554}'::smallint[])",
                 "Relation Name": "string_encrypted_10000",
                 "Startup Cost": 56.22,
                 "Total Cost": 60.73
@@ -50,22 +50,23 @@
       "parameters": [
         {
           "bf": [
-            36,
-            1603,
-            1164,
-            10,
-            1555,
-            1789
+            1393,
+            453,
+            91,
+            461,
+            1033,
+            1554
           ],
           "i": {
             "c": "value",
             "t": "string_encrypted_10000"
           },
+          "k": "ct",
           "v": 2
         }
       ],
       "query": "SELECT id,value::jsonb FROM string_encrypted_10000 WHERE value LIKE $1 LIMIT 10",
-      "rows_returned": 10
+      "rows_returned": 2
     },
     {
       "explain": [
@@ -88,7 +89,7 @@
                 "Plans": [
                   {
                     "Async Capable": false,
-                    "Index Cond": "((eql_v2.bloom_filter(value))::smallint[] @> '{1381,1185,1609,835,1715,513,1967,543,461,1098,237,523,1987,820,1196,1846,1665,242,765,290,1061,702,44,1659,97,574,518,2024,450,1988}'::smallint[])",
+                    "Index Cond": "((eql_v2.bloom_filter(value))::smallint[] @> '{1637,1018,587,865,998,1200,1735,1453,1845,1496,830,1183,1751,421,1057,895,61,792,1068,1500,1574,1596,1760,1109,710,1031,2028,682,582,1143}'::smallint[])",
                     "Index Name": "string_encrypted_10000_gin_index",
                     "Node Type": "Bitmap Index Scan",
                     "Parallel Aware": false,
@@ -99,7 +100,7 @@
                     "Total Cost": 264.6
                   }
                 ],
-                "Recheck Cond": "((eql_v2.bloom_filter(value))::smallint[] @> '{1381,1185,1609,835,1715,513,1967,543,461,1098,237,523,1987,820,1196,1846,1665,242,765,290,1061,702,44,1659,97,574,518,2024,450,1988}'::smallint[])",
+                "Recheck Cond": "((eql_v2.bloom_filter(value))::smallint[] @> '{1637,1018,587,865,998,1200,1735,1453,1845,1496,830,1183,1751,421,1057,895,61,792,1068,1500,1574,1596,1760,1109,710,1031,2028,682,582,1143}'::smallint[])",
                 "Relation Name": "string_encrypted_10000",
                 "Startup Cost": 264.6,
                 "Total Cost": 269.11
@@ -117,41 +118,42 @@
       "parameters": [
         {
           "bf": [
-            1381,
-            1185,
-            1609,
-            835,
-            1715,
-            513,
-            1967,
-            543,
-            461,
-            1098,
-            237,
-            523,
-            1987,
-            820,
-            1196,
-            1846,
-            1665,
-            242,
-            765,
-            290,
-            1061,
-            702,
-            44,
-            1659,
-            97,
-            574,
-            518,
-            2024,
-            450,
-            1988
+            1637,
+            1018,
+            587,
+            865,
+            998,
+            1200,
+            1735,
+            1453,
+            1845,
+            1496,
+            830,
+            1183,
+            1751,
+            421,
+            1057,
+            895,
+            61,
+            792,
+            1068,
+            1500,
+            1574,
+            1596,
+            1760,
+            1109,
+            710,
+            1031,
+            2028,
+            682,
+            582,
+            1143
           ],
           "i": {
             "c": "value",
             "t": "string_encrypted_10000"
           },
+          "k": "ct",
           "v": 2
         }
       ],
@@ -179,7 +181,7 @@
                 "Plans": [
                   {
                     "Async Capable": false,
-                    "Index Cond": "((eql_v2.bloom_filter(value))::smallint[] @> '{1196,1659,2024,543,1967,518,1381,242,1185,450,290,835,820,1987,765,1846,237,461,44,1609,523,1715,1988,1098,702,97,574,1665,1061,513}'::smallint[])",
+                    "Index Cond": "((eql_v2.bloom_filter(value))::smallint[] @> '{830,61,1500,2028,1031,1057,1496,1018,1109,1596,587,682,865,1751,582,1735,421,1637,710,792,1574,1143,895,1453,1760,1068,1183,1845,998,1200}'::smallint[])",
                     "Index Name": "string_encrypted_10000_gin_index",
                     "Node Type": "Bitmap Index Scan",
                     "Parallel Aware": false,
@@ -190,7 +192,7 @@
                     "Total Cost": 264.6
                   }
                 ],
-                "Recheck Cond": "((eql_v2.bloom_filter(value))::smallint[] @> '{1196,1659,2024,543,1967,518,1381,242,1185,450,290,835,820,1987,765,1846,237,461,44,1609,523,1715,1988,1098,702,97,574,1665,1061,513}'::smallint[])",
+                "Recheck Cond": "((eql_v2.bloom_filter(value))::smallint[] @> '{830,61,1500,2028,1031,1057,1496,1018,1109,1596,587,682,865,1751,582,1735,421,1637,710,792,1574,1143,895,1453,1760,1068,1183,1845,998,1200}'::smallint[])",
                 "Relation Name": "string_encrypted_10000",
                 "Startup Cost": 264.6,
                 "Total Cost": 269.11
@@ -208,41 +210,42 @@
       "parameters": [
         {
           "bf": [
-            1196,
-            1659,
-            2024,
-            543,
-            1967,
-            518,
-            1381,
-            242,
-            1185,
-            450,
-            290,
-            835,
-            820,
-            1987,
-            765,
-            1846,
-            237,
-            461,
-            44,
-            1609,
-            523,
-            1715,
-            1988,
-            1098,
-            702,
-            97,
-            574,
-            1665,
-            1061,
-            513
+            830,
+            61,
+            1500,
+            2028,
+            1031,
+            1057,
+            1496,
+            1018,
+            1109,
+            1596,
+            587,
+            682,
+            865,
+            1751,
+            582,
+            1735,
+            421,
+            1637,
+            710,
+            792,
+            1574,
+            1143,
+            895,
+            1453,
+            1760,
+            1068,
+            1183,
+            1845,
+            998,
+            1200
           ],
           "i": {
             "c": "value",
             "t": "string_encrypted_10000"
           },
+          "k": "ct",
           "v": 2
         }
       ],

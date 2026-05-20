@@ -6,6 +6,7 @@ This report summarises the performance benchmarks for encrypted database operati
 
 1. [Ingest Throughput](#ingest-throughput)
    - [Int](#int)
+   - [Json Large](#json-large)
    - [Json Small](#json-small)
    - [Ste Vec Small](#ste-vec-small)
    - [String](#string)
@@ -39,13 +40,27 @@ Tests insertion of encrypted integer values.
 
 | Records | Throughput (records/sec) | Total Time | Avg Memory |
 |---------|--------------------------|------------|------------|
-| 500 | 544.83 | 0.92s | 15.25 MB |
-| 1,000 | 1.11K | 0.90s | 17.83 MB |
-| 10,000 | 1.34K | 7.48s | 20.34 MB |
+| 500 | 533.07 | 0.94s | 29.12 MB |
+| 1,000 | 1.40K | 0.71s | 29.12 MB |
+| 10,000 | 2.02K | 4.94s | 29.12 MB |
 
 ![Ingest Throughput - int](ingest_int_throughput_chart.png)
 
 ![Ingest Total Time - int](ingest_int_time_chart.png)
+
+### Json Large
+
+Tests insertion of large encrypted JSON objects with complex nested structures (user info, company, addresses, orders).
+
+| Records | Throughput (records/sec) | Total Time | Avg Memory |
+|---------|--------------------------|------------|------------|
+| 500 | 672.53 | 0.74s | 55.95 MB |
+| 1,000 | 1.62K | 0.62s | 94.62 MB |
+| 10,000 | 2.13K | 4.69s | 164.94 MB |
+
+![Ingest Throughput - json_large](ingest_json_large_throughput_chart.png)
+
+![Ingest Total Time - json_large](ingest_json_large_time_chart.png)
 
 ### Json Small
 
@@ -53,9 +68,9 @@ Tests insertion of small encrypted JSON objects (first_name, last_name, age, ema
 
 | Records | Throughput (records/sec) | Total Time | Avg Memory |
 |---------|--------------------------|------------|------------|
-| 500 | 565.55 | 0.88s | 18.70 MB |
-| 1,000 | 1.45K | 0.69s | 27.47 MB |
-| 10,000 | 2.22K | 4.51s | 45.33 MB |
+| 500 | 783.26 | 0.64s | 28.43 MB |
+| 1,000 | 3.96K | 0.25s | 29.12 MB |
+| 10,000 | 11.32K | 0.88s | 29.12 MB |
 
 ![Ingest Throughput - json_small](ingest_json_small_throughput_chart.png)
 
@@ -79,9 +94,9 @@ Tests insertion of encrypted string values.
 
 | Records | Throughput (records/sec) | Total Time | Avg Memory |
 |---------|--------------------------|------------|------------|
-| 500 | 559.65 | 0.89s | 14.12 MB |
-| 1,000 | 1.86K | 0.54s | 16.19 MB |
-| 10,000 | 2.83K | 3.54s | 18.23 MB |
+| 500 | 540.18 | 0.93s | 28.77 MB |
+| 1,000 | 3.35K | 0.30s | 29.00 MB |
+| 10,000 | 8.77K | 1.14s | 29.00 MB |
 
 ![Ingest Throughput - string](ingest_string_throughput_chart.png)
 
@@ -96,9 +111,9 @@ Per-query-type detail is broken out into separate pages — click into a scenari
 | COMBO | `bloom_ore_order_limit`, `filtered_group_by`, `top_n_filtered_group_by` | 10,000, 100,000, 1,000,000, 10,000,000 | 98.05ms | [open](combo.md) |
 | EXACT | `eql_cast`, `eql_hash` | 10,000, 100,000, 1,000,000, 10,000,000 | 454.21μs | [open](exact.md) |
 | GROUP_BY | `low_cardinality_groups_encrypted`, `low_cardinality_groups_plaintext`, `top_n_groups_encrypted`, `top_n_groups_plaintext` | 10,000, 100,000, 1,000,000, 10,000,000 | 864.52ms | [open](group_by.md) |
-| JSON | `contains`, `field_order` | 10,000, 100,000 | 2.426s | [open](json.md) |
+| JSON | `contains/functional`, `field_eq/bare`, `field_eq/extractor`, `field_eq/functional`, `field_order/functional` | 10,000, 100,000, 1,000,000, 10,000,000 | 2.06ms | [open](json.md) |
 | MATCH | `eql_bloom`, `eql_cast_firstname`, `eql_cast_lastname` | 10,000, 100,000, 1,000,000, 10,000,000 | 151.23ms | [open](match.md) |
-| ORE | `range_gt_10`, `range_gt_100`, `range_highly_selective_gt_10`, `range_highly_selective_gt_count`, `range_lt_10`, `range_lt_100`, `range_lt_hybrid_ordered_10`, `range_lt_natural_ordered_10`, `range_selective_gt_100`, `range_selective_gt_count` | 10,000, 100,000, 1,000,000, 10,000,000 | 573.45ms | [open](ore.md) |
+| ORE | `range_gt_10`, `range_gt_100`, `range_highly_selective_gt_10`, `range_highly_selective_gt_count`, `range_lt_10`, `range_lt_100`, `range_lt_hybrid_ordered_10`, `range_selective_gt_100`, `range_selective_gt_count` | 10,000, 100,000, 1,000,000, 10,000,000 | 573.45ms | [open](ore.md) |
 
 
 ---

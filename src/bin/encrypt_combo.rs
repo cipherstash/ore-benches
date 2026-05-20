@@ -21,7 +21,7 @@
 use anyhow::{Context, Result};
 use cipherstash_client::{
     encryption::Plaintext,
-    eql::{encrypt_eql, EqlOperation, Identifier, PreparedPlaintext},
+    eql::{encrypt_eql, EqlCiphertext, EqlOperation, EqlOutput, Identifier, PreparedPlaintext},
     schema::{column::Index, ColumnConfig, ColumnType},
 };
 use dbbenches::{init_scoped_cipher, FakeCategory};
@@ -66,14 +66,14 @@ async fn main() -> Result<()> {
     let scoped_cipher = init_scoped_cipher().await?;
 
     let name_config = ColumnConfig::build("name")
-        .casts_as(ColumnType::Utf8Str)
+        .casts_as(ColumnType::Text)
         .add_index(Index::new_unique())
         .add_index(Index::new_match());
     let age_config = ColumnConfig::build("age")
         .casts_as(ColumnType::Int)
         .add_index(Index::new_ore());
     let category_config = ColumnConfig::build("category")
-        .casts_as(ColumnType::Utf8Str)
+        .casts_as(ColumnType::Text)
         .add_index(Index::new_unique());
 
     let name_ident = Identifier::new(&table_name, "name");
@@ -116,9 +116,23 @@ async fn main() -> Result<()> {
 
         let out = encrypt_eql(scoped_cipher.clone(), prepared, &Default::default()).await?;
 
+        // Every PreparedPlaintext above used EqlOperation::Store, so encrypt_eql
+        // yields only EqlOutput::Store. alpha.9 split the storage / query payload
+        // shapes — unwrap to the storage ciphertext (which, unlike EqlOutput, is
+        // Clone) before reassembling rows.
+        let ciphertexts: Vec<EqlCiphertext> = out
+            .into_iter()
+            .map(|o| match o {
+                EqlOutput::Store(ct) => ct,
+                EqlOutput::Query(_) => {
+                    unreachable!("storage batch must yield EqlOutput::Store")
+                }
+            })
+            .collect();
+
         // encrypt_eql preserves input order; chunks of 3 reassemble per-row
         // (name, age, category) tuples for the multi-column INSERT.
-        let rows: Vec<(_, _, _)> = out
+        let rows: Vec<(_, _, _)> = ciphertexts
             .chunks_exact(3)
             .map(|c| (c[0].clone(), c[1].clone(), c[2].clone()))
             .collect();

@@ -1,1 +1,2 @@
-DROP INDEX IF EXISTS json_ste_vec_small_encrypted_ste_vec_index;
+DROP INDEX IF EXISTS json_ste_vec_small_encrypted_jsonb_array_index;
+DROP INDEX IF EXISTS json_ste_vec_small_encrypted_stevec_query_index;

@@ -40,7 +40,7 @@ async fn build_query(
     table_name: &str,
 ) -> EncryptedQuery {
     let column_config = ColumnConfig::build("value")
-        .casts_as(ColumnType::Utf8Str)
+        .casts_as(ColumnType::Text)
         .add_index(Index::new_unique());
 
     let identifier = Identifier::new(table_name, "value");
@@ -160,7 +160,7 @@ fn criterion_benchmark(c: &mut Criterion) {
             b.to_async(&rt).iter(|| async {
                 // String_encrypted column holds Utf8Str — decrypt to Vec<String>.
                 // Was previously typed as Vec<i32> which would have panicked on
-                // try_from(Plaintext::Utf8Str → i32), but never triggered
+                // try_from(Plaintext::Text → i32), but never triggered
                 // because the bench search term matched zero rows.
                 let _r: Vec<String> = black_box(bench_assert(
                     query.execute_and_decrypt(&pool).await,
