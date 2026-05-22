@@ -100,11 +100,8 @@ fn get_rust_version() -> String {
 }
 
 fn get_postgres_version() -> Option<String> {
-    // Try to get version from running Docker container
-    get_command_output(
-        "docker",
-        &["exec", "ore-benches-postgres", "psql", "--version"],
-    )
+    // psql client version — postgresql@17 is on PATH via mise's `_.path`.
+    get_command_output("psql", &["--version"])
 }
 
 fn get_host_info() -> HostInfo {

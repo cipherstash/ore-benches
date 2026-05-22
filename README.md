@@ -35,7 +35,7 @@ Query-only medians (no decrypt) from the latest full run against EQL 2.3, across
 
 The benchmarks are designed to run on a local development machine with the following stack:
 
-- **Database**: PostgreSQL 17 (running in Docker)
+- **Database**: PostgreSQL 17 (native — Homebrew `postgresql@17`)
 - **Language**: Rust (latest stable)
 - **Framework**: Criterion.rs for benchmarking
 - **Encryption**: CipherStash EQL v2 with ORE support
@@ -43,8 +43,9 @@ The benchmarks are designed to run on a local development machine with the follo
 ### Database Configuration
 
 ```yaml
-PostgreSQL 17
-Port: 5400 (mapped from container port 5432)
+PostgreSQL 17 (native, Homebrew postgresql@17)
+Data directory: ~/.eqlbench/pgdata
+Port: 5400
 User: postgres
 Database: postgres
 ```
@@ -104,6 +105,13 @@ Each query is tested with and without decryption of results.
    # Edit .env with your CipherStash credentials
    ```
 
+4. **Install PostgreSQL 17** — the benches run a native local cluster:
+   ```bash
+   brew install postgresql@17
+   ```
+   The cluster itself (`~/.eqlbench/pgdata`, port 5400) is created automatically
+   on first use by the `postgres-init` task — no manual `initdb` needed.
+
 ### Quick Start
 
 ```bash
@@ -136,7 +144,7 @@ mise run report:build
 mise run postgres
 ```
 
-This starts PostgreSQL 17 in a Docker container on port 5400.
+This starts the native PostgreSQL 17 cluster on port 5400 (data directory `~/.eqlbench/pgdata`), creating and configuring it first if it doesn't yet exist.
 
 #### 2. Initialize Database
 
@@ -326,8 +334,8 @@ Query performance is affected by:
 ### PostgreSQL Connection Issues
 
 ```bash
-# Check if PostgreSQL is running
-docker ps | grep postgres
+# Check / start PostgreSQL (idempotent — reports if already running)
+mise run postgres
 
 # Restart PostgreSQL
 mise run postgres-stop
