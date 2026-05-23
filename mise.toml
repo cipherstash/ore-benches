@@ -4,22 +4,77 @@ rust = "latest"
 
 [env]
 DATABASE_URL = "postgres://postgres:postgres@localhost:5400/postgres"
+# Native Postgres benches cluster (migrated off Docker). psql / pg_isready /
+# pg_dump pick up host/port/user/db from these; pg_ctl uses PGDATA.
+PGHOST = "localhost"
+PGPORT = "5400"
+PGUSER = "postgres"
+PGDATABASE = "postgres"
+PGDATA = "{{env.HOME}}/.eqlbench/pgdata"
+# Homebrew keg-only postgresql@17 — not on PATH by default.
+_.path = ["/opt/homebrew/opt/postgresql@17/bin"]
+
+[tasks.postgres-init]
+description = "One-time: initdb + configure the native Postgres benches cluster"
+run = """
+#!/usr/bin/env bash
+set -e
+if [ -d "$PGDATA" ]; then
+  echo "Cluster already exists: $PGDATA"
+  exit 0
+fi
+echo "Initialising native benches cluster at $PGDATA ..."
+initdb -D "$PGDATA" --auth=trust --username=postgres -E UTF8
+cat >> "$PGDATA/postgresql.conf" <<'CONF'
+
+# --- benches native cluster tuning ---
+port = 5400
+listen_addresses = 'localhost'
+shared_buffers = 4GB
+maintenance_work_mem = 4GB
+effective_cache_size = 24GB
+work_mem = 128MB
+max_parallel_maintenance_workers = 4
+max_wal_size = 8GB
+CONF
+echo "Cluster initialised. Next: mise run setup-db"
+"""
 
 [tasks.postgres]
-description = "Start PostgreSQL via Docker Compose"
-run = "docker compose up -d postgres"
+description = "Start the native Postgres benches cluster"
+depends = ["postgres-init"]
+run = """
+#!/usr/bin/env bash
+set -e
+if pg_ctl status -D "$PGDATA" >/dev/null 2>&1; then
+  echo "Postgres already running ($PGDATA)."
+else
+  pg_ctl start -D "$PGDATA" -l "$PGDATA/server.log" -w
+  echo "Postgres started ($PGDATA, port $PGPORT)."
+fi
+"""
 
 [tasks.postgres-stop]
-description = "Stop PostgreSQL Docker container"
-run = "docker compose down"
+description = "Stop the native Postgres benches cluster"
+run = """
+#!/usr/bin/env bash
+if pg_ctl status -D "$PGDATA" >/dev/null 2>&1; then
+  pg_ctl stop -D "$PGDATA" -m fast
+else
+  echo "Postgres not running."
+fi
+"""
 
 [tasks.postgres-logs]
-description = "View PostgreSQL logs"
-run = "docker compose logs -f postgres"
+description = "Tail the native Postgres server log"
+run = """
+#!/usr/bin/env bash
+tail -f "$PGDATA/server.log"
+"""
 
 [tasks.psql]
-description = "Connect to PostgreSQL via psql"
-run = "docker exec -it ore-benches-postgres psql -U postgres -d postgres"
+description = "Open a psql shell on the benches database"
+run = "psql"
 
 [tasks.reset-db]
 description = "Reset the database (drop and recreate)"
@@ -29,13 +84,13 @@ run = """
 set -e
 
 echo "Waiting for PostgreSQL to be ready..."
-until docker exec ore-benches-postgres pg_isready -U postgres > /dev/null 2>&1; do
+until pg_isready -U postgres > /dev/null 2>&1; do
   sleep 1
 done
 
 echo "Dropping and recreating database..."
-docker exec -i ore-benches-postgres psql -U postgres -d template1 -c "DROP DATABASE IF EXISTS postgres WITH (FORCE);"
-docker exec -i ore-benches-postgres psql -U postgres -d template1 -c "CREATE DATABASE postgres;"
+psql -U postgres -d template1 -c "DROP DATABASE IF EXISTS postgres WITH (FORCE);"
+psql -U postgres -d template1 -c "CREATE DATABASE postgres;"
 
 echo "Database reset complete. Run 'mise run setup-db' to set up tables and data."
 """
@@ -48,12 +103,12 @@ run = """
 set -e
 
 echo "Waiting for PostgreSQL to be ready..."
-until docker exec ore-benches-postgres pg_isready -U postgres > /dev/null 2>&1; do
+until pg_isready -U postgres > /dev/null 2>&1; do
   sleep 1
 done
 
 echo "Truncating all bench tables in public schema..."
-docker exec -i ore-benches-postgres psql -v ON_ERROR_STOP=1 -U postgres -d postgres <<'SQL'
+psql -v ON_ERROR_STOP=1 -U postgres -d postgres <<'SQL'
 DO $$
 DECLARE
   r record;
@@ -90,7 +145,7 @@ run = """
 set -e
 
 echo "Waiting for PostgreSQL to be ready..."
-until docker exec ore-benches-postgres pg_isready -U postgres > /dev/null 2>&1; do
+until pg_isready -U postgres > /dev/null 2>&1; do
   sleep 1
 done
 
@@ -106,10 +161,10 @@ else
 fi
 
 echo "Installing EQL..."
-docker exec -i ore-benches-postgres psql -v ON_ERROR_STOP=1 -U postgres -d postgres < /tmp/cipherstash-encrypt.sql
+psql -v ON_ERROR_STOP=1 -U postgres -d postgres < /tmp/cipherstash-encrypt.sql
 
 echo "Creating tables..."
-docker exec -i ore-benches-postgres psql -v ON_ERROR_STOP=1 -U postgres -d postgres < sql/schema.sql
+psql -v ON_ERROR_STOP=1 -U postgres -d postgres < sql/schema.sql
 
 echo "Database setup complete!"
 """
@@ -145,7 +200,7 @@ fi
 echo "Running $BENCH_NAME ingest benchmark..."
 mise x -- hyperfine --export-json target/${BENCH_NAME}_hyperfine.json \
   -L num_records "${NUM_RECORDS}" --runs 2 \
-  --prepare "docker exec ore-benches-postgres psql -U postgres -d postgres -c 'TRUNCATE TABLE ${TABLE_NAME};'" \
+  --prepare "psql -U postgres -d postgres -c 'TRUNCATE TABLE ${TABLE_NAME};'" \
   "NUM_RECORDS={num_records} ./target/release/$BENCH_NAME"
 
 echo "Combining results..."
@@ -187,20 +242,20 @@ TABLE_NAME="json_ste_vec_small_encrypted"
 NUM_RECORDS="${1:-500,1000,10000}"
 
 echo "Waiting for PostgreSQL to be ready..."
-until docker exec ore-benches-postgres pg_isready -U postgres > /dev/null 2>&1; do
+until pg_isready -U postgres > /dev/null 2>&1; do
   sleep 1
 done
 
 echo "Truncating table and creating GIN index before ingest..."
-docker exec -i ore-benches-postgres psql -v ON_ERROR_STOP=1 -U postgres -d postgres -c "TRUNCATE TABLE ${TABLE_NAME};"
-docker exec -i ore-benches-postgres psql -v ON_ERROR_STOP=1 -U postgres -d postgres < sql/indexes/${TABLE_NAME}_down.sql
-docker exec -i ore-benches-postgres psql -v ON_ERROR_STOP=1 -U postgres -d postgres < sql/indexes/${TABLE_NAME}_up.sql
+psql -v ON_ERROR_STOP=1 -U postgres -d postgres -c "TRUNCATE TABLE ${TABLE_NAME};"
+psql -v ON_ERROR_STOP=1 -U postgres -d postgres < sql/indexes/${TABLE_NAME}_down.sql
+psql -v ON_ERROR_STOP=1 -U postgres -d postgres < sql/indexes/${TABLE_NAME}_up.sql
 
 echo "Running $BENCH_NAME ingest benchmark (with GIN index)..."
 mkdir -p results/ingest
 hyperfine --export-json results/ingest/${BENCH_NAME}_gin_hyperfine.json \
   -L num_records "${NUM_RECORDS}" --runs 2 \
-  --prepare "docker exec ore-benches-postgres psql -U postgres -d postgres -c 'TRUNCATE TABLE ${TABLE_NAME};'" \
+  --prepare "psql -U postgres -d postgres -c 'TRUNCATE TABLE ${TABLE_NAME};'" \
   "NUM_RECORDS={num_records} ./target/release/$BENCH_NAME"
 
 echo "Benchmark complete! Results written to results/ingest/${BENCH_NAME}_gin_hyperfine.json"
@@ -250,12 +305,12 @@ esac
 TABLE_NAME="${BASE_TABLE}_${TARGET_ROWS}"
 
 echo "Waiting for PostgreSQL to be ready..."
-until docker exec ore-benches-postgres pg_isready -U postgres > /dev/null 2>&1; do
+until pg_isready -U postgres > /dev/null 2>&1; do
   sleep 1
 done
 
 echo "Counting rows in $TABLE_NAME table..."
-CURRENT_ROWS=$(docker exec ore-benches-postgres psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM $TABLE_NAME;" | tr -d ' ')
+CURRENT_ROWS=$(psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM $TABLE_NAME;" | tr -d ' ')
 
 echo "Current rows: $CURRENT_ROWS"
 echo "Target rows: $TARGET_ROWS"
@@ -266,7 +321,7 @@ if [ "$CURRENT_ROWS" -ge "$TARGET_ROWS" ]; then
 fi
 
 echo "Dropping indexes..."
-docker exec -i ore-benches-postgres psql -U postgres -d postgres < sql/indexes/${TABLE_NAME}_down.sql
+psql -U postgres -d postgres < sql/indexes/${TABLE_NAME}_down.sql
 
 # ZeroKMS occasionally returns "Unexpected error" mid-stream on long encrypt
 # runs (typically 150-400k rows in), killing the binary. The binary writes
@@ -276,7 +331,7 @@ docker exec -i ore-benches-postgres psql -U postgres -d postgres < sql/indexes/$
 MAX_ATTEMPTS=30
 attempt=1
 while true; do
-  CURRENT_ROWS=$(docker exec ore-benches-postgres psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM $TABLE_NAME;" | tr -d ' ')
+  CURRENT_ROWS=$(psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM $TABLE_NAME;" | tr -d ' ')
   if [ "$CURRENT_ROWS" -ge "$TARGET_ROWS" ]; then
     echo "Table reached $CURRENT_ROWS rows (>= $TARGET_ROWS)."
     break
@@ -297,7 +352,7 @@ while true; do
 done
 
 echo "Creating indexes..."
-docker exec -i ore-benches-postgres psql -U postgres -d postgres < sql/indexes/${TABLE_NAME}_up.sql
+psql -U postgres -d postgres < sql/indexes/${TABLE_NAME}_up.sql
 
 # ANALYZE the freshly-loaded table so the planner has accurate
 # selectivity stats for the functional indexes. Without this, the
@@ -306,9 +361,9 @@ docker exec -i ore-benches-postgres psql -U postgres -d postgres < sql/indexes/$
 # predicates — which silently looks like a benchmark of "EQL is slow"
 # when really it's "stats are stale". Costs seconds even at 10M rows.
 echo "Running ANALYZE..."
-docker exec -i ore-benches-postgres psql -U postgres -d postgres -c "ANALYZE $TABLE_NAME;"
+psql -U postgres -d postgres -c "ANALYZE $TABLE_NAME;"
 
-FINAL_ROWS=$(docker exec ore-benches-postgres psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM $TABLE_NAME;" | tr -d ' ')
+FINAL_ROWS=$(psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM $TABLE_NAME;" | tr -d ' ')
 echo "Preparation complete! Final row count: $FINAL_ROWS"
 """
 
@@ -359,11 +414,11 @@ esac
 TABLE_NAME="category_plaintext_${TARGET_ROWS}"
 
 echo "Waiting for PostgreSQL to be ready..."
-until docker exec ore-benches-postgres pg_isready -U postgres > /dev/null 2>&1; do
+until pg_isready -U postgres > /dev/null 2>&1; do
   sleep 1
 done
 
-CURRENT_ROWS=$(docker exec ore-benches-postgres psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM $TABLE_NAME;" | tr -d ' ')
+CURRENT_ROWS=$(psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM $TABLE_NAME;" | tr -d ' ')
 
 echo "Current rows in $TABLE_NAME: $CURRENT_ROWS"
 echo "Target rows: $TARGET_ROWS"
@@ -378,13 +433,13 @@ echo "Inserting $ROWS_TO_INSERT random category values (CAT_001..CAT_250, unifor
 
 # `format('CAT_%s', lpad(((random()*249)::int + 1)::text, 3, '0'))` matches the
 # Rust FakeCategory output `format!("CAT_{:03}", n)`. 250 distinct buckets.
-docker exec ore-benches-postgres psql -v ON_ERROR_STOP=1 -U postgres -d postgres -c "
+psql -v ON_ERROR_STOP=1 -U postgres -d postgres -c "
   INSERT INTO $TABLE_NAME (value)
   SELECT 'CAT_' || lpad(((random() * 249)::int + 1)::text, 3, '0')
   FROM generate_series(1, $ROWS_TO_INSERT) g;
 "
 
-FINAL_ROWS=$(docker exec ore-benches-postgres psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM $TABLE_NAME;" | tr -d ' ')
+FINAL_ROWS=$(psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM $TABLE_NAME;" | tr -d ' ')
 echo "Preparation complete! Final row count: $FINAL_ROWS"
 """
 
@@ -415,11 +470,11 @@ esac
 TABLE_NAME="string_plaintext_${TARGET_ROWS}"
 
 echo "Waiting for PostgreSQL to be ready..."
-until docker exec ore-benches-postgres pg_isready -U postgres > /dev/null 2>&1; do
+until pg_isready -U postgres > /dev/null 2>&1; do
   sleep 1
 done
 
-CURRENT_ROWS=$(docker exec ore-benches-postgres psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM $TABLE_NAME;" | tr -d ' ')
+CURRENT_ROWS=$(psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM $TABLE_NAME;" | tr -d ' ')
 
 echo "Current rows in $TABLE_NAME: $CURRENT_ROWS"
 echo "Target rows: $TARGET_ROWS"
@@ -435,13 +490,13 @@ echo "Inserting $ROWS_TO_INSERT random rows (md5 of (random, ordinal))..."
 # md5(random()::text || g::text) is high-cardinality 32-char hex per row.
 # Single SQL insert in PG is far faster than per-row roundtrips — completes
 # 10M rows in tens of seconds, no encryption-client dependency.
-docker exec ore-benches-postgres psql -v ON_ERROR_STOP=1 -U postgres -d postgres -c "
+psql -v ON_ERROR_STOP=1 -U postgres -d postgres -c "
   INSERT INTO $TABLE_NAME (value)
   SELECT md5(random()::text || g::text)
   FROM generate_series(1, $ROWS_TO_INSERT) g;
 "
 
-FINAL_ROWS=$(docker exec ore-benches-postgres psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM $TABLE_NAME;" | tr -d ' ')
+FINAL_ROWS=$(psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM $TABLE_NAME;" | tr -d ' ')
 echo "Preparation complete! Final row count: $FINAL_ROWS"
 """
 
@@ -737,10 +792,10 @@ echo "========================================"
 """
 
 [tasks.report]
-description = "Overview of all benchmark results — median runtime per scenario, slowest first"
+description = "Overview of all benchmark results — median runtime per scenario (slowest first), with per-scenario 'last run' age. Optional first arg is a bench-id prefix to filter (e.g. 'ORE', 'EXACT/exact_decrypt')."
 run = """
 #!/usr/bin/env bash
-python3 find_slow_queries.py --all
+python3 find_slow_queries.py --all "$@"
 """
 
 [tasks."report:build"]
@@ -759,10 +814,17 @@ echo "Report saved to: $OUTPUT_FILE"
 """
 
 [tasks."report:slow"]
-description = "List queries whose median runtime exceeds a threshold (default 100ms)"
+description = "List queries whose median runtime exceeds a threshold (default 100ms). Optional second arg is a bench-id prefix (e.g. 'ORE', 'EXACT/exact_decrypt') to filter."
 run = """
 #!/usr/bin/env bash
-# Optional first arg is the threshold in milliseconds.
+# Optional first arg is the threshold in milliseconds; optional second arg is a bench-id prefix.
 THRESHOLD_MS="${1:-100}"
-python3 find_slow_queries.py --ms "$THRESHOLD_MS"
+python3 find_slow_queries.py --ms "$THRESHOLD_MS" "${2:-}"
+"""
+
+[tasks."report:ingest"]
+description = "Overview of ingest benchmark results — throughput per scenario, highest first, with per-scenario 'last run' age. Optional first arg is a bench-name prefix (e.g. 'encrypt_int', 'encrypt_json') to filter."
+run = """
+#!/usr/bin/env bash
+python3 report_ingest.py "$@"
 """

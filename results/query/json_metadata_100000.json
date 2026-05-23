@@ -75,12 +75,12 @@
                 "Plan Width": 4,
                 "Relation Name": "json_ste_vec_small_encrypted_100000",
                 "Scan Direction": "Forward",
-                "Startup Cost": 0.25,
-                "Total Cost": 75294.25
+                "Startup Cost": 0.54,
+                "Total Cost": 19741.54
               }
             ],
-            "Startup Cost": 0.25,
-            "Total Cost": 7.78
+            "Startup Cost": 0.54,
+            "Total Cost": 2.52
           }
         }
       ],
@@ -115,7 +115,7 @@
                 "Plan Width": 4,
                 "Relation Name": "json_ste_vec_small_encrypted_100000",
                 "Startup Cost": 0.0,
-                "Total Cost": 44127.0
+                "Total Cost": 44132.0
               }
             ],
             "Startup Cost": 0.0,
@@ -153,12 +153,12 @@
                 "Plan Width": 4,
                 "Relation Name": "json_ste_vec_small_encrypted_100000",
                 "Scan Direction": "Forward",
-                "Startup Cost": 0.25,
-                "Total Cost": 75294.25
+                "Startup Cost": 0.54,
+                "Total Cost": 19741.54
               }
             ],
-            "Startup Cost": 0.25,
-            "Total Cost": 7.78
+            "Startup Cost": 0.54,
+            "Total Cost": 2.52
           }
         }
       ],
@@ -194,7 +194,7 @@
                 "Relation Name": "json_ste_vec_small_encrypted_100000",
                 "Scan Direction": "Forward",
                 "Startup Cost": 0.42,
-                "Total Cost": 127598.27
+                "Total Cost": 127618.52
               }
             ],
             "Startup Cost": 0.42,

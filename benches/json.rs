@@ -262,9 +262,14 @@ async fn create_field_indexes(pool: &sqlx::PgPool, table: &str, needles: &Needle
             .execute(pool)
             .await
             .expect("drop stale field_eq index");
+        // btree, not hash: `eq_term` returns bytea and a btree serves `=`
+        // equally well — but hash index *builds* degrade badly at scale
+        // (random bucket I/O, and they can't use parallel workers). btree
+        // builds sort-then-bulk-load and parallelise, so the 10M build goes
+        // from pathological to routine. Same query cost either way.
         sqlx::query(&format!(
             "CREATE INDEX {table}_field_eq_idx ON {table} \
-             USING hash (eql_v2.eq_term(value -> '{}'::text))",
+             USING btree (eql_v2.eq_term(value -> '{}'::text))",
             p.selector
         ))
         .execute(pool)

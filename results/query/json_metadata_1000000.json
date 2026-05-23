@@ -71,16 +71,16 @@
                 "Node Type": "Index Scan",
                 "Parallel Aware": false,
                 "Parent Relationship": "Outer",
-                "Plan Rows": 999733,
+                "Plan Rows": 1002404,
                 "Plan Width": 4,
                 "Relation Name": "json_ste_vec_small_encrypted_1000000",
                 "Scan Direction": "Forward",
-                "Startup Cost": 0.25,
-                "Total Cost": 707863.58
+                "Startup Cost": 0.68,
+                "Total Cost": 187629.75
               }
             ],
-            "Startup Cost": 0.25,
-            "Total Cost": 7.33
+            "Startup Cost": 0.68,
+            "Total Cost": 2.55
           }
         }
       ],
@@ -111,15 +111,15 @@
                 "Node Type": "Seq Scan",
                 "Parallel Aware": false,
                 "Parent Relationship": "Outer",
-                "Plan Rows": 999633,
+                "Plan Rows": 1002304,
                 "Plan Width": 4,
                 "Relation Name": "json_ste_vec_small_encrypted_1000000",
                 "Startup Cost": 0.0,
-                "Total Cost": 431478.24
+                "Total Cost": 432237.06
               }
             ],
             "Startup Cost": 0.0,
-            "Total Cost": 4.32
+            "Total Cost": 4.31
           }
         }
       ],
@@ -149,16 +149,16 @@
                 "Node Type": "Index Scan",
                 "Parallel Aware": false,
                 "Parent Relationship": "Outer",
-                "Plan Rows": 999733,
+                "Plan Rows": 1002404,
                 "Plan Width": 4,
                 "Relation Name": "json_ste_vec_small_encrypted_1000000",
                 "Scan Direction": "Forward",
-                "Startup Cost": 0.25,
-                "Total Cost": 707863.58
+                "Startup Cost": 0.68,
+                "Total Cost": 187629.75
               }
             ],
-            "Startup Cost": 0.25,
-            "Total Cost": 7.33
+            "Startup Cost": 0.68,
+            "Total Cost": 2.55
           }
         }
       ],
@@ -189,16 +189,16 @@
                 "Node Type": "Index Scan",
                 "Parallel Aware": false,
                 "Parent Relationship": "Outer",
-                "Plan Rows": 999733,
+                "Plan Rows": 1002404,
                 "Plan Width": 36,
                 "Relation Name": "json_ste_vec_small_encrypted_1000000",
                 "Scan Direction": "Forward",
                 "Startup Cost": 0.55,
-                "Total Cost": 1236753.73
+                "Total Cost": 1238292.08
               }
             ],
             "Startup Cost": 0.55,
-            "Total Cost": 12.92
+            "Total Cost": 12.9
           }
         }
       ],

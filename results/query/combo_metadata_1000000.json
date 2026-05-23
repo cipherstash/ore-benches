@@ -29,7 +29,7 @@
                     "Plans": [
                       {
                         "Async Capable": false,
-                        "Index Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{91,1033,1393,1554,453,461}'::smallint[])",
+                        "Index Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{1033,91,461,1393,453,1554}'::smallint[])",
                         "Index Name": "combo_encrypted_1000000_name_gin_index",
                         "Node Type": "Bitmap Index Scan",
                         "Parallel Aware": false,
@@ -37,24 +37,24 @@
                         "Plan Rows": 1,
                         "Plan Width": 0,
                         "Startup Cost": 0.0,
-                        "Total Cost": 307.85
+                        "Total Cost": 282.35
                       }
                     ],
-                    "Recheck Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{91,1033,1393,1554,453,461}'::smallint[])",
+                    "Recheck Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{1033,91,461,1393,453,1554}'::smallint[])",
                     "Relation Name": "combo_encrypted_1000000",
-                    "Startup Cost": 307.85,
-                    "Total Cost": 312.36
+                    "Startup Cost": 282.35,
+                    "Total Cost": 286.86
                   }
                 ],
                 "Sort Key": [
                   "(eql_v2.ore_block_u64_8_256(age))"
                 ],
-                "Startup Cost": 312.37,
-                "Total Cost": 312.37
+                "Startup Cost": 286.87,
+                "Total Cost": 286.87
               }
             ],
-            "Startup Cost": 312.37,
-            "Total Cost": 312.37
+            "Startup Cost": 286.87,
+            "Total Cost": 286.87
           }
         }
       ],
@@ -65,12 +65,12 @@
       "parameters": [
         {
           "bf": [
-            91,
             1033,
+            91,
+            461,
             1393,
-            1554,
             453,
-            461
+            1554
           ],
           "i": {
             "c": "name",
@@ -116,7 +116,7 @@
                     "Plans": [
                       {
                         "Async Capable": false,
-                        "Index Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{1393,91,1033,461,453,1554}'::smallint[])",
+                        "Index Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{453,1033,91,461,1393,1554}'::smallint[])",
                         "Index Name": "combo_encrypted_1000000_name_gin_index",
                         "Node Type": "Bitmap Index Scan",
                         "Parallel Aware": false,
@@ -124,25 +124,25 @@
                         "Plan Rows": 1,
                         "Plan Width": 0,
                         "Startup Cost": 0.0,
-                        "Total Cost": 307.85
+                        "Total Cost": 282.35
                       }
                     ],
-                    "Recheck Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{1393,91,1033,461,453,1554}'::smallint[])",
+                    "Recheck Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{453,1033,91,461,1393,1554}'::smallint[])",
                     "Relation Name": "combo_encrypted_1000000",
-                    "Startup Cost": 307.85,
-                    "Total Cost": 312.11
+                    "Startup Cost": 282.35,
+                    "Total Cost": 286.61
                   }
                 ],
                 "Sort Key": [
                   "((((category).data ->> 'hm'::text))::eql_v2.hmac_256)"
                 ],
-                "Startup Cost": 312.12,
-                "Total Cost": 312.13
+                "Startup Cost": 286.62,
+                "Total Cost": 286.63
               }
             ],
-            "Startup Cost": 312.12,
+            "Startup Cost": 286.62,
             "Strategy": "Sorted",
-            "Total Cost": 312.14
+            "Total Cost": 286.64
           }
         }
       ],
@@ -153,11 +153,11 @@
       "parameters": [
         {
           "bf": [
-            1393,
-            91,
-            1033,
-            461,
             453,
+            1033,
+            91,
+            461,
+            1393,
             1554
           ],
           "i": {
@@ -220,7 +220,7 @@
                             "Plans": [
                               {
                                 "Async Capable": false,
-                                "Index Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{453,1554,91,461,1393,1033}'::smallint[])",
+                                "Index Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{453,91,1554,461,1033,1393}'::smallint[])",
                                 "Index Name": "combo_encrypted_1000000_name_gin_index",
                                 "Node Type": "Bitmap Index Scan",
                                 "Parallel Aware": false,
@@ -228,36 +228,36 @@
                                 "Plan Rows": 1,
                                 "Plan Width": 0,
                                 "Startup Cost": 0.0,
-                                "Total Cost": 307.85
+                                "Total Cost": 282.35
                               }
                             ],
-                            "Recheck Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{453,1554,91,461,1393,1033}'::smallint[])",
+                            "Recheck Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{453,91,1554,461,1033,1393}'::smallint[])",
                             "Relation Name": "combo_encrypted_1000000",
-                            "Startup Cost": 307.85,
-                            "Total Cost": 312.11
+                            "Startup Cost": 282.35,
+                            "Total Cost": 286.61
                           }
                         ],
                         "Sort Key": [
                           "((((category).data ->> 'hm'::text))::eql_v2.hmac_256)"
                         ],
-                        "Startup Cost": 312.12,
-                        "Total Cost": 312.13
+                        "Startup Cost": 286.62,
+                        "Total Cost": 286.63
                       }
                     ],
-                    "Startup Cost": 312.12,
+                    "Startup Cost": 286.62,
                     "Strategy": "Sorted",
-                    "Total Cost": 312.14
+                    "Total Cost": 286.64
                   }
                 ],
                 "Sort Key": [
                   "(count(*)) DESC"
                 ],
-                "Startup Cost": 312.15,
-                "Total Cost": 312.16
+                "Startup Cost": 286.65,
+                "Total Cost": 286.66
               }
             ],
-            "Startup Cost": 312.15,
-            "Total Cost": 312.16
+            "Startup Cost": 286.65,
+            "Total Cost": 286.66
           }
         }
       ],
@@ -269,11 +269,11 @@
         {
           "bf": [
             453,
-            1554,
             91,
+            1554,
             461,
-            1393,
-            1033
+            1033,
+            1393
           ],
           "i": {
             "c": "name",

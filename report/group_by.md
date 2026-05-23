@@ -35,10 +35,10 @@ ON category_encrypted_10000 using hash (
 
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
-| 10,000 | 1 | 2.73ms | N/A |
-| 100,000 | 1 | 27.96ms | N/A |
-| 1,000,000 | 1 | ⚠️ 178.78ms | N/A |
-| 10,000,000 | 1 | ⚠️ 1.466s | N/A |
+| 10,000 | 1 | 2.21ms | N/A |
+| 100,000 | 1 | 20.10ms | N/A |
+| 1,000,000 | 1 | 95.95ms | N/A |
+| 10,000,000 | 1 | ⚠️ 789.77ms | N/A |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
 
@@ -89,17 +89,17 @@ Full `EXPLAIN (FORMAT JSON)`:
               "Plan Width": 32,
               "Relation Name": "category_encrypted_10000",
               "Startup Cost": 0.0,
-              "Total Cost": 580.0
+              "Total Cost": 602.0
             }
           ],
-          "Startup Cost": 605.0,
+          "Startup Cost": 627.0,
           "Strategy": "Hashed",
-          "Total Cost": 608.12
+          "Total Cost": 630.12
         }
       ],
-      "Startup Cost": 611.25,
+      "Startup Cost": 633.25,
       "Strategy": "Plain",
-      "Total Cost": 611.26
+      "Total Cost": 633.26
     }
   }
 ]
@@ -149,17 +149,17 @@ Full `EXPLAIN (FORMAT JSON)`:
               "Plan Width": 32,
               "Relation Name": "category_encrypted_100000",
               "Startup Cost": 0.0,
-              "Total Cost": 5796.0
+              "Total Cost": 6066.0
             }
           ],
-          "Startup Cost": 6046.0,
+          "Startup Cost": 6316.0,
           "Strategy": "Hashed",
-          "Total Cost": 6049.12
+          "Total Cost": 6319.12
         }
       ],
-      "Startup Cost": 6052.25,
+      "Startup Cost": 6322.25,
       "Strategy": "Plain",
-      "Total Cost": 6052.26
+      "Total Cost": 6322.26
     }
   }
 ]
@@ -235,37 +235,37 @@ Full `EXPLAIN (FORMAT JSON)`:
                           "Node Type": "Seq Scan",
                           "Parallel Aware": true,
                           "Parent Relationship": "Outer",
-                          "Plan Rows": 416663,
+                          "Plan Rows": 416656,
                           "Plan Width": 32,
                           "Relation Name": "category_encrypted_1000000",
                           "Startup Cost": 0.0,
-                          "Total Cost": 50663.29
+                          "Total Cost": 52840.2
                         }
                       ],
-                      "Startup Cost": 51704.94,
+                      "Startup Cost": 53881.84,
                       "Strategy": "Hashed",
-                      "Total Cost": 51708.07
+                      "Total Cost": 53884.96
                     }
                   ],
                   "Sort Key": [
                     "((((category_encrypted_1000000.value).data ->> 'hm'::text))::eql_v2.hmac_256)"
                   ],
-                  "Startup Cost": 51718.03,
-                  "Total Cost": 51718.65
+                  "Startup Cost": 53894.92,
+                  "Total Cost": 53895.55
                 }
               ],
-              "Startup Cost": 52718.05,
-              "Total Cost": 52776.39,
+              "Startup Cost": 54894.94,
+              "Total Cost": 54953.28,
               "Workers Planned": 2
             }
           ],
-          "Startup Cost": 52718.05,
-          "Total Cost": 52778.26
+          "Startup Cost": 54894.94,
+          "Total Cost": 54955.16
         }
       ],
-      "Startup Cost": 52781.39,
+      "Startup Cost": 54958.28,
       "Strategy": "Plain",
-      "Total Cost": 52781.4
+      "Total Cost": 54958.29
     }
   }
 ]
@@ -287,15 +287,6 @@ Full `EXPLAIN (FORMAT JSON)`:
 ```json
 [
   {
-    "JIT": {
-      "Functions": 8,
-      "Options": {
-        "Deforming": true,
-        "Expressions": true,
-        "Inlining": true,
-        "Optimization": true
-      }
-    },
     "Plan": {
       "Async Capable": false,
       "Node Type": "Aggregate",
@@ -350,37 +341,37 @@ Full `EXPLAIN (FORMAT JSON)`:
                           "Node Type": "Seq Scan",
                           "Parallel Aware": true,
                           "Parent Relationship": "Outer",
-                          "Plan Rows": 4166667,
+                          "Plan Rows": 4166822,
                           "Plan Width": 32,
                           "Relation Name": "category_encrypted_10000000",
                           "Startup Cost": 0.0,
-                          "Total Cost": 506629.33
+                          "Total Cost": 528325.28
                         }
                       ],
-                      "Startup Cost": 517046.0,
+                      "Startup Cost": 538742.33,
                       "Strategy": "Hashed",
-                      "Total Cost": 517049.13
+                      "Total Cost": 538745.46
                     }
                   ],
                   "Sort Key": [
                     "((((category_encrypted_10000000.value).data ->> 'hm'::text))::eql_v2.hmac_256)"
                   ],
-                  "Startup Cost": 517059.08,
-                  "Total Cost": 517059.71
+                  "Startup Cost": 538755.41,
+                  "Total Cost": 538756.04
                 }
               ],
-              "Startup Cost": 518059.11,
-              "Total Cost": 518117.45,
+              "Startup Cost": 539755.44,
+              "Total Cost": 539813.77,
               "Workers Planned": 2
             }
           ],
-          "Startup Cost": 518059.11,
-          "Total Cost": 518119.32
+          "Startup Cost": 539755.44,
+          "Total Cost": 539815.65
         }
       ],
-      "Startup Cost": 518122.45,
+      "Startup Cost": 539818.77,
       "Strategy": "Plain",
-      "Total Cost": 518122.46
+      "Total Cost": 539818.78
     }
   }
 ]
@@ -412,10 +403,10 @@ SELECT count(*) FROM (SELECT 1 FROM {TABLE} GROUP BY value) g
 
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
-| 10,000 | 1 | 1.51ms | N/A |
-| 100,000 | 1 | 9.88ms | N/A |
-| 1,000,000 | 1 | 35.63ms | N/A |
-| 10,000,000 | 1 | ⚠️ 430.47ms | N/A |
+| 10,000 | 1 | 1.17ms | N/A |
+| 100,000 | 1 | 9.14ms | N/A |
+| 1,000,000 | 1 | 40.41ms | N/A |
+| 10,000,000 | 1 | ⚠️ 341.69ms | N/A |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
 
@@ -526,17 +517,17 @@ Full `EXPLAIN (FORMAT JSON)`:
               "Plan Width": 8,
               "Relation Name": "category_plaintext_100000",
               "Startup Cost": 0.0,
-              "Total Cost": 1541.0
+              "Total Cost": 1544.0
             }
           ],
-          "Startup Cost": 1791.0,
+          "Startup Cost": 1794.0,
           "Strategy": "Hashed",
-          "Total Cost": 1793.5
+          "Total Cost": 1796.5
         }
       ],
-      "Startup Cost": 1796.62,
+      "Startup Cost": 1799.62,
       "Strategy": "Plain",
-      "Total Cost": 1796.63
+      "Total Cost": 1799.63
     }
   }
 ]
@@ -616,33 +607,33 @@ Full `EXPLAIN (FORMAT JSON)`:
                           "Plan Width": 8,
                           "Relation Name": "category_plaintext_1000000",
                           "Startup Cost": 0.0,
-                          "Total Cost": 9572.67
+                          "Total Cost": 9574.67
                         }
                       ],
-                      "Startup Cost": 10614.33,
+                      "Startup Cost": 10616.33,
                       "Strategy": "Hashed",
-                      "Total Cost": 10616.83
+                      "Total Cost": 10618.83
                     }
                   ],
                   "Sort Key": [
                     "category_plaintext_1000000.value"
                   ],
-                  "Startup Cost": 10626.79,
-                  "Total Cost": 10627.42
+                  "Startup Cost": 10628.79,
+                  "Total Cost": 10629.42
                 }
               ],
-              "Startup Cost": 11626.82,
-              "Total Cost": 11685.15,
+              "Startup Cost": 11628.82,
+              "Total Cost": 11687.15,
               "Workers Planned": 2
             }
           ],
-          "Startup Cost": 11626.82,
-          "Total Cost": 11686.4
+          "Startup Cost": 11628.82,
+          "Total Cost": 11688.4
         }
       ],
-      "Startup Cost": 11689.53,
+      "Startup Cost": 11691.53,
       "Strategy": "Plain",
-      "Total Cost": 11689.54
+      "Total Cost": 11691.54
     }
   }
 ]
@@ -664,15 +655,6 @@ Full `EXPLAIN (FORMAT JSON)`:
 ```json
 [
   {
-    "JIT": {
-      "Functions": 7,
-      "Options": {
-        "Deforming": true,
-        "Expressions": true,
-        "Inlining": false,
-        "Optimization": false
-      }
-    },
     "Plan": {
       "Async Capable": false,
       "Node Type": "Aggregate",
@@ -727,37 +709,37 @@ Full `EXPLAIN (FORMAT JSON)`:
                           "Node Type": "Seq Scan",
                           "Parallel Aware": true,
                           "Parent Relationship": "Outer",
-                          "Plan Rows": 4166608,
+                          "Plan Rows": 4166275,
                           "Plan Width": 8,
                           "Relation Name": "category_plaintext_10000000",
                           "Startup Cost": 0.0,
-                          "Total Cost": 95721.08
+                          "Total Cost": 95774.75
                         }
                       ],
-                      "Startup Cost": 106137.6,
+                      "Startup Cost": 106190.43,
                       "Strategy": "Hashed",
-                      "Total Cost": 106140.1
+                      "Total Cost": 106192.93
                     }
                   ],
                   "Sort Key": [
                     "category_plaintext_10000000.value"
                   ],
-                  "Startup Cost": 106150.06,
-                  "Total Cost": 106150.69
+                  "Startup Cost": 106202.89,
+                  "Total Cost": 106203.52
                 }
               ],
-              "Startup Cost": 107150.08,
-              "Total Cost": 107208.42,
+              "Startup Cost": 107202.91,
+              "Total Cost": 107261.25,
               "Workers Planned": 2
             }
           ],
-          "Startup Cost": 107150.08,
-          "Total Cost": 107209.67
+          "Startup Cost": 107202.91,
+          "Total Cost": 107262.5
         }
       ],
-      "Startup Cost": 107212.8,
+      "Startup Cost": 107265.63,
       "Strategy": "Plain",
-      "Total Cost": 107212.81
+      "Total Cost": 107265.64
     }
   }
 ]
@@ -798,10 +780,10 @@ ON category_encrypted_10000 using hash (
 
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
-| 10,000 | 10 | 2.87ms | N/A |
-| 100,000 | 10 | 29.15ms | N/A |
-| 1,000,000 | 10 | ⚠️ 153.20ms | N/A |
-| 10,000,000 | 10 | ⚠️ 1.312s | N/A |
+| 10,000 | 10 | 2.53ms | N/A |
+| 100,000 | 10 | 20.28ms | N/A |
+| 1,000,000 | 10 | 92.97ms | N/A |
+| 10,000,000 | 10 | ⚠️ 815.42ms | N/A |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
 
@@ -860,23 +842,23 @@ Full `EXPLAIN (FORMAT JSON)`:
                   "Plan Width": 32,
                   "Relation Name": "category_encrypted_10000",
                   "Startup Cost": 0.0,
-                  "Total Cost": 580.0
+                  "Total Cost": 602.0
                 }
               ],
-              "Startup Cost": 630.0,
+              "Startup Cost": 652.0,
               "Strategy": "Hashed",
-              "Total Cost": 633.12
+              "Total Cost": 655.12
             }
           ],
           "Sort Key": [
             "(count(*)) DESC"
           ],
-          "Startup Cost": 638.53,
-          "Total Cost": 639.15
+          "Startup Cost": 660.53,
+          "Total Cost": 661.15
         }
       ],
-      "Startup Cost": 638.53,
-      "Total Cost": 638.55
+      "Startup Cost": 660.53,
+      "Total Cost": 660.55
     }
   }
 ]
@@ -934,23 +916,23 @@ Full `EXPLAIN (FORMAT JSON)`:
                   "Plan Width": 32,
                   "Relation Name": "category_encrypted_100000",
                   "Startup Cost": 0.0,
-                  "Total Cost": 5796.0
+                  "Total Cost": 6066.0
                 }
               ],
-              "Startup Cost": 6296.0,
+              "Startup Cost": 6566.0,
               "Strategy": "Hashed",
-              "Total Cost": 6299.12
+              "Total Cost": 6569.12
             }
           ],
           "Sort Key": [
             "(count(*)) DESC"
           ],
-          "Startup Cost": 6304.53,
-          "Total Cost": 6305.15
+          "Startup Cost": 6574.53,
+          "Total Cost": 6575.15
         }
       ],
-      "Startup Cost": 6304.53,
-      "Total Cost": 6304.55
+      "Startup Cost": 6574.53,
+      "Total Cost": 6574.55
     }
   }
 ]
@@ -1035,44 +1017,44 @@ Full `EXPLAIN (FORMAT JSON)`:
                               "Node Type": "Seq Scan",
                               "Parallel Aware": true,
                               "Parent Relationship": "Outer",
-                              "Plan Rows": 416663,
+                              "Plan Rows": 416656,
                               "Plan Width": 32,
                               "Relation Name": "category_encrypted_1000000",
                               "Startup Cost": 0.0,
-                              "Total Cost": 50663.29
+                              "Total Cost": 52840.2
                             }
                           ],
-                          "Startup Cost": 52746.6,
+                          "Startup Cost": 54923.48,
                           "Strategy": "Hashed",
-                          "Total Cost": 52749.73
+                          "Total Cost": 54926.6
                         }
                       ],
                       "Sort Key": [
                         "((((value).data ->> 'hm'::text))::eql_v2.hmac_256)"
                       ],
-                      "Startup Cost": 52759.68,
-                      "Total Cost": 52760.31
+                      "Startup Cost": 54936.56,
+                      "Total Cost": 54937.19
                     }
                   ],
-                  "Startup Cost": 53759.71,
-                  "Total Cost": 53818.05,
+                  "Startup Cost": 55936.58,
+                  "Total Cost": 55994.92,
                   "Workers Planned": 2
                 }
               ],
-              "Startup Cost": 53759.71,
+              "Startup Cost": 55936.58,
               "Strategy": "Sorted",
-              "Total Cost": 53823.67
+              "Total Cost": 56000.55
             }
           ],
           "Sort Key": [
             "(count(*)) DESC"
           ],
-          "Startup Cost": 53829.07,
-          "Total Cost": 53829.7
+          "Startup Cost": 56005.95,
+          "Total Cost": 56006.57
         }
       ],
-      "Startup Cost": 53829.07,
-      "Total Cost": 53829.1
+      "Startup Cost": 56005.95,
+      "Total Cost": 56005.97
     }
   }
 ]
@@ -1095,15 +1077,6 @@ Full `EXPLAIN (FORMAT JSON)`:
 ```json
 [
   {
-    "JIT": {
-      "Functions": 8,
-      "Options": {
-        "Deforming": true,
-        "Expressions": true,
-        "Inlining": true,
-        "Optimization": true
-      }
-    },
     "Plan": {
       "Async Capable": false,
       "Node Type": "Limit",
@@ -1166,44 +1139,44 @@ Full `EXPLAIN (FORMAT JSON)`:
                               "Node Type": "Seq Scan",
                               "Parallel Aware": true,
                               "Parent Relationship": "Outer",
-                              "Plan Rows": 4166667,
+                              "Plan Rows": 4166822,
                               "Plan Width": 32,
                               "Relation Name": "category_encrypted_10000000",
                               "Startup Cost": 0.0,
-                              "Total Cost": 506629.33
+                              "Total Cost": 528325.28
                             }
                           ],
-                          "Startup Cost": 527462.67,
+                          "Startup Cost": 549159.39,
                           "Strategy": "Hashed",
-                          "Total Cost": 527465.79
+                          "Total Cost": 549162.51
                         }
                       ],
                       "Sort Key": [
                         "((((value).data ->> 'hm'::text))::eql_v2.hmac_256)"
                       ],
-                      "Startup Cost": 527475.75,
-                      "Total Cost": 527476.38
+                      "Startup Cost": 549172.47,
+                      "Total Cost": 549173.09
                     }
                   ],
-                  "Startup Cost": 528475.78,
-                  "Total Cost": 528534.11,
+                  "Startup Cost": 550172.49,
+                  "Total Cost": 550230.83,
                   "Workers Planned": 2
                 }
               ],
-              "Startup Cost": 528475.78,
+              "Startup Cost": 550172.49,
               "Strategy": "Sorted",
-              "Total Cost": 528539.74
+              "Total Cost": 550236.45
             }
           ],
           "Sort Key": [
             "(count(*)) DESC"
           ],
-          "Startup Cost": 528545.14,
-          "Total Cost": 528545.76
+          "Startup Cost": 550241.86,
+          "Total Cost": 550242.48
         }
       ],
-      "Startup Cost": 528545.14,
-      "Total Cost": 528545.16
+      "Startup Cost": 550241.86,
+      "Total Cost": 550241.88
     }
   }
 ]
@@ -1235,10 +1208,10 @@ SELECT value, count(*) FROM {TABLE} GROUP BY 1 ORDER BY count(*) DESC LIMIT 10
 
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
-| 10,000 | 10 | 1.61ms | N/A |
-| 100,000 | 10 | 10.65ms | N/A |
-| 1,000,000 | 10 | 47.69ms | N/A |
-| 10,000,000 | 10 | ⚠️ 461.75ms | N/A |
+| 10,000 | 10 | 1.20ms | N/A |
+| 100,000 | 10 | 9.52ms | N/A |
+| 1,000,000 | 10 | 40.21ms | N/A |
+| 10,000,000 | 10 | ⚠️ 350.21ms | N/A |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
 
@@ -1371,23 +1344,23 @@ Full `EXPLAIN (FORMAT JSON)`:
                   "Plan Width": 8,
                   "Relation Name": "category_plaintext_100000",
                   "Startup Cost": 0.0,
-                  "Total Cost": 1541.0
+                  "Total Cost": 1544.0
                 }
               ],
-              "Startup Cost": 2041.0,
+              "Startup Cost": 2044.0,
               "Strategy": "Hashed",
-              "Total Cost": 2043.5
+              "Total Cost": 2046.5
             }
           ],
           "Sort Key": [
             "(count(*)) DESC"
           ],
-          "Startup Cost": 2048.9,
-          "Total Cost": 2049.53
+          "Startup Cost": 2051.9,
+          "Total Cost": 2052.53
         }
       ],
-      "Startup Cost": 2048.9,
-      "Total Cost": 2048.93
+      "Startup Cost": 2051.9,
+      "Total Cost": 2051.93
     }
   }
 ]
@@ -1476,40 +1449,40 @@ Full `EXPLAIN (FORMAT JSON)`:
                               "Plan Width": 8,
                               "Relation Name": "category_plaintext_1000000",
                               "Startup Cost": 0.0,
-                              "Total Cost": 9572.67
+                              "Total Cost": 9574.67
                             }
                           ],
-                          "Startup Cost": 11656.0,
+                          "Startup Cost": 11658.0,
                           "Strategy": "Hashed",
-                          "Total Cost": 11658.5
+                          "Total Cost": 11660.5
                         }
                       ],
                       "Sort Key": [
                         "value"
                       ],
-                      "Startup Cost": 11668.46,
-                      "Total Cost": 11669.08
+                      "Startup Cost": 11670.46,
+                      "Total Cost": 11671.08
                     }
                   ],
-                  "Startup Cost": 12668.48,
-                  "Total Cost": 12726.82,
+                  "Startup Cost": 12670.48,
+                  "Total Cost": 12728.82,
                   "Workers Planned": 2
                 }
               ],
-              "Startup Cost": 12668.48,
+              "Startup Cost": 12670.48,
               "Strategy": "Sorted",
-              "Total Cost": 12731.82
+              "Total Cost": 12733.82
             }
           ],
           "Sort Key": [
             "(count(*)) DESC"
           ],
-          "Startup Cost": 12737.22,
-          "Total Cost": 12737.85
+          "Startup Cost": 12739.22,
+          "Total Cost": 12739.85
         }
       ],
-      "Startup Cost": 12737.22,
-      "Total Cost": 12737.25
+      "Startup Cost": 12739.22,
+      "Total Cost": 12739.25
     }
   }
 ]
@@ -1532,15 +1505,6 @@ Full `EXPLAIN (FORMAT JSON)`:
 ```json
 [
   {
-    "JIT": {
-      "Functions": 7,
-      "Options": {
-        "Deforming": true,
-        "Expressions": true,
-        "Inlining": false,
-        "Optimization": false
-      }
-    },
     "Plan": {
       "Async Capable": false,
       "Node Type": "Limit",
@@ -1603,44 +1567,44 @@ Full `EXPLAIN (FORMAT JSON)`:
                               "Node Type": "Seq Scan",
                               "Parallel Aware": true,
                               "Parent Relationship": "Outer",
-                              "Plan Rows": 4166608,
+                              "Plan Rows": 4166275,
                               "Plan Width": 8,
                               "Relation Name": "category_plaintext_10000000",
                               "Startup Cost": 0.0,
-                              "Total Cost": 95721.08
+                              "Total Cost": 95774.75
                             }
                           ],
-                          "Startup Cost": 116554.12,
+                          "Startup Cost": 116606.12,
                           "Strategy": "Hashed",
-                          "Total Cost": 116556.62
+                          "Total Cost": 116608.62
                         }
                       ],
                       "Sort Key": [
                         "value"
                       ],
-                      "Startup Cost": 116566.58,
-                      "Total Cost": 116567.21
+                      "Startup Cost": 116618.58,
+                      "Total Cost": 116619.2
                     }
                   ],
-                  "Startup Cost": 117566.6,
-                  "Total Cost": 117624.94,
+                  "Startup Cost": 117618.6,
+                  "Total Cost": 117676.94,
                   "Workers Planned": 2
                 }
               ],
-              "Startup Cost": 117566.6,
+              "Startup Cost": 117618.6,
               "Strategy": "Sorted",
-              "Total Cost": 117629.94
+              "Total Cost": 117681.94
             }
           ],
           "Sort Key": [
             "(count(*)) DESC"
           ],
-          "Startup Cost": 117635.34,
-          "Total Cost": 117635.97
+          "Startup Cost": 117687.34,
+          "Total Cost": 117687.97
         }
       ],
-      "Startup Cost": 117635.34,
-      "Total Cost": 117635.37
+      "Startup Cost": 117687.34,
+      "Total Cost": 117687.37
     }
   }
 ]

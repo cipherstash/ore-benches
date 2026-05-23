@@ -13,7 +13,7 @@
               {
                 "Alias": "string_encrypted_10000000",
                 "Async Capable": false,
-                "Index Cond": "(((value).data ->> 'hm'::text) = '3ad65b2ad0d1cd146d576dffe73c17884b1c3d7004d17efc546d7d9d7a6e0677'::text)",
+                "Index Cond": "(((value).data ->> 'hm'::text) = 'e361bf6d2ee8c36944302cb9963da12b0e6bbdc563f5e088f8b970b7779cc2fb'::text)",
                 "Index Name": "string_encrypted_10000000_hash_index",
                 "Node Type": "Index Scan",
                 "Parallel Aware": false,
@@ -37,11 +37,12 @@
       ],
       "parameters": [
         {
-          "hm": "3ad65b2ad0d1cd146d576dffe73c17884b1c3d7004d17efc546d7d9d7a6e0677",
+          "hm": "e361bf6d2ee8c36944302cb9963da12b0e6bbdc563f5e088f8b970b7779cc2fb",
           "i": {
             "c": "value",
             "t": "string_encrypted_10000000"
           },
+          "k": "ct",
           "v": 2
         }
       ],
@@ -61,7 +62,7 @@
               {
                 "Alias": "string_encrypted_10000000",
                 "Async Capable": false,
-                "Index Cond": "(((value).data ->> 'hm'::text) = '3ad65b2ad0d1cd146d576dffe73c17884b1c3d7004d17efc546d7d9d7a6e0677'::text)",
+                "Index Cond": "(((value).data ->> 'hm'::text) = 'e361bf6d2ee8c36944302cb9963da12b0e6bbdc563f5e088f8b970b7779cc2fb'::text)",
                 "Index Name": "string_encrypted_10000000_hash_index",
                 "Node Type": "Index Scan",
                 "Parallel Aware": false,
@@ -85,11 +86,12 @@
       ],
       "parameters": [
         {
-          "hm": "3ad65b2ad0d1cd146d576dffe73c17884b1c3d7004d17efc546d7d9d7a6e0677",
+          "hm": "e361bf6d2ee8c36944302cb9963da12b0e6bbdc563f5e088f8b970b7779cc2fb",
           "i": {
             "c": "value",
             "t": "string_encrypted_10000000"
           },
+          "k": "ct",
           "v": 2
         }
       ],
