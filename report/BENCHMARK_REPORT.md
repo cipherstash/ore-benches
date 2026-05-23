@@ -40,9 +40,9 @@ Tests insertion of encrypted integer values.
 
 | Records | Throughput (records/sec) | Total Time | Avg Memory |
 |---------|--------------------------|------------|------------|
-| 500 | 533.07 | 0.94s | 29.12 MB |
-| 1,000 | 1.40K | 0.71s | 29.12 MB |
-| 10,000 | 2.02K | 4.94s | 29.12 MB |
+| 500 | 698.69 | 0.72s | 17.22 MB |
+| 1,000 | 1.59K | 0.63s | 20.39 MB |
+| 10,000 | 2.13K | 4.70s | 22.25 MB |
 
 ![Ingest Throughput - int](ingest_int_throughput_chart.png)
 
@@ -54,9 +54,9 @@ Tests insertion of large encrypted JSON objects with complex nested structures (
 
 | Records | Throughput (records/sec) | Total Time | Avg Memory |
 |---------|--------------------------|------------|------------|
-| 500 | 672.53 | 0.74s | 55.95 MB |
-| 1,000 | 1.62K | 0.62s | 94.62 MB |
-| 10,000 | 2.13K | 4.69s | 164.94 MB |
+| 500 | 734.25 | 0.68s | 55.98 MB |
+| 1,000 | 2.13K | 0.47s | 95.58 MB |
+| 10,000 | 3.59K | 2.79s | 162.06 MB |
 
 ![Ingest Throughput - json_large](ingest_json_large_throughput_chart.png)
 
@@ -68,9 +68,9 @@ Tests insertion of small encrypted JSON objects (first_name, last_name, age, ema
 
 | Records | Throughput (records/sec) | Total Time | Avg Memory |
 |---------|--------------------------|------------|------------|
-| 500 | 783.26 | 0.64s | 28.43 MB |
-| 1,000 | 3.96K | 0.25s | 29.12 MB |
-| 10,000 | 11.32K | 0.88s | 29.12 MB |
+| 500 | 665.29 | 0.75s | 16.22 MB |
+| 1,000 | 3.68K | 0.27s | 18.05 MB |
+| 10,000 | 11.42K | 0.88s | 20.22 MB |
 
 ![Ingest Throughput - json_small](ingest_json_small_throughput_chart.png)
 
@@ -94,9 +94,9 @@ Tests insertion of encrypted string values.
 
 | Records | Throughput (records/sec) | Total Time | Avg Memory |
 |---------|--------------------------|------------|------------|
-| 500 | 540.18 | 0.93s | 28.77 MB |
-| 1,000 | 3.35K | 0.30s | 29.00 MB |
-| 10,000 | 8.77K | 1.14s | 29.00 MB |
+| 500 | 966.23 | 0.52s | 16.48 MB |
+| 1,000 | 3.99K | 0.25s | 18.66 MB |
+| 10,000 | 9.65K | 1.04s | 21.23 MB |
 
 ![Ingest Throughput - string](ingest_string_throughput_chart.png)
 
