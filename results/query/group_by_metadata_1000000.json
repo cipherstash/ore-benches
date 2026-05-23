@@ -57,37 +57,37 @@
                                 "Node Type": "Seq Scan",
                                 "Parallel Aware": true,
                                 "Parent Relationship": "Outer",
-                                "Plan Rows": 416662,
+                                "Plan Rows": 416656,
                                 "Plan Width": 32,
                                 "Relation Name": "category_encrypted_1000000",
                                 "Startup Cost": 0.0,
-                                "Total Cost": 52828.27
+                                "Total Cost": 52840.2
                               }
                             ],
-                            "Startup Cost": 53869.93,
+                            "Startup Cost": 53881.84,
                             "Strategy": "Hashed",
-                            "Total Cost": 53873.05
+                            "Total Cost": 53884.96
                           }
                         ],
                         "Sort Key": [
                           "((((category_encrypted_1000000.value).data ->> 'hm'::text))::eql_v2.hmac_256)"
                         ],
-                        "Startup Cost": 53883.01,
-                        "Total Cost": 53883.63
+                        "Startup Cost": 53894.92,
+                        "Total Cost": 53895.55
                       }
                     ],
-                    "Startup Cost": 54883.03,
-                    "Total Cost": 54941.37,
+                    "Startup Cost": 54894.94,
+                    "Total Cost": 54953.28,
                     "Workers Planned": 2
                   }
                 ],
-                "Startup Cost": 54883.03,
-                "Total Cost": 54943.25
+                "Startup Cost": 54894.94,
+                "Total Cost": 54955.16
               }
             ],
-            "Startup Cost": 54946.37,
+            "Startup Cost": 54958.28,
             "Strategy": "Plain",
-            "Total Cost": 54946.38
+            "Total Cost": 54958.29
           }
         }
       ],
@@ -154,37 +154,37 @@
                                 "Node Type": "Seq Scan",
                                 "Parallel Aware": true,
                                 "Parent Relationship": "Outer",
-                                "Plan Rows": 459510,
+                                "Plan Rows": 416667,
                                 "Plan Width": 8,
                                 "Relation Name": "category_plaintext_1000000",
                                 "Startup Cost": 0.0,
-                                "Total Cost": 10001.1
+                                "Total Cost": 9574.67
                               }
                             ],
-                            "Startup Cost": 11149.88,
+                            "Startup Cost": 10616.33,
                             "Strategy": "Hashed",
-                            "Total Cost": 11152.38
+                            "Total Cost": 10618.83
                           }
                         ],
                         "Sort Key": [
                           "category_plaintext_1000000.value"
                         ],
-                        "Startup Cost": 11162.33,
-                        "Total Cost": 11162.96
+                        "Startup Cost": 10628.79,
+                        "Total Cost": 10629.42
                       }
                     ],
-                    "Startup Cost": 12162.36,
-                    "Total Cost": 12220.69,
+                    "Startup Cost": 11628.82,
+                    "Total Cost": 11687.15,
                     "Workers Planned": 2
                   }
                 ],
-                "Startup Cost": 12162.36,
-                "Total Cost": 12221.94
+                "Startup Cost": 11628.82,
+                "Total Cost": 11688.4
               }
             ],
-            "Startup Cost": 12225.07,
+            "Startup Cost": 11691.53,
             "Strategy": "Plain",
-            "Total Cost": 12225.08
+            "Total Cost": 11691.54
           }
         }
       ],
@@ -259,44 +259,44 @@
                                     "Node Type": "Seq Scan",
                                     "Parallel Aware": true,
                                     "Parent Relationship": "Outer",
-                                    "Plan Rows": 416662,
+                                    "Plan Rows": 416656,
                                     "Plan Width": 32,
                                     "Relation Name": "category_encrypted_1000000",
                                     "Startup Cost": 0.0,
-                                    "Total Cost": 52828.27
+                                    "Total Cost": 52840.2
                                   }
                                 ],
-                                "Startup Cost": 54911.58,
+                                "Startup Cost": 54923.48,
                                 "Strategy": "Hashed",
-                                "Total Cost": 54914.71
+                                "Total Cost": 54926.6
                               }
                             ],
                             "Sort Key": [
                               "((((value).data ->> 'hm'::text))::eql_v2.hmac_256)"
                             ],
-                            "Startup Cost": 54924.66,
-                            "Total Cost": 54925.29
+                            "Startup Cost": 54936.56,
+                            "Total Cost": 54937.19
                           }
                         ],
-                        "Startup Cost": 55924.69,
-                        "Total Cost": 55983.03,
+                        "Startup Cost": 55936.58,
+                        "Total Cost": 55994.92,
                         "Workers Planned": 2
                       }
                     ],
-                    "Startup Cost": 55924.69,
+                    "Startup Cost": 55936.58,
                     "Strategy": "Sorted",
-                    "Total Cost": 55988.65
+                    "Total Cost": 56000.55
                   }
                 ],
                 "Sort Key": [
                   "(count(*)) DESC"
                 ],
-                "Startup Cost": 55994.05,
-                "Total Cost": 55994.68
+                "Startup Cost": 56005.95,
+                "Total Cost": 56006.57
               }
             ],
-            "Startup Cost": 55994.05,
-            "Total Cost": 55994.08
+            "Startup Cost": 56005.95,
+            "Total Cost": 56005.97
           }
         }
       ],
@@ -371,44 +371,44 @@
                                     "Node Type": "Seq Scan",
                                     "Parallel Aware": true,
                                     "Parent Relationship": "Outer",
-                                    "Plan Rows": 459510,
+                                    "Plan Rows": 416667,
                                     "Plan Width": 8,
                                     "Relation Name": "category_plaintext_1000000",
                                     "Startup Cost": 0.0,
-                                    "Total Cost": 10001.1
+                                    "Total Cost": 9574.67
                                   }
                                 ],
-                                "Startup Cost": 12298.65,
+                                "Startup Cost": 11658.0,
                                 "Strategy": "Hashed",
-                                "Total Cost": 12301.15
+                                "Total Cost": 11660.5
                               }
                             ],
                             "Sort Key": [
                               "value"
                             ],
-                            "Startup Cost": 12311.11,
-                            "Total Cost": 12311.73
+                            "Startup Cost": 11670.46,
+                            "Total Cost": 11671.08
                           }
                         ],
-                        "Startup Cost": 13311.13,
-                        "Total Cost": 13369.47,
+                        "Startup Cost": 12670.48,
+                        "Total Cost": 12728.82,
                         "Workers Planned": 2
                       }
                     ],
-                    "Startup Cost": 13311.13,
+                    "Startup Cost": 12670.48,
                     "Strategy": "Sorted",
-                    "Total Cost": 13374.47
+                    "Total Cost": 12733.82
                   }
                 ],
                 "Sort Key": [
                   "(count(*)) DESC"
                 ],
-                "Startup Cost": 13379.87,
-                "Total Cost": 13380.5
+                "Startup Cost": 12739.22,
+                "Total Cost": 12739.85
               }
             ],
-            "Startup Cost": 13379.87,
-            "Total Cost": 13379.9
+            "Startup Cost": 12739.22,
+            "Total Cost": 12739.25
           }
         }
       ],
