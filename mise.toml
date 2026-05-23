@@ -821,3 +821,10 @@ run = """
 THRESHOLD_MS="${1:-100}"
 python3 find_slow_queries.py --ms "$THRESHOLD_MS" "${2:-}"
 """
+
+[tasks."report:ingest"]
+description = "Overview of ingest benchmark results — throughput per scenario, highest first, with per-scenario 'last run' age. Optional first arg is a bench-name prefix (e.g. 'encrypt_int', 'encrypt_json') to filter."
+run = """
+#!/usr/bin/env bash
+python3 report_ingest.py "$@"
+"""
