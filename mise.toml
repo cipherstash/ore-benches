@@ -792,10 +792,10 @@ echo "========================================"
 """
 
 [tasks.report]
-description = "Overview of all benchmark results — median runtime per scenario, slowest first"
+description = "Overview of all benchmark results — median runtime per scenario (slowest first), with per-scenario 'last run' age. Optional first arg is a bench-id prefix to filter (e.g. 'ORE', 'EXACT/exact_decrypt')."
 run = """
 #!/usr/bin/env bash
-python3 find_slow_queries.py --all
+python3 find_slow_queries.py --all "$@"
 """
 
 [tasks."report:build"]
@@ -814,10 +814,10 @@ echo "Report saved to: $OUTPUT_FILE"
 """
 
 [tasks."report:slow"]
-description = "List queries whose median runtime exceeds a threshold (default 100ms)"
+description = "List queries whose median runtime exceeds a threshold (default 100ms). Optional second arg is a bench-id prefix (e.g. 'ORE', 'EXACT/exact_decrypt') to filter."
 run = """
 #!/usr/bin/env bash
-# Optional first arg is the threshold in milliseconds.
+# Optional first arg is the threshold in milliseconds; optional second arg is a bench-id prefix.
 THRESHOLD_MS="${1:-100}"
-python3 find_slow_queries.py --ms "$THRESHOLD_MS"
+python3 find_slow_queries.py --ms "$THRESHOLD_MS" "${2:-}"
 """
