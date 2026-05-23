@@ -16,18 +16,18 @@ Query-only medians (no decrypt) from the latest full run against EQL 2.3, across
 
 | Family | Scenario | 10k | 100k | 1M | 10M |
 |---|---|--:|--:|--:|--:|
-| **JSON** | contains/functional | 0.66 ms | 0.65 ms | 0.68 ms | 6.8 ms |
-| JSON | field_eq/functional | 0.98 ms | 0.98 ms | 0.90 ms | 0.92 ms |
-| JSON | field_order/functional | 0.74 ms | 0.77 ms | 0.77 ms | 0.84 ms |
-| **ORE** | range_gt_100 | 4.1 ms | 6.7 ms | 6.9 ms | 8.1 ms |
-| ORE | range_lt_hybrid_ordered_10 | — | 1.1 ms | 1.2 ms | 1.2 ms |
-| **EXACT** | eql_hash | 0.43 ms | 0.44 ms | 0.43 ms | 0.46 ms |
-| **MATCH** | eql_bloom | 1.0 ms | 2.5 ms | 18 ms | 216 ms |
-| **GROUP_BY** | low_cardinality — encrypted | 2.7 ms | 28 ms | 179 ms | 1.47 s |
-| GROUP_BY | low_cardinality — plaintext baseline | 1.5 ms | 9.9 ms | 36 ms | 430 ms |
-| **COMBO** | top_n_filtered_group_by | 0.84 ms | 1.1 ms | 5.5 ms | 43 ms |
+| **JSON** | contains/functional | 0.2 ms | 0.3 ms | 0.4 ms | 0.8 ms |
+| JSON | field_eq/functional | 0.1 ms | 0.1 ms | 0.1 ms | 0.1 ms |
+| JSON | field_order/functional | 0.3 ms | 0.3 ms | 0.4 ms | 0.4 ms |
+| **ORE** | range_gt_100 | 4.1 ms | 4.2 ms | 4.2 ms | 4.2 ms |
+| ORE | range_lt_hybrid_ordered_10 | 0.5 ms | 0.5 ms | 0.5 ms | 0.5 ms |
+| **EXACT** | eql_hash | 0.1 ms | 0.1 ms | 0.1 ms | 0.1 ms |
+| **MATCH** | eql_bloom | 0.4 ms | 1.8 ms | 15 ms | 144 ms |
+| **GROUP_BY** | low_cardinality — encrypted | 2.2 ms | 20 ms | 93 ms | 776 ms |
+| GROUP_BY | low_cardinality — plaintext baseline | 1.2 ms | 9.0 ms | 39 ms | 339 ms |
+| **COMBO** | top_n_filtered_group_by | 0.2 ms | 1.0 ms | 5.3 ms | 52 ms |
 
-`range_lt_hybrid_ordered_10` has no 10k entry — the 10k ORE result set predates the scenario. Selective ORE range scenarios are currently disabled (a planner selectivity mis-estimate) — see [encrypt-query-language#230](https://github.com/cipherstash/encrypt-query-language/issues/230).
+Selective ORE range scenarios are currently disabled (a planner selectivity mis-estimate) — see [encrypt-query-language#230](https://github.com/cipherstash/encrypt-query-language/issues/230). The pathological `range_lt_natural_ordered_10` scenarios (full-scan-equivalent — ~60 s at 10M) are excluded from the headline above.
 
 ## 🔧 Test Setup
 
