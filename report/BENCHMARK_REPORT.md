@@ -108,12 +108,12 @@ Per-query-type detail is broken out into separate pages — click into a scenari
 
 | Query Type | Scenarios | Tiers | Largest-tier median (no decrypt) | Detail |
 |-|-|-|-|-|
-| COMBO | `bloom_ore_order_limit`, `filtered_group_by`, `top_n_filtered_group_by` | 10,000, 100,000, 1,000,000, 10,000,000 | 98.05ms | [open](combo.md) |
-| EXACT | `eql_cast`, `eql_hash` | 10,000, 100,000, 1,000,000, 10,000,000 | 454.21μs | [open](exact.md) |
-| GROUP_BY | `low_cardinality_groups_encrypted`, `low_cardinality_groups_plaintext`, `top_n_groups_encrypted`, `top_n_groups_plaintext` | 10,000, 100,000, 1,000,000, 10,000,000 | 864.52ms | [open](group_by.md) |
-| JSON | `contains/functional`, `field_eq/bare`, `field_eq/extractor`, `field_eq/functional`, `field_order/functional` | 10,000, 100,000, 1,000,000, 10,000,000 | 2.06ms | [open](json.md) |
-| MATCH | `eql_bloom`, `eql_cast_firstname`, `eql_cast_lastname` | 10,000, 100,000, 1,000,000, 10,000,000 | 151.23ms | [open](match.md) |
-| ORE | `range_gt_10`, `range_gt_100`, `range_highly_selective_gt_10`, `range_highly_selective_gt_count`, `range_lt_10`, `range_lt_100`, `range_lt_hybrid_ordered_10`, `range_selective_gt_100`, `range_selective_gt_count` | 10,000, 100,000, 1,000,000, 10,000,000 | 573.45ms | [open](ore.md) |
+| COMBO | `bloom_ore_order_limit`, `filtered_group_by`, `top_n_filtered_group_by` | 10,000, 100,000, 1,000,000, 10,000,000 | 86.89ms | [open](combo.md) |
+| EXACT | `eql_cast`, `eql_hash` | 10,000, 100,000, 1,000,000, 10,000,000 | 108.58μs | [open](exact.md) |
+| GROUP_BY | `low_cardinality_groups_encrypted`, `low_cardinality_groups_plaintext`, `top_n_groups_encrypted`, `top_n_groups_plaintext` | 10,000, 100,000, 1,000,000, 10,000,000 | 568.48ms | [open](group_by.md) |
+| JSON | `contains/functional`, `field_eq/bare`, `field_eq/extractor`, `field_eq/functional`, `field_order/functional` | 10,000, 100,000, 1,000,000, 10,000,000 | 370.33μs | [open](json.md) |
+| MATCH | `eql_bloom`, `eql_cast_firstname`, `eql_cast_lastname` | 10,000, 100,000, 1,000,000, 10,000,000 | 107.51ms | [open](match.md) |
+| ORE | `range_gt_10`, `range_gt_100`, `range_lt_10`, `range_lt_100`, `range_lt_hybrid_ordered_10`, `range_lt_natural_ordered_10` | 10,000, 100,000, 1,000,000, 10,000,000 | 10.302s | [open](ore.md) |
 
 
 ---

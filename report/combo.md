@@ -49,10 +49,10 @@ ON combo_encrypted_10000 USING hash (
 
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
-| 10,000 | 9 | 1.33ms | N/A |
-| 100,000 | 10 | 2.36ms | N/A |
-| 1,000,000 | 10 | 16.51ms | N/A |
-| 10,000,000 | 10 | ⚠️ 208.49ms | N/A |
+| 10,000 | 4 | 303.27μs | N/A |
+| 100,000 | 10 | 2.11ms | N/A |
+| 1,000,000 | 10 | 16.53ms | N/A |
+| 10,000,000 | 10 | ⚠️ 159.30ms | N/A |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
 
@@ -99,7 +99,7 @@ Full `EXPLAIN (FORMAT JSON)`:
               "Plans": [
                 {
                   "Async Capable": false,
-                  "Index Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{36,1603,1789,1164,10,1555}'::smallint[])",
+                  "Index Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{1554,461,1033,91,1393,453}'::smallint[])",
                   "Index Name": "combo_encrypted_10000_name_gin_index",
                   "Node Type": "Bitmap Index Scan",
                   "Parallel Aware": false,
@@ -110,7 +110,7 @@ Full `EXPLAIN (FORMAT JSON)`:
                   "Total Cost": 56.22
                 }
               ],
-              "Recheck Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{36,1603,1789,1164,10,1555}'::smallint[])",
+              "Recheck Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{1554,461,1033,91,1393,453}'::smallint[])",
               "Relation Name": "combo_encrypted_10000",
               "Startup Cost": 56.22,
               "Total Cost": 60.73
@@ -170,7 +170,7 @@ Full `EXPLAIN (FORMAT JSON)`:
               "Plans": [
                 {
                   "Async Capable": false,
-                  "Index Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{1554,453,1393,1033,91,461}'::smallint[])",
+                  "Index Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{1033,1554,453,1393,91,461}'::smallint[])",
                   "Index Name": "combo_encrypted_100000_name_gin_index",
                   "Node Type": "Bitmap Index Scan",
                   "Parallel Aware": false,
@@ -181,7 +181,7 @@ Full `EXPLAIN (FORMAT JSON)`:
                   "Total Cost": 93.35
                 }
               ],
-              "Recheck Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{1554,453,1393,1033,91,461}'::smallint[])",
+              "Recheck Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{1033,1554,453,1393,91,461}'::smallint[])",
               "Relation Name": "combo_encrypted_100000",
               "Startup Cost": 93.35,
               "Total Cost": 97.86
@@ -241,7 +241,7 @@ Full `EXPLAIN (FORMAT JSON)`:
               "Plans": [
                 {
                   "Async Capable": false,
-                  "Index Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{453,91,1033,1393,461,1554}'::smallint[])",
+                  "Index Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{1033,91,461,1393,453,1554}'::smallint[])",
                   "Index Name": "combo_encrypted_1000000_name_gin_index",
                   "Node Type": "Bitmap Index Scan",
                   "Parallel Aware": false,
@@ -249,24 +249,24 @@ Full `EXPLAIN (FORMAT JSON)`:
                   "Plan Rows": 1,
                   "Plan Width": 0,
                   "Startup Cost": 0.0,
-                  "Total Cost": 311.97
+                  "Total Cost": 282.35
                 }
               ],
-              "Recheck Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{453,91,1033,1393,461,1554}'::smallint[])",
+              "Recheck Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{1033,91,461,1393,453,1554}'::smallint[])",
               "Relation Name": "combo_encrypted_1000000",
-              "Startup Cost": 311.97,
-              "Total Cost": 316.48
+              "Startup Cost": 282.35,
+              "Total Cost": 286.86
             }
           ],
           "Sort Key": [
             "(eql_v2.ore_block_u64_8_256(age))"
           ],
-          "Startup Cost": 316.49,
-          "Total Cost": 316.5
+          "Startup Cost": 286.87,
+          "Total Cost": 286.87
         }
       ],
-      "Startup Cost": 316.49,
-      "Total Cost": 316.5
+      "Startup Cost": 286.87,
+      "Total Cost": 286.87
     }
   }
 ]
@@ -312,7 +312,7 @@ Full `EXPLAIN (FORMAT JSON)`:
               "Plans": [
                 {
                   "Async Capable": false,
-                  "Index Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{1164,1789,10,1603,1555,36}'::smallint[])",
+                  "Index Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{1393,461,1033,1554,453,91}'::smallint[])",
                   "Index Name": "combo_encrypted_10000000_name_gin_index",
                   "Node Type": "Bitmap Index Scan",
                   "Parallel Aware": false,
@@ -320,24 +320,24 @@ Full `EXPLAIN (FORMAT JSON)`:
                   "Plan Rows": 1,
                   "Plan Width": 0,
                   "Startup Cost": 0.0,
-                  "Total Cost": 2296.1
+                  "Total Cost": 2258.22
                 }
               ],
-              "Recheck Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{1164,1789,10,1603,1555,36}'::smallint[])",
+              "Recheck Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{1393,461,1033,1554,453,91}'::smallint[])",
               "Relation Name": "combo_encrypted_10000000",
-              "Startup Cost": 2296.1,
-              "Total Cost": 2300.61
+              "Startup Cost": 2258.22,
+              "Total Cost": 2262.73
             }
           ],
           "Sort Key": [
             "(eql_v2.ore_block_u64_8_256(age))"
           ],
-          "Startup Cost": 2300.62,
-          "Total Cost": 2300.62
+          "Startup Cost": 2262.74,
+          "Total Cost": 2262.75
         }
       ],
-      "Startup Cost": 2300.62,
-      "Total Cost": 2300.62
+      "Startup Cost": 2262.74,
+      "Total Cost": 2262.75
     }
   }
 ]
@@ -390,10 +390,10 @@ ON combo_encrypted_10000 USING hash (
 
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
-| 10,000 | 9 | 954.55μs | N/A |
-| 100,000 | 63 | 1.18ms | N/A |
-| 1,000,000 | 227 | 6.29ms | N/A |
-| 10,000,000 | 250 | 43.43ms | N/A |
+| 10,000 | 4 | 177.62μs | N/A |
+| 100,000 | 52 | 679.25μs | N/A |
+| 1,000,000 | 231 | 9.10ms | N/A |
+| 10,000,000 | 250 | 50.09ms | N/A |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
 
@@ -444,7 +444,7 @@ Full `EXPLAIN (FORMAT JSON)`:
               "Plans": [
                 {
                   "Async Capable": false,
-                  "Index Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{1164,10,1555,1789,1603,36}'::smallint[])",
+                  "Index Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{1033,91,453,1554,461,1393}'::smallint[])",
                   "Index Name": "combo_encrypted_10000_name_gin_index",
                   "Node Type": "Bitmap Index Scan",
                   "Parallel Aware": false,
@@ -455,7 +455,7 @@ Full `EXPLAIN (FORMAT JSON)`:
                   "Total Cost": 56.22
                 }
               ],
-              "Recheck Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{1164,10,1555,1789,1603,36}'::smallint[])",
+              "Recheck Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{1033,91,453,1554,461,1393}'::smallint[])",
               "Relation Name": "combo_encrypted_10000",
               "Startup Cost": 56.22,
               "Total Cost": 60.49
@@ -520,7 +520,7 @@ Full `EXPLAIN (FORMAT JSON)`:
               "Plans": [
                 {
                   "Async Capable": false,
-                  "Index Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{1554,1033,453,461,91,1393}'::smallint[])",
+                  "Index Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{1554,91,1033,453,461,1393}'::smallint[])",
                   "Index Name": "combo_encrypted_100000_name_gin_index",
                   "Node Type": "Bitmap Index Scan",
                   "Parallel Aware": false,
@@ -531,7 +531,7 @@ Full `EXPLAIN (FORMAT JSON)`:
                   "Total Cost": 93.35
                 }
               ],
-              "Recheck Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{1554,1033,453,461,91,1393}'::smallint[])",
+              "Recheck Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{1554,91,1033,453,461,1393}'::smallint[])",
               "Relation Name": "combo_encrypted_100000",
               "Startup Cost": 93.35,
               "Total Cost": 97.61
@@ -596,7 +596,7 @@ Full `EXPLAIN (FORMAT JSON)`:
               "Plans": [
                 {
                   "Async Capable": false,
-                  "Index Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{461,1554,1393,91,453,1033}'::smallint[])",
+                  "Index Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{453,1033,91,461,1393,1554}'::smallint[])",
                   "Index Name": "combo_encrypted_1000000_name_gin_index",
                   "Node Type": "Bitmap Index Scan",
                   "Parallel Aware": false,
@@ -604,25 +604,25 @@ Full `EXPLAIN (FORMAT JSON)`:
                   "Plan Rows": 1,
                   "Plan Width": 0,
                   "Startup Cost": 0.0,
-                  "Total Cost": 311.97
+                  "Total Cost": 282.35
                 }
               ],
-              "Recheck Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{461,1554,1393,91,453,1033}'::smallint[])",
+              "Recheck Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{453,1033,91,461,1393,1554}'::smallint[])",
               "Relation Name": "combo_encrypted_1000000",
-              "Startup Cost": 311.97,
-              "Total Cost": 316.24
+              "Startup Cost": 282.35,
+              "Total Cost": 286.61
             }
           ],
           "Sort Key": [
             "((((category).data ->> 'hm'::text))::eql_v2.hmac_256)"
           ],
-          "Startup Cost": 316.25,
-          "Total Cost": 316.25
+          "Startup Cost": 286.62,
+          "Total Cost": 286.63
         }
       ],
-      "Startup Cost": 316.25,
+      "Startup Cost": 286.62,
       "Strategy": "Sorted",
-      "Total Cost": 316.27
+      "Total Cost": 286.64
     }
   }
 ]
@@ -672,7 +672,7 @@ Full `EXPLAIN (FORMAT JSON)`:
               "Plans": [
                 {
                   "Async Capable": false,
-                  "Index Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{1164,1789,1555,10,36,1603}'::smallint[])",
+                  "Index Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{1033,453,461,1554,91,1393}'::smallint[])",
                   "Index Name": "combo_encrypted_10000000_name_gin_index",
                   "Node Type": "Bitmap Index Scan",
                   "Parallel Aware": false,
@@ -680,25 +680,25 @@ Full `EXPLAIN (FORMAT JSON)`:
                   "Plan Rows": 1,
                   "Plan Width": 0,
                   "Startup Cost": 0.0,
-                  "Total Cost": 2296.1
+                  "Total Cost": 2258.22
                 }
               ],
-              "Recheck Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{1164,1789,1555,10,36,1603}'::smallint[])",
+              "Recheck Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{1033,453,461,1554,91,1393}'::smallint[])",
               "Relation Name": "combo_encrypted_10000000",
-              "Startup Cost": 2296.1,
-              "Total Cost": 2300.36
+              "Startup Cost": 2258.22,
+              "Total Cost": 2262.49
             }
           ],
           "Sort Key": [
             "((((category).data ->> 'hm'::text))::eql_v2.hmac_256)"
           ],
-          "Startup Cost": 2300.37,
-          "Total Cost": 2300.38
+          "Startup Cost": 2262.5,
+          "Total Cost": 2262.5
         }
       ],
-      "Startup Cost": 2300.37,
+      "Startup Cost": 2262.5,
       "Strategy": "Sorted",
-      "Total Cost": 2300.39
+      "Total Cost": 2262.52
     }
   }
 ]
@@ -751,10 +751,10 @@ ON combo_encrypted_10000 USING hash (
 
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
-| 10,000 | 9 | 837.68μs | N/A |
-| 100,000 | 10 | 1.12ms | N/A |
-| 1,000,000 | 10 | 5.48ms | N/A |
-| 10,000,000 | 10 | 43.19ms | N/A |
+| 10,000 | 4 | 177.00μs | N/A |
+| 100,000 | 10 | 1.01ms | N/A |
+| 1,000,000 | 10 | 5.32ms | N/A |
+| 10,000,000 | 10 | 52.33ms | N/A |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
 
@@ -823,7 +823,7 @@ Full `EXPLAIN (FORMAT JSON)`:
                       "Plans": [
                         {
                           "Async Capable": false,
-                          "Index Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{36,1789,1603,1164,10,1555}'::smallint[])",
+                          "Index Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{1033,1554,91,1393,461,453}'::smallint[])",
                           "Index Name": "combo_encrypted_10000_name_gin_index",
                           "Node Type": "Bitmap Index Scan",
                           "Parallel Aware": false,
@@ -834,7 +834,7 @@ Full `EXPLAIN (FORMAT JSON)`:
                           "Total Cost": 56.22
                         }
                       ],
-                      "Recheck Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{36,1789,1603,1164,10,1555}'::smallint[])",
+                      "Recheck Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{1033,1554,91,1393,461,453}'::smallint[])",
                       "Relation Name": "combo_encrypted_10000",
                       "Startup Cost": 56.22,
                       "Total Cost": 60.49
@@ -928,7 +928,7 @@ Full `EXPLAIN (FORMAT JSON)`:
                       "Plans": [
                         {
                           "Async Capable": false,
-                          "Index Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{91,453,1033,461,1393,1554}'::smallint[])",
+                          "Index Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{453,461,1033,1554,1393,91}'::smallint[])",
                           "Index Name": "combo_encrypted_100000_name_gin_index",
                           "Node Type": "Bitmap Index Scan",
                           "Parallel Aware": false,
@@ -939,7 +939,7 @@ Full `EXPLAIN (FORMAT JSON)`:
                           "Total Cost": 93.35
                         }
                       ],
-                      "Recheck Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{91,453,1033,461,1393,1554}'::smallint[])",
+                      "Recheck Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{453,461,1033,1554,1393,91}'::smallint[])",
                       "Relation Name": "combo_encrypted_100000",
                       "Startup Cost": 93.35,
                       "Total Cost": 97.61
@@ -1033,7 +1033,7 @@ Full `EXPLAIN (FORMAT JSON)`:
                       "Plans": [
                         {
                           "Async Capable": false,
-                          "Index Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{1033,453,91,1554,461,1393}'::smallint[])",
+                          "Index Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{453,91,1554,461,1033,1393}'::smallint[])",
                           "Index Name": "combo_encrypted_1000000_name_gin_index",
                           "Node Type": "Bitmap Index Scan",
                           "Parallel Aware": false,
@@ -1041,36 +1041,36 @@ Full `EXPLAIN (FORMAT JSON)`:
                           "Plan Rows": 1,
                           "Plan Width": 0,
                           "Startup Cost": 0.0,
-                          "Total Cost": 311.97
+                          "Total Cost": 282.35
                         }
                       ],
-                      "Recheck Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{1033,453,91,1554,461,1393}'::smallint[])",
+                      "Recheck Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{453,91,1554,461,1033,1393}'::smallint[])",
                       "Relation Name": "combo_encrypted_1000000",
-                      "Startup Cost": 311.97,
-                      "Total Cost": 316.24
+                      "Startup Cost": 282.35,
+                      "Total Cost": 286.61
                     }
                   ],
                   "Sort Key": [
                     "((((category).data ->> 'hm'::text))::eql_v2.hmac_256)"
                   ],
-                  "Startup Cost": 316.25,
-                  "Total Cost": 316.25
+                  "Startup Cost": 286.62,
+                  "Total Cost": 286.63
                 }
               ],
-              "Startup Cost": 316.25,
+              "Startup Cost": 286.62,
               "Strategy": "Sorted",
-              "Total Cost": 316.27
+              "Total Cost": 286.64
             }
           ],
           "Sort Key": [
             "(count(*)) DESC"
           ],
-          "Startup Cost": 316.28,
-          "Total Cost": 316.28
+          "Startup Cost": 286.65,
+          "Total Cost": 286.66
         }
       ],
-      "Startup Cost": 316.28,
-      "Total Cost": 316.28
+      "Startup Cost": 286.65,
+      "Total Cost": 286.66
     }
   }
 ]
@@ -1138,7 +1138,7 @@ Full `EXPLAIN (FORMAT JSON)`:
                       "Plans": [
                         {
                           "Async Capable": false,
-                          "Index Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{1603,1555,10,1164,1789,36}'::smallint[])",
+                          "Index Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{453,1554,461,91,1033,1393}'::smallint[])",
                           "Index Name": "combo_encrypted_10000000_name_gin_index",
                           "Node Type": "Bitmap Index Scan",
                           "Parallel Aware": false,
@@ -1146,36 +1146,36 @@ Full `EXPLAIN (FORMAT JSON)`:
                           "Plan Rows": 1,
                           "Plan Width": 0,
                           "Startup Cost": 0.0,
-                          "Total Cost": 2296.1
+                          "Total Cost": 2258.22
                         }
                       ],
-                      "Recheck Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{1603,1555,10,1164,1789,36}'::smallint[])",
+                      "Recheck Cond": "((eql_v2.bloom_filter(name))::smallint[] @> '{453,1554,461,91,1033,1393}'::smallint[])",
                       "Relation Name": "combo_encrypted_10000000",
-                      "Startup Cost": 2296.1,
-                      "Total Cost": 2300.36
+                      "Startup Cost": 2258.22,
+                      "Total Cost": 2262.49
                     }
                   ],
                   "Sort Key": [
                     "((((category).data ->> 'hm'::text))::eql_v2.hmac_256)"
                   ],
-                  "Startup Cost": 2300.37,
-                  "Total Cost": 2300.38
+                  "Startup Cost": 2262.5,
+                  "Total Cost": 2262.5
                 }
               ],
-              "Startup Cost": 2300.37,
+              "Startup Cost": 2262.5,
               "Strategy": "Sorted",
-              "Total Cost": 2300.39
+              "Total Cost": 2262.52
             }
           ],
           "Sort Key": [
             "(count(*)) DESC"
           ],
-          "Startup Cost": 2300.4,
-          "Total Cost": 2300.41
+          "Startup Cost": 2262.53,
+          "Total Cost": 2262.53
         }
       ],
-      "Startup Cost": 2300.4,
-      "Total Cost": 2300.41
+      "Startup Cost": 2262.53,
+      "Total Cost": 2262.53
     }
   }
 ]
