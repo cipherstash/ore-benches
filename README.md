@@ -19,15 +19,15 @@ Query-only medians (no decrypt) from the latest full run against EQL 2.3, across
 | **JSON** | contains/functional | 0.2 ms | 0.3 ms | 0.4 ms | 0.8 ms |
 | JSON | field_eq/functional | 0.1 ms | 0.1 ms | 0.1 ms | 0.1 ms |
 | JSON | field_order/functional | 0.3 ms | 0.3 ms | 0.4 ms | 0.4 ms |
-| **ORE** | range_gt_100 | 4.1 ms | 4.2 ms | 4.2 ms | 4.2 ms |
-| ORE | range_lt_hybrid_ordered_10 | 0.5 ms | 0.5 ms | 0.5 ms | 0.5 ms |
+| **ORE** | range_gt_100 | 4.0 ms | 4.2 ms | 4.1 ms | 4.0 ms |
+| ORE | range_lt_ordered_10 | 0.5 ms | 0.5 ms | 0.5 ms | 0.5 ms |
 | **EXACT** | eql_hash | 0.1 ms | 0.1 ms | 0.1 ms | 0.1 ms |
 | **MATCH** | eql_bloom | 0.4 ms | 1.8 ms | 15 ms | 144 ms |
 | **GROUP_BY** | low_cardinality — encrypted | 2.2 ms | 20 ms | 93 ms | 776 ms |
 | GROUP_BY | low_cardinality — plaintext baseline | 1.2 ms | 9.0 ms | 39 ms | 339 ms |
 | **COMBO** | top_n_filtered_group_by | 0.2 ms | 1.0 ms | 5.3 ms | 52 ms |
 
-Selective ORE range scenarios are currently disabled (a planner selectivity mis-estimate) — see [encrypt-query-language#230](https://github.com/cipherstash/encrypt-query-language/issues/230). The pathological `range_lt_natural_ordered_10` scenarios (full-scan-equivalent — ~60 s at 10M) are excluded from the headline above.
+Selective ORE range scenarios are currently disabled (a planner selectivity mis-estimate) — see [encrypt-query-language#230](https://github.com/cipherstash/encrypt-query-language/issues/230). The pathological `ORDER BY value` shape (no extractor; ~60 s at the 10M tier because the sort key can't match any allowed index — a btree directly on `value` would, but the encrypted body trips Postgres's btree entry-size limit) has been removed from the suite — the EQL perf guide covers it as the documented anti-pattern.
 
 ## 🔧 Test Setup
 

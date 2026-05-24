@@ -113,7 +113,7 @@ Per-query-type detail is broken out into separate pages — click into a scenari
 | GROUP_BY | `low_cardinality_groups_encrypted`, `low_cardinality_groups_plaintext`, `top_n_groups_encrypted`, `top_n_groups_plaintext` | 10,000, 100,000, 1,000,000, 10,000,000 | 568.48ms | [open](group_by.md) |
 | JSON | `contains/functional`, `field_eq/bare`, `field_eq/extractor`, `field_eq/functional`, `field_order/functional` | 10,000, 100,000, 1,000,000, 10,000,000 | 370.33μs | [open](json.md) |
 | MATCH | `eql_bloom`, `eql_cast_firstname`, `eql_cast_lastname` | 10,000, 100,000, 1,000,000, 10,000,000 | 107.51ms | [open](match.md) |
-| ORE | `range_gt_10`, `range_gt_100`, `range_lt_10`, `range_lt_100`, `range_lt_hybrid_ordered_10`, `range_lt_natural_ordered_10` | 10,000, 100,000, 1,000,000, 10,000,000 | 10.302s | [open](ore.md) |
+| ORE | `range_gt_10`, `range_gt_100`, `range_lt_10`, `range_lt_100`, `range_lt_ordered_10` | 10,000, 100,000, 1,000,000, 10,000,000 | 2.01ms | [open](ore.md) |
 
 
 ---
