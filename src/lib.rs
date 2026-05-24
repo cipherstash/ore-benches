@@ -12,6 +12,27 @@ use cipherstash_client::{
 use fake::{Dummy, Fake};
 use serde_json::json;
 use sqlx::{postgres::PgPoolOptions, types::Json, QueryBuilder};
+
+/// Custom sqlx type for the `eql_v2_encrypted` Postgres composite (single
+/// `data jsonb` field). Lets bench scenarios SELECT `value` directly without
+/// the historic `value::jsonb` cast, which mattered for `ORDER BY value`:
+/// the cast was being folded into the sort key by projection-pushdown
+/// (`Sort Key: ((value)::jsonb)`), preventing any functional ORE index
+/// from satisfying the sort. See `docs/reference/query-performance.md` §4
+/// in the EQL repo. Decode walks the composite via `Json<EqlCiphertext>`
+/// for the `data` field.
+#[derive(Debug, sqlx::Type)]
+#[sqlx(type_name = "eql_v2_encrypted")]
+pub struct EqlV2Encrypted {
+    pub data: Json<EqlCiphertext>,
+}
+
+impl EqlV2Encrypted {
+    /// Extract the inner ciphertext, dropping the composite wrapper.
+    pub fn into_ciphertext(self) -> EqlCiphertext {
+        self.data.0
+    }
+}
 use stack_profile::ProfileStore;
 use std::borrow::Cow;
 use std::env;
@@ -47,17 +68,16 @@ pub async fn sample_plaintext_string(
     cipher: Arc<ScopedCipher<AutoStrategy>>,
     table_name: &str,
 ) -> Result<String> {
-    // `value::jsonb` cast is needed because the column type is the custom
-    // `eql_v2_encrypted` Postgres type — sqlx's JSONB decoder doesn't know
-    // how to read that directly. Every other bench file does the same cast
-    // in its SELECT shape (e.g. `SELECT id, value::jsonb FROM ...`).
-    let row: (Json<EqlCiphertext>,) =
-        sqlx::query_as(&format!("SELECT value::jsonb FROM {} LIMIT 1", table_name))
+    // Select the encrypted column directly — the custom `EqlV2Encrypted`
+    // Decode impl (defined above) handles the composite-to-EqlCiphertext
+    // conversion, no SQL-level cast needed.
+    let row: (EqlV2Encrypted,) =
+        sqlx::query_as(&format!("SELECT value FROM {} LIMIT 1", table_name))
             .fetch_one(pool)
             .await
             .with_context(|| format!("sample query failed against {}", table_name))?;
 
-    let decrypted = decrypt_eql(cipher, vec![row.0 .0], &Default::default())
+    let decrypted = decrypt_eql(cipher, vec![row.0.into_ciphertext()], &Default::default())
         .await
         .context("sample decrypt failed")?;
 
@@ -472,8 +492,8 @@ pub struct EncryptedQuery {
 }
 
 impl EncryptedQuery {
-    pub async fn execute(&self, pool: &sqlx::PgPool) -> Result<Vec<(i32, Json<EqlCiphertext>)>> {
-        let results: Vec<(i32, Json<EqlCiphertext>)> = sqlx::query_as(&self.statement)
+    pub async fn execute(&self, pool: &sqlx::PgPool) -> Result<Vec<(i32, EqlV2Encrypted)>> {
+        let results: Vec<(i32, EqlV2Encrypted)> = sqlx::query_as(&self.statement)
             .bind(Json(&self.eql))
             .fetch_all(pool)
             .await?;
@@ -486,11 +506,11 @@ impl EncryptedQuery {
         T: TryFrom<Plaintext>,
         <T as TryFrom<Plaintext>>::Error: Debug,
     {
-        let results: Vec<(i32, Json<EqlCiphertext>)> = self.execute(pool).await?;
+        let results: Vec<(i32, EqlV2Encrypted)> = self.execute(pool).await?;
 
         let decrypted = decrypt_eql(
             Arc::clone(&self.scoped_cipher),
-            results.into_iter().map(|(_, value)| value.0),
+            results.into_iter().map(|(_, value)| value.into_ciphertext()),
             &Default::default(),
         )
         .await?

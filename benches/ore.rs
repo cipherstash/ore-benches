@@ -52,33 +52,43 @@ use tokio::runtime::Runtime;
 // no LIMIT to cut the scan short. Re-enable them once #230 lands a
 // selectivity fix: https://github.com/cipherstash/encrypt-query-language/issues/230
 //
-// **Hybrid ordered range** uses extractor ORDER BY (`ORDER BY
+// **Ordered range** uses extractor ORDER BY (`ORDER BY
 // eql_v2.ore_block_u64_8_256(val)`) matching the functional index expression —
 // rows stream out of the index already sorted (Index Scan, no Sort node).
+// The pair scenario `range_lt_natural_ordered_10` (`ORDER BY value` with no
+// extractor) was previously included as a "what the sort-key trap costs"
+// baseline, but it ran in seconds at the 10M tier and is the deliberate
+// anti-pattern documented in `docs/reference/query-performance.md` §4 of
+// the EQL repo — a public bench shouldn't headline pathological cases.
 //
-// **Natural-form ordered range** uses column ORDER BY (`ORDER BY value`). The
-// sort key doesn't match the functional index expression syntactically, so the
-// plan keeps a residual Top-N Sort over the bitmap-scan output. The hybrid /
-// natural pair documents the cost of taking the §4 sort-key shortcut.
+// Note on projection — every scenario projects `value` directly rather than
+// `value::jsonb`. The cast is harmless under extractor ORDER BY (the sort
+// key is `ore_block_u64_8_256(value)`, structurally distinct from the
+// projected `(value)::jsonb`, so there's no folding), but it pushes the
+// trap into reach for any future scenario that adds ORDER BY on the column
+// itself: projection-pushdown folds the cast into the Sort Key
+// (`Sort Key: ((value)::jsonb)`), preventing any index on `eql_v2_encrypted`
+// from satisfying the sort. The custom `dbbenches::EqlV2Encrypted` sqlx
+// Decode means we can SELECT `value` raw without losing harness typing.
 static QUERY_TEMPLATES: &[(&str, i32, &str)] = &[
     // ── Non-selective baselines (≈50% selectivity → Seq Scan + LIMIT) ──
     (
-        "SELECT id,value::jsonb FROM {TABLE} WHERE value > $1 LIMIT 10",
+        "SELECT id, value FROM {TABLE} WHERE value > $1 LIMIT 10",
         5000,
         "range_gt_10",
     ),
     (
-        "SELECT id,value::jsonb FROM {TABLE} WHERE value > $1 LIMIT 100",
+        "SELECT id, value FROM {TABLE} WHERE value > $1 LIMIT 100",
         5000,
         "range_gt_100",
     ),
     (
-        "SELECT id,value::jsonb FROM {TABLE} WHERE value < $1 LIMIT 10",
+        "SELECT id, value FROM {TABLE} WHERE value < $1 LIMIT 10",
         5000,
         "range_lt_10",
     ),
     (
-        "SELECT id,value::jsonb FROM {TABLE} WHERE value < $1 LIMIT 100",
+        "SELECT id, value FROM {TABLE} WHERE value < $1 LIMIT 100",
         5000,
         "range_lt_100",
     ),
@@ -92,7 +102,7 @@ static QUERY_TEMPLATES: &[(&str, i32, &str)] = &[
     // Re-enable once EQL issue #230 lands a selectivity fix:
     // https://github.com/cipherstash/encrypt-query-language/issues/230
     // (
-    //     "SELECT id,value::jsonb FROM {TABLE} WHERE value > $1 LIMIT 100",
+    //     "SELECT id, value FROM {TABLE} WHERE value > $1 LIMIT 100",
     //     2_140_000_000,
     //     "range_selective_gt_100",
     // ),
@@ -101,34 +111,32 @@ static QUERY_TEMPLATES: &[(&str, i32, &str)] = &[
     // above (EQL issue #230): the planner mis-estimates the selective
     // encrypted predicate and seq-scans most of the table at the 10M tier.
     // (
-    //     "SELECT id,value::jsonb FROM {TABLE} WHERE value > $1 LIMIT 10",
+    //     "SELECT id, value FROM {TABLE} WHERE value > $1 LIMIT 10",
     //     2_147_000_000,
     //     "range_highly_selective_gt_10",
     // ),
-    // ── Hybrid ordered range (extractor in ORDER BY) ──
+    // ── Ordered range (extractor in ORDER BY) ──
     // Sort key matches the functional index expression syntactically, so rows
     // stream out of the index already sorted — no Sort node in the plan.
+    //
+    // The companion `range_lt_natural_ordered_10` scenario (`ORDER BY value`,
+    // no extractor) was removed: Postgres can't structurally match `value`
+    // against the functional `ore_block_u64_8_256(value)` index, so the plan
+    // falls back to Sort + bitmap/seq scan and runs in seconds (62 s at 10M).
+    // That's the deliberate anti-pattern documented in the EQL perf guide
+    // (`docs/reference/query-performance.md` §4); a public bench shouldn't
+    // ship pathological cases as headline numbers. Also note the
+    // projection-pushdown sort-key trap discussed in §4: `SELECT col::jsonb
+    // ... ORDER BY col` folds the cast into the sort key, defeating even the
+    // direct btree opclass on `eql_v2_encrypted`. This bench projects `value`
+    // raw (decoded by the dbbenches `EqlV2Encrypted` sqlx type) to avoid
+    // ever conflating the two failure modes.
     (
-        "SELECT id,value::jsonb FROM {TABLE} \
+        "SELECT id, value FROM {TABLE} \
          WHERE value < $1 \
          ORDER BY eql_v2.ore_block_u64_8_256(value) LIMIT 10",
         5000,
-        "range_lt_hybrid_ordered_10",
-    ),
-    // ── Natural-form ordered range (column in ORDER BY) ──
-    // Companion to the hybrid scenario above. Postgres can't structurally
-    // match `ORDER BY value` against the functional index expression, so the
-    // plan has a residual Top-N Sort over the bitmap-scan output. Post-EQL
-    // #218 each comparison in the sort is the inlined ORE-term path, so the
-    // residual cost is bounded by Sort + heap fetches rather than per-row
-    // plpgsql. The cost delta vs the hybrid form is what justifies (or
-    // doesn't) the §4 sort-key recommendation in the EQL perf guide.
-    (
-        "SELECT id,value::jsonb FROM {TABLE} \
-         WHERE value < $1 \
-         ORDER BY value LIMIT 10",
-        5000,
-        "range_lt_natural_ordered_10",
+        "range_lt_ordered_10",
     ),
 ];
 

@@ -13,10 +13,14 @@ use sqlx::postgres::PgPoolOptions;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
 
+// `EncryptedQuery::execute` decodes `value` via the custom
+// `dbbenches::EqlV2Encrypted` sqlx type — no SQL-level cast required. See
+// the corresponding note in `benches/ore.rs` for why the casts were removed
+// (projection-pushdown sort-key folding under ORDER BY).
 static QUERY_TEMPLATES: &[(&str, &str, &str)] = &[
-    ("SELECT id,value::jsonb FROM {TABLE} WHERE value LIKE $1 LIMIT 10", "Bob", "eql_cast_firstname"),
-    ("SELECT id,value::jsonb FROM {TABLE} WHERE value LIKE $1 LIMIT 10", "Johnson", "eql_cast_lastname"),
-    ("SELECT id,value::jsonb FROM {TABLE} WHERE eql_v2.bloom_filter(value) @> eql_v2.bloom_filter($1) LIMIT 10", "Johnson", "eql_bloom"),
+    ("SELECT id, value FROM {TABLE} WHERE value LIKE $1 LIMIT 10", "Bob", "eql_cast_firstname"),
+    ("SELECT id, value FROM {TABLE} WHERE value LIKE $1 LIMIT 10", "Johnson", "eql_cast_lastname"),
+    ("SELECT id, value FROM {TABLE} WHERE eql_v2.bloom_filter(value) @> eql_v2.bloom_filter($1) LIMIT 10", "Johnson", "eql_bloom"),
 ];
 
 async fn build_query(
