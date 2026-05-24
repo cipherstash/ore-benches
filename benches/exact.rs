@@ -17,18 +17,20 @@ use tokio::runtime::Runtime;
 // a sample decrypt of the target table (see `sample_plaintext_string`) — the
 // previous hardcoded "Bob Johnson" matched zero rows at every tier because
 // `fake::Name<EN>` doesn't generate that exact combination.
-// SELECT shape (`id, value::jsonb`) matches what `EncryptedQuery::execute`
-// expects to decode: `Vec<(i32, Json<EqlCiphertext>)>`. The previous
-// `SELECT value FROM ...` shape only worked because the search term
-// matched zero rows — sqlx never tried to decode a row and the type
-// mismatch went unnoticed.
+// `EncryptedQuery::execute` decodes the encrypted column via the custom
+// `dbbenches::EqlV2Encrypted` sqlx type, so the bench projects `value`
+// directly. The earlier `value::jsonb` shape worked too but was a footgun
+// in the presence of an `ORDER BY value` (projection-pushdown folds the
+// cast into the sort key, killing index-for-sort); SELECTing `value` raw
+// keeps the bench scenarios free of that interaction. See
+// `docs/reference/query-performance.md` §4 in the EQL repo.
 static QUERY_TEMPLATES: &[(&str, &str)] = &[
     (
-        "SELECT id, value::jsonb FROM {TABLE} WHERE value = $1 LIMIT 1",
+        "SELECT id, value FROM {TABLE} WHERE value = $1 LIMIT 1",
         "eql_cast",
     ),
     (
-        "SELECT id, value::jsonb FROM {TABLE} WHERE eql_v2.hmac_256(value) = eql_v2.hmac_256($1::jsonb) LIMIT 1",
+        "SELECT id, value FROM {TABLE} WHERE eql_v2.hmac_256(value) = eql_v2.hmac_256($1::jsonb) LIMIT 1",
         "eql_hash",
     ),
 ];
