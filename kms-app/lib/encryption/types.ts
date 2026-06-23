@@ -9,7 +9,7 @@ export type Field = "email" | "name";
 
 export interface EncryptionBackend {
   /** Backend identifier, also written to the `backend` column for traceability. */
-  readonly name: "zerokms" | "aws-kms";
+  readonly name: "zerokms" | "aws-kms" | "aws-kms-envelope";
   /** One-time async setup (client construction, schema registration). */
   init(): Promise<void>;
   /** Encrypt a plaintext field value; returns a string to store. */

@@ -9,10 +9,12 @@
     "db:setup": "psql \"${DATABASE_URL:-postgres://postgres:postgres@localhost:5400/postgres}\" -v ON_ERROR_STOP=1 -f sql/schema.sql",
     "serve:zerokms": "ENCRYPTION_BACKEND=zerokms next start",
     "serve:aws-kms": "ENCRYPTION_BACKEND=aws-kms next start",
+    "serve:aws-kms-envelope": "ENCRYPTION_BACKEND=aws-kms-envelope next start",
     "load": "artillery run load/users.yml",
     "load:zerokms": "artillery run load/users.yml -o results/zerokms.json",
     "load:aws-kms": "artillery run load/users.yml -o results/aws-kms.json",
-    "report": "node scripts/summarize.mjs results/zerokms.json results/aws-kms.json"
+    "load:aws-kms-envelope": "artillery run load/users.yml -o results/aws-kms-envelope.json",
+    "report": "node scripts/summarize.mjs results/zerokms.json results/aws-kms.json results/aws-kms-envelope.json"
   },
   "dependencies": {
     "@aws-sdk/client-kms": "^3.700.0",

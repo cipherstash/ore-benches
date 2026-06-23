@@ -6,12 +6,23 @@
 // Reads the `aggregate` block Artillery writes with `--output`. Prints latency
 // percentiles (ms) and request throughput per file, side by side.
 
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { basename } from "node:path";
 
-const files = process.argv.slice(2);
-if (files.length === 0) {
+const requested = process.argv.slice(2);
+if (requested.length === 0) {
   console.error("usage: node scripts/summarize.mjs <artillery.json> [more.json ...]");
+  process.exit(1);
+}
+
+// Skip files that weren't produced (e.g. only two of three backends were run).
+const files = requested.filter((f) => {
+  if (existsSync(f)) return true;
+  console.error(`skipping ${f} (not found)`);
+  return false;
+});
+if (files.length === 0) {
+  console.error("no result files found — run a load test first");
   process.exit(1);
 }
 

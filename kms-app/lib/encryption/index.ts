@@ -1,6 +1,7 @@
 import type { EncryptionBackend } from "./types";
 import { createZeroKmsBackend } from "./zerokms";
 import { createAwsKmsBackend } from "./aws-kms";
+import { createAwsKmsEnvelopeBackend } from "./aws-kms-envelope";
 
 export type { EncryptionBackend, Field } from "./types";
 
@@ -20,11 +21,13 @@ export function getBackend(): Promise<EncryptionBackend> {
       ? createZeroKmsBackend()
       : selected === "aws-kms"
         ? createAwsKmsBackend()
-        : null;
+        : selected === "aws-kms-envelope"
+          ? createAwsKmsEnvelopeBackend()
+          : null;
 
   if (!backend) {
     throw new Error(
-      `ENCRYPTION_BACKEND must be 'zerokms' or 'aws-kms' (got: ${selected ?? "unset"})`,
+      `ENCRYPTION_BACKEND must be 'zerokms', 'aws-kms', or 'aws-kms-envelope' (got: ${selected ?? "unset"})`,
     );
   }
 

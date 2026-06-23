@@ -13,9 +13,9 @@ import type { EncryptionBackend, Field } from "./types";
  * the fairness caveats (see kms-app/README.md):
  *   - KMS Encrypt has a 4 KB plaintext limit and is rate-limited per region.
  *   - The production-grade AWS pattern is *envelope encryption* (KMS protects
- *     a local data key; AES-GCM encrypts the data). That trades a network
- *     round-trip per value for local crypto. A future backend variant
- *     (`aws-kms-envelope`) should be added to compare that path too.
+ *     a local data key; AES-GCM encrypts the data). For that path, use the
+ *     `aws-kms-envelope` backend instead — it caches the data key so it is not
+ *     bound to one KMS call per value.
  */
 class AwsKmsBackend implements EncryptionBackend {
   readonly name = "aws-kms" as const;
