@@ -1,0 +1,45 @@
+# Artillery load profile for the user create + read flow.
+#
+# The encryption backend under test is whatever the *server* was started with
+# (ENCRYPTION_BACKEND); this file is backend-agnostic. Run the same profile
+# against each backend and compare the JSON outputs (see ../README.md).
+#
+# Tune `phases` to your machine. The defaults are a gentle ramp suitable for a
+# local run; raise arrivalRate for a throughput-saturation test.
+
+config:
+  # Override the host without editing this file with: artillery run --target http://host load/users.yml
+  target: "http://localhost:3000"
+  processor: "./processor.js"
+  plugins:
+    expect: {}
+  phases:
+    - name: warmup
+      duration: 15
+      arrivalRate: 5
+    - name: ramp
+      duration: 60
+      arrivalRate: 10
+      rampTo: 50
+  defaults:
+    headers:
+      content-type: application/json
+
+scenarios:
+  - name: create-then-read
+    flow:
+      - function: "genUser"
+      - post:
+          url: "/api/users"
+          json:
+            email: "{{ email }}"
+            name: "{{ name }}"
+          capture:
+            - json: "$.id"
+              as: "userId"
+          expect:
+            - statusCode: 201
+      - get:
+          url: "/api/users/{{ userId }}"
+          expect:
+            - statusCode: 200
