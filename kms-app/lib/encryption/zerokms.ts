@@ -43,7 +43,9 @@ class ZeroKmsBackend implements EncryptionBackend {
     if (result.failure) {
       throw new Error(`zerokms decrypt failed: ${result.failure.message}`);
     }
-    return result.data;
+    // decrypt() returns JsPlaintext (string | number | …); we only ever encrypt
+    // string field values, so coerce back to string.
+    return String(result.data);
   }
 }
 
