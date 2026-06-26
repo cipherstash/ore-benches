@@ -97,8 +97,27 @@ kill %1
 npm run report     # side-by-side latency percentiles + throughput
 ```
 
-Tune the load in `load/users.yml` (`phases`). The defaults are a gentle local
-ramp; raise `arrivalRate` to push toward saturation.
+`npm run report` prints an overall table plus a **per-endpoint** breakdown
+(write = `create`, read = `read`), so you can see encrypt vs decrypt cost
+separately rather than blended.
+
+### The load profile (`load/users.yml`)
+
+The default is a **sustained, fixed-rate** test: a short warmup, then one
+arrival rate held for 2 minutes. Holding a steady rate gives stable
+p50/p95/p99 at a known offered load, which is what you want when comparing
+backends. To find the saturation knee instead, comment out the `steady` phase
+and uncomment the `ramp` phase.
+
+Two things to keep honest:
+
+- **AWS KMS rate limits.** For the `aws-kms` (direct) backend, keep
+  `arrivalRate` well under your account's per-region KMS quota, or you'll be
+  measuring KMS throttling, not crypto cost. `aws-kms-envelope` with data-key
+  caching makes far fewer KMS calls and tolerates higher rates.
+- **`ensure` thresholds.** The profile fails the run if any virtual user errors
+  or p95 exceeds 1s, so a throttled/erroring backend can't quietly look "fast".
+  Adjust to your SLO.
 
 ## Layout
 
@@ -116,7 +135,7 @@ kms-app/
 
 ## TODO / next steps
 
-- [ ] Capture the original Artillery Cloud scenario (share `sh_75edb…`) and
-      reconcile this profile against it
 - [ ] Add a `report:build` that writes a Markdown report into `results/` for
       committing alongside the EQL benchmark reports
+- [ ] First real run: `npm install`, confirm the `@cipherstash/stack` API
+      surface, and capture baseline numbers per backend

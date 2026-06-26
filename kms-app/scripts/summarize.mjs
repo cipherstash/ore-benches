@@ -29,9 +29,23 @@ if (files.length === 0) {
 const cols = files.map((file) => {
   const data = JSON.parse(readFileSync(file, "utf-8"));
   const agg = data.aggregate ?? data;
-  const rt = agg.summaries?.["http.response_time"] ?? {};
+  const summaries = agg.summaries ?? {};
+  const rt = summaries["http.response_time"] ?? {};
   const counters = agg.counters ?? {};
   const rates = agg.rates ?? {};
+
+  // Per-endpoint latency from the metrics-by-endpoint plugin (named requests:
+  // create / read). Key format varies by Artillery version, so match any
+  // response_time summary that isn't the overall http.response_time and label
+  // it by its trailing segment.
+  const endpoints = {};
+  for (const [key, val] of Object.entries(summaries)) {
+    if (key === "http.response_time") continue;
+    if (!/response_time/i.test(key)) continue;
+    const label = key.split(/[./]/).pop();
+    endpoints[label] = val;
+  }
+
   return {
     label: basename(file).replace(/\.json$/, ""),
     requests: counters["http.requests"] ?? 0,
@@ -46,6 +60,7 @@ const cols = files.map((file) => {
     p95: rt.p95,
     p99: rt.p99,
     max: rt.max,
+    endpoints,
   };
 });
 
@@ -61,11 +76,38 @@ const rows = [
   ["latency max (ms)", ...cols.map((c) => fmt(c.max))],
 ];
 
-const widths = rows[0].map((_, i) => Math.max(...rows.map((r) => String(r[i]).length)));
-const line = (r) => r.map((cell, i) => String(cell).padEnd(widths[i])).join("  ");
-console.log(line(rows[0]));
-console.log(widths.map((w) => "-".repeat(w)).join("  "));
-rows.slice(1).forEach((r) => console.log(line(r)));
+printTable(rows);
+
+// Per-endpoint breakdown (write vs read), if metrics-by-endpoint data exists.
+const endpointLabels = [
+  ...new Set(cols.flatMap((c) => Object.keys(c.endpoints))),
+].sort();
+if (endpointLabels.length > 0) {
+  const eRows = [["endpoint / pctl", ...cols.map((c) => c.label)]];
+  const pctls = [
+    ["p50", (s) => s.median ?? s.p50],
+    ["p95", (s) => s.p95],
+    ["p99", (s) => s.p99],
+  ];
+  for (const ep of endpointLabels) {
+    for (const [pctl, get] of pctls) {
+      eRows.push([
+        `${ep} ${pctl} (ms)`,
+        ...cols.map((c) => fmt(c.endpoints[ep] ? get(c.endpoints[ep]) : undefined)),
+      ]);
+    }
+  }
+  console.log("\nPer-endpoint latency (write = create, read = read):");
+  printTable(eRows);
+}
+
+function printTable(table) {
+  const w = table[0].map((_, i) => Math.max(...table.map((r) => String(r[i]).length)));
+  const fmtRow = (r) => r.map((cell, i) => String(cell).padEnd(w[i])).join("  ");
+  console.log(fmtRow(table[0]));
+  console.log(w.map((n) => "-".repeat(n)).join("  "));
+  table.slice(1).forEach((r) => console.log(fmtRow(r)));
+}
 
 function fmt(n) {
   return typeof n === "number" ? n.toFixed(1) : "—";
