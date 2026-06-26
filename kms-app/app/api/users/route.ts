@@ -15,17 +15,26 @@ export async function POST(request: Request) {
     );
   }
 
-  const backend = await getBackend();
-  const [emailEncrypted, nameEncrypted] = await Promise.all([
-    backend.encrypt(String(body.email), "email"),
-    backend.encrypt(String(body.name), "name"),
-  ]);
+  try {
+    const backend = await getBackend();
+    const [emailEncrypted, nameEncrypted] = await Promise.all([
+      backend.encrypt(String(body.email), "email"),
+      backend.encrypt(String(body.name), "name"),
+    ]);
 
-  const { rows } = await pool.query(
-    `INSERT INTO users (backend, email_encrypted, name_encrypted)
-     VALUES ($1, $2, $3) RETURNING id`,
-    [backend.name, emailEncrypted, nameEncrypted],
-  );
+    const { rows } = await pool.query(
+      `INSERT INTO users (backend, email_encrypted, name_encrypted)
+       VALUES ($1, $2, $3) RETURNING id`,
+      [backend.name, emailEncrypted, nameEncrypted],
+    );
 
-  return NextResponse.json({ id: rows[0].id }, { status: 201 });
+    return NextResponse.json({ id: rows[0].id }, { status: 201 });
+  } catch (error) {
+    // Surface backend/DB failures (e.g. KMS throttling) as a structured error
+    // so they're visible in the load-test output rather than opaque 500s.
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : String(error) },
+      { status: 500 },
+    );
+  }
 }
