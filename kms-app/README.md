@@ -31,25 +31,26 @@ The backend is chosen per server process by `ENCRYPTION_BACKEND`. All three
 store a serialized ciphertext string per field, so the table shape is
 identical; only the key-management work differs.
 
-## Fairness caveats (read before quoting numbers)
+## Fairness: compare under equal security constraints
 
-Pick the AWS comparison that matches the claim you're making:
+A latency comparison is only fair if both systems provide the **same security
+guarantee**. ZeroKMS gives every value a unique key and mediates every
+encrypt/decrypt individually, so each value's access is independently auditable
+and revocable. The AWS side must hold that same constraint to be comparable —
+which means **per-value KMS operations, no data-key caching**:
 
-- **`aws-kms` (naive direct KMS)** has a 4 KB plaintext limit and is
-  **rate-limited per region**, so a saturation test mostly measures KMS API
-  throttling. It's what teams reach for first, but it's not how AWS recommends
-  encrypting bulk application data.
-- **`aws-kms-envelope`** is the production-grade AWS pattern (KMS protects a
-  local AES-256 data key; AES-GCM encrypts locally). With data-key caching
-  (`ENVELOPE_DATA_KEY_MAX_USES`) it makes far fewer KMS calls, so it's the
-  fairer high-throughput comparison. Set `ENVELOPE_DATA_KEY_MAX_USES=1` to see
-  the no-caching worst case.
-- **`zerokms`** issues a unique key per record and derives keys in the SDK; its
-  cost profile is different by design. Report both write and read paths, not a
-  single number.
-- Run the app and Postgres on the **same hardware/region** for each backend,
-  and warm up before measuring. Numbers are comparative for *this* workload,
-  not absolute KMS benchmarks.
+- **`aws-kms` (direct)** and **`aws-kms-envelope` with `ENVELOPE_DATA_KEY_MAX_USES=1`
+  (the default)** both make one KMS call per value, preserving per-value
+  mediation/audit. These are the apples-to-apples comparisons against ZeroKMS.
+- **`aws-kms-envelope` with caching (`MAX_USES > 1`) is a *different, weaker*
+  security model**, not a faster version of the same one. A cached data key
+  covers many records with its plaintext held in app memory, so you lose the
+  ability to identify, audit, or revoke access to individual values. It's
+  faster because it does less — included only to show the trade-off, **not** a
+  fair comparison against ZeroKMS.
+- Report write and read paths separately; run the app + Postgres on the same
+  hardware/region for each backend; warm up first. Numbers are comparative for
+  *this* workload, not absolute KMS benchmarks.
 
 ## Prerequisites
 

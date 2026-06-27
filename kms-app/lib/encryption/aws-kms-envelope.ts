@@ -7,19 +7,22 @@ import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 import type { EncryptionBackend, Field } from "./types";
 
 /**
- * AWS KMS envelope encryption — the production-grade AWS pattern.
+ * AWS KMS envelope encryption.
  *
  * KMS protects a local AES-256 *data key* (DEK); the field value is encrypted
  * locally with AES-256-GCM. This removes the 4 KB plaintext limit of direct
- * KMS Encrypt, and — crucially — lets a single DEK protect many values, so we
- * are not bound to one KMS call per value.
+ * KMS Encrypt.
  *
- * Data-key caching (the realistic optimization, à la the AWS Encryption SDK):
- *   - Write: reuse a cached DEK for up to ENVELOPE_DATA_KEY_MAX_USES values
- *     before calling GenerateDataKey again. Set it to 1 to force a KMS call
- *     per value (worst case, closest to the naive `aws-kms` backend).
- *   - Read: cache the decrypted plaintext DEK keyed by its encrypted form, so
- *     reading many values that share a DEK costs one KMS Decrypt, not N.
+ * IMPORTANT — security model vs caching:
+ *   - DEFAULT (ENVELOPE_DATA_KEY_MAX_USES=1): a fresh data key per value, so
+ *     every encrypt/decrypt is its own KMS operation. This preserves per-value
+ *     mediation — each value's access is independently auditable and revocable
+ *     — which is the EQUAL-SECURITY comparison against ZeroKMS.
+ *   - Caching (MAX_USES > 1) reuses one DEK across many records, with its
+ *     plaintext held in app memory. That is FASTER but a WEAKER model: you can
+ *     no longer identify, audit, or revoke access to individual values. It is a
+ *     different security posture, not a faster version of the same one — keep
+ *     it out of fair latency comparisons (it's here only to show the trade-off).
  *
  * Stored ciphertext is a JSON string: { edk, iv, tag, ct } (all base64).
  */
@@ -47,7 +50,9 @@ class AwsKmsEnvelopeBackend implements EncryptionBackend {
     }
     this.keyId = keyId;
     this.client = new KMSClient({ region: process.env.AWS_REGION });
-    this.maxUses = Math.max(1, Number(process.env.ENVELOPE_DATA_KEY_MAX_USES ?? 1000));
+    // Default 1 = per-value data key (the fair, equal-security comparison).
+    // >1 enables caching: faster but a weaker security model (see class doc).
+    this.maxUses = Math.max(1, Number(process.env.ENVELOPE_DATA_KEY_MAX_USES ?? 1));
   }
 
   private async getWriteKey() {

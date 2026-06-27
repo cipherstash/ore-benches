@@ -21,8 +21,10 @@ class ZeroKmsBackend implements EncryptionBackend {
   private client!: Awaited<ReturnType<typeof Encryption>>;
 
   async init(): Promise<void> {
-    // Credentials are read from the environment by the SDK:
-    // CS_CLIENT_ID, CS_CLIENT_KEY, CS_CLIENT_ACCESS_KEY, CS_WORKSPACE_CRN.
+    // Credentials come from the local CipherStash profile (`stash login`,
+    // ~/.cipherstash/) automatically — no env vars needed for local runs. For
+    // headless/CI the FFI also reads CS_WORKSPACE_CRN / CS_CLIENT_ID /
+    // CS_CLIENT_KEY / CS_CLIENT_ACCESS_KEY.
     this.client = await Encryption({ schemas: [users] });
   }
 
