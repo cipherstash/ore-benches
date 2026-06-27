@@ -10,6 +10,12 @@ The latest benchmark results are available in the [`report/`](report/) directory
 - Includes ingest throughput, query performance, SQL statements, and index configurations
 - Performance indicators (⚠️) highlight queries exceeding 100ms
 
+### Other benchmarks
+
+- **[ZeroKMS vs AWS KMS](kms-app/REPORT.md)** — bulk field‑encryption throughput
+  vs AWS KMS. ZeroKMS encrypts/decrypts a whole batch in one round‑trip; AWS KMS
+  has no bulk API and throttle‑fails past a few hundred values per request.
+
 ### Headline numbers
 
 Query-only medians (no decrypt) from the latest full run against EQL 2.3, across four row-count tiers. Full per-scenario detail — SQL, planner index choices, EXPLAIN plans — is in [`report/`](report/).
