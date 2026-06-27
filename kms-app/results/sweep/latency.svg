@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="960" height="440" font-family="system-ui,-apple-system,sans-serif" font-size="12">
-<rect width="960" height="440" fill="white"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="480" font-family="system-ui,-apple-system,sans-serif" font-size="12">
+<rect width="960" height="480" fill="white"/>
 <text x="480" y="24" text-anchor="middle" font-size="16" font-weight="600">ZeroKMS vs AWS KMS — median p95 latency by batch size (3 fields/record)</text>
 <text x="269" y="40" text-anchor="middle" font-weight="600">Insert (encrypt + write)</text>
 <line x1="104" y1="384" x2="474" y2="384" stroke="#e5e7eb"/>
@@ -67,12 +67,12 @@
 <circle cx="803.3" cy="68.3" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
 <circle cx="920.0" cy="72.1" r="4" fill="#7c3aed"/>
 <circle cx="920.0" cy="72.1" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
-<rect x="104" y="417" width="14" height="3" fill="#16a34a"/>
-<text x="124" y="422" fill="#374151">ZeroKMS (bulk)</text>
-<rect x="232" y="417" width="14" height="3" fill="#ea580c"/>
-<text x="252" y="422" fill="#374151">AWS KMS (direct)</text>
-<rect x="374" y="417" width="14" height="3" fill="#7c3aed"/>
-<text x="394" y="422" fill="#374151">AWS KMS (envelope)</text>
-<circle cx="536" cy="418" r="6" fill="none" stroke="#dc2626" stroke-width="2"/>
-<text x="548" y="422" fill="#374151">= had failures (throttling)</text>
+<rect x="104" y="457" width="14" height="3" fill="#16a34a"/>
+<text x="124" y="462" fill="#374151">ZeroKMS (bulk)</text>
+<rect x="232" y="457" width="14" height="3" fill="#ea580c"/>
+<text x="252" y="462" fill="#374151">AWS KMS (direct)</text>
+<rect x="374" y="457" width="14" height="3" fill="#7c3aed"/>
+<text x="394" y="462" fill="#374151">AWS KMS (envelope)</text>
+<circle cx="536" cy="458" r="6" fill="none" stroke="#dc2626" stroke-width="2"/>
+<text x="548" y="462" fill="#374151">= had failures (throttling)</text>
 </svg>

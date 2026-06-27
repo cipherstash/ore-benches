@@ -30,7 +30,7 @@ function stat(kind, size, backend) {
 }
 
 // --- geometry ---
-const W = 960, H = 440, PADL = 64, PADR = 20, PADT = 56, PADB = 56, GAP = 56;
+const W = 960, H = 480, PADL = 64, PADR = 20, PADT = 56, PADB = 96, GAP = 56;
 const PANEL_W = (W - PADL - PADR - GAP) / 2;
 const PLOT_H = H - PADT - PADB;
 const YMIN = 10, YMAX = 10000; // log decades
