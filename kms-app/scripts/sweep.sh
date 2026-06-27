@@ -44,7 +44,7 @@ echo "health: $(curl -s http://localhost:$PORT/api/health)"
 for kind in insert query; do
   for s in "${SIZES[@]}"; do
     write_cfg "$kind" "$s" /tmp/sweep-cfg.yml
-    npx artillery run /tmp/sweep-cfg.yml -o "$OUT/$kind-s$s-$BACKEND.json" >/tmp/sweep-art.log 2>&1
+    npx artillery run /tmp/sweep-cfg.yml -o "$OUT/$kind-s$s-$BACKEND${ROUND:+-r$ROUND}.json" >/tmp/sweep-art.log 2>&1
     codes=$(grep -oE "http.codes.[0-9]+: +\.+ +[0-9]+" /tmp/sweep-art.log | tr -s ' ' | tr '\n' ' ')
     p95=$(grep -A6 "response_time" /tmp/sweep-art.log | grep -m1 "p95" | grep -oE "[0-9.]+$")
     failed=$(grep -m1 "vusers.failed" /tmp/sweep-art.log | grep -oE "[0-9]+$")
