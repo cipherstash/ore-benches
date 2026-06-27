@@ -40,9 +40,13 @@ const cols = files.map((file) => {
   // it by its trailing segment.
   const endpoints = {};
   for (const [key, val] of Object.entries(summaries)) {
-    if (key === "http.response_time") continue;
+    // Skip the overall metric and its status-code variants (http.response_time.2xx).
+    if (key.startsWith("http.response_time")) continue;
     if (!/response_time/i.test(key)) continue;
-    const label = key.split(/[./]/).pop();
+    // metrics-by-endpoint keys look like "...response_time./api/users (create)";
+    // prefer the request name in parens, else the trailing path segment.
+    const named = key.match(/\(([^)]+)\)\s*$/);
+    const label = named ? named[1] : key.split(/[./]/).pop();
     endpoints[label] = val;
   }
 

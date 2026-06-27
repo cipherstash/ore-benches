@@ -127,7 +127,7 @@ kms-app/
   app/api/health/         readiness probe
   lib/encryption/         backend abstraction + zerokms / aws-kms / aws-kms-envelope impls
   lib/db.ts               Postgres pool
-  load/users.yml          Artillery profile (+ processor.js payload generator)
+  load/users.yml          Artillery profile (+ processor.cjs payload generator)
   scripts/summarize.mjs   Artillery JSON → comparison table
   sql/schema.sql          users table
   results/                load-test outputs (gitignored)

@@ -18,7 +18,7 @@
 
 config:
   target: "http://localhost:3000" # override: artillery run --target http://host load/users.yml
-  processor: "./processor.js"
+  processor: "./processor.cjs"
   plugins:
     expect: {}
     metrics-by-endpoint: {}
