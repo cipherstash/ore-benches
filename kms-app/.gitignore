@@ -7,3 +7,4 @@ next-env.d.ts
 
 # Local load-test outputs; keep the dir (results/.gitkeep) but ignore runs.
 results/*.json
+results/**/*.json
