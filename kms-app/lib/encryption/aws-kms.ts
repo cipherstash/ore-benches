@@ -3,19 +3,17 @@ import {
   EncryptCommand,
   DecryptCommand,
 } from "@aws-sdk/client-kms";
-import type { EncryptionBackend, Field } from "./types";
+import type { EncryptionBackend, PlainRecord, EncRecord } from "./types";
+import { FIELDS } from "./types";
 
 /**
- * AWS KMS backend — the naive "encrypt the field directly with KMS" approach.
+ * AWS KMS backend — direct KMS Encrypt/Decrypt per value.
  *
- * This calls KMS Encrypt/Decrypt per value, which is the simplest way to use
- * KMS for application data and the pattern most teams reach for first. Note
- * the fairness caveats (see kms-app/README.md):
- *   - KMS Encrypt has a 4 KB plaintext limit and is rate-limited per region.
- *   - The production-grade AWS pattern is *envelope encryption* (KMS protects
- *     a local data key; AES-GCM encrypts the data). For that path, use the
- *     `aws-kms-envelope` backend instead — it caches the data key so it is not
- *     bound to one KMS call per value.
+ * AWS KMS has no bulk API, so a batch of N records × 3 fields is N×3 separate
+ * KMS calls. We fire them all concurrently (Promise.all) — the most charitable
+ * fan-out for AWS — but it's still one round-trip per value vs ZeroKMS's one
+ * round-trip per batch. This is the per-value-mediation comparison (every
+ * value individually auditable/revocable); see README "Fairness".
  */
 class AwsKmsBackend implements EncryptionBackend {
   readonly name = "aws-kms" as const;
@@ -24,34 +22,51 @@ class AwsKmsBackend implements EncryptionBackend {
 
   async init(): Promise<void> {
     const keyId = process.env.AWS_KMS_KEY_ID;
-    if (!keyId) {
-      throw new Error("AWS_KMS_KEY_ID is required for the aws-kms backend");
-    }
+    if (!keyId) throw new Error("AWS_KMS_KEY_ID is required for the aws-kms backend");
     this.keyId = keyId;
     this.client = new KMSClient({ region: process.env.AWS_REGION });
   }
 
-  async encrypt(plaintext: string, _field: Field): Promise<string> {
+  private async encryptOne(plaintext: string): Promise<string> {
     const res = await this.client.send(
-      new EncryptCommand({
-        KeyId: this.keyId,
-        Plaintext: Buffer.from(plaintext, "utf-8"),
-      }),
+      new EncryptCommand({ KeyId: this.keyId, Plaintext: Buffer.from(plaintext, "utf-8") }),
     );
     if (!res.CiphertextBlob) throw new Error("aws-kms encrypt returned no blob");
     return Buffer.from(res.CiphertextBlob).toString("base64");
   }
 
-  async decrypt(ciphertext: string, _field: Field): Promise<string> {
+  private async decryptOne(ciphertext: string): Promise<string> {
     const res = await this.client.send(
-      new DecryptCommand({
-        KeyId: this.keyId,
-        CiphertextBlob: Buffer.from(ciphertext, "base64"),
-      }),
+      new DecryptCommand({ KeyId: this.keyId, CiphertextBlob: Buffer.from(ciphertext, "base64") }),
     );
     if (!res.Plaintext) throw new Error("aws-kms decrypt returned no plaintext");
     return Buffer.from(res.Plaintext).toString("utf-8");
   }
+
+  async encryptBatch(input: PlainRecord[]): Promise<EncRecord[]> {
+    const flat = await Promise.all(
+      input.flatMap((r) => FIELDS.map((f) => this.encryptOne(r[f]))),
+    );
+    return regroup(flat);
+  }
+
+  async decryptBatch(input: EncRecord[]): Promise<PlainRecord[]> {
+    const flat = await Promise.all(
+      input.flatMap((r) => FIELDS.map((f) => this.decryptOne(r[f]))),
+    );
+    return regroup(flat);
+  }
+}
+
+/** Reassemble a flat [v0_email, v0_name, v0_phone, v1_email, ...] array into records. */
+export function regroup<T extends Record<string, string>>(flat: string[]): T[] {
+  const out: T[] = [];
+  for (let i = 0; i < flat.length; i += FIELDS.length) {
+    out.push(
+      Object.fromEntries(FIELDS.map((f, j) => [f, flat[i + j]])) as T,
+    );
+  }
+  return out;
 }
 
 export function createAwsKmsBackend(): EncryptionBackend {

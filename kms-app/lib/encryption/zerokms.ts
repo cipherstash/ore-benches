@@ -1,19 +1,25 @@
 import { Encryption } from "@cipherstash/stack";
 import { encryptedTable, encryptedColumn } from "@cipherstash/stack/schema";
-import type { EncryptionBackend, Field } from "./types";
+import type { EncryptionBackend, PlainRecord, EncRecord } from "./types";
+import { FIELDS } from "./types";
 
 /**
  * ZeroKMS backend, via the CipherStash Encryption SDK (`@cipherstash/stack`).
  *
- * Each value is encrypted with a unique, per-record key managed by ZeroKMS.
- * The SDK returns a JSON payload (the EQL ciphertext envelope); we serialize
- * it to a string for storage and parse it back on read. This mirrors the
- * production SDK pattern documented at
- * https://cipherstash.com/docs/stack/reference/comparisons/aws-kms
+ * Uses bulkEncryptModels / bulkDecryptModels: per the SDK, each performs a
+ * SINGLE call to ZeroKMS regardless of the number of models — so a batch of
+ * 20 records × 3 fields is one network round-trip, not 60. This is where
+ * ZeroKMS's throughput advantage over AWS KMS comes from.
+ *
+ * Credentials come from the local CipherStash profile (`stash login`,
+ * ~/.cipherstash/) automatically — no env vars needed for local runs. For
+ * headless/CI the FFI also reads CS_WORKSPACE_CRN / CS_CLIENT_ID /
+ * CS_CLIENT_KEY / CS_CLIENT_ACCESS_KEY.
  */
-const users = encryptedTable("users", {
+const records = encryptedTable("records", {
   email: encryptedColumn("email"),
   name: encryptedColumn("name"),
+  phone: encryptedColumn("phone"),
 });
 
 class ZeroKmsBackend implements EncryptionBackend {
@@ -21,35 +27,39 @@ class ZeroKmsBackend implements EncryptionBackend {
   private client!: Awaited<ReturnType<typeof Encryption>>;
 
   async init(): Promise<void> {
-    // Credentials come from the local CipherStash profile (`stash login`,
-    // ~/.cipherstash/) automatically — no env vars needed for local runs. For
-    // headless/CI the FFI also reads CS_WORKSPACE_CRN / CS_CLIENT_ID /
-    // CS_CLIENT_KEY / CS_CLIENT_ACCESS_KEY.
-    this.client = await Encryption({ schemas: [users] });
+    this.client = await Encryption({ schemas: [records] });
   }
 
-  async encrypt(plaintext: string, field: Field): Promise<string> {
-    const result = await this.client.encrypt(plaintext, {
-      column: users[field],
-      table: users,
+  async encryptBatch(input: PlainRecord[]): Promise<EncRecord[]> {
+    const result = await this.client.bulkEncryptModels(input, records);
+    if (result.failure) {
+      throw new Error(`zerokms bulkEncrypt failed: ${result.failure.message}`);
+    }
+    // Each model field is an EQL ciphertext object; serialize per field for TEXT storage.
+    return result.data.map((m) => {
+      const rec = m as Record<Field, unknown>;
+      return Object.fromEntries(FIELDS.map((f) => [f, JSON.stringify(rec[f])])) as EncRecord;
     });
-    if (result.failure) {
-      throw new Error(`zerokms encrypt failed: ${result.failure.message}`);
-    }
-    // result.data is the EQL JSON envelope; store it as a string.
-    return JSON.stringify(result.data);
   }
 
-  async decrypt(ciphertext: string, _field: Field): Promise<string> {
-    const result = await this.client.decrypt(JSON.parse(ciphertext));
+  async decryptBatch(input: EncRecord[]): Promise<PlainRecord[]> {
+    // Rebuild encrypted models from the stored ciphertext strings.
+    const models = input.map((r) =>
+      Object.fromEntries(FIELDS.map((f) => [f, JSON.parse(r[f])])),
+    );
+    const result = await this.client.bulkDecryptModels(models);
     if (result.failure) {
-      throw new Error(`zerokms decrypt failed: ${result.failure.message}`);
+      throw new Error(`zerokms bulkDecrypt failed: ${result.failure.message}`);
     }
-    // decrypt() returns JsPlaintext (string | number | …); we only ever encrypt
-    // string field values, so coerce back to string.
-    return String(result.data);
+    return result.data.map((m) => {
+      const rec = m as Record<Field, unknown>;
+      return Object.fromEntries(FIELDS.map((f) => [f, String(rec[f])])) as PlainRecord;
+    });
   }
 }
+
+// FIELDS is imported above; re-declare the element type locally for the maps.
+type Field = (typeof FIELDS)[number];
 
 export function createZeroKmsBackend(): EncryptionBackend {
   return new ZeroKmsBackend();

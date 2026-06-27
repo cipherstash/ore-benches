@@ -17,19 +17,28 @@ load profile, only the encryption backend changes. Three backends ship:
 
 ## How it works
 
+Each request encrypts or decrypts **a batch of values** — that bulk
+amortization is the whole point. A realistic request handles, say, 20 records ×
+3 encrypted fields = 60 values:
+
 ```
-Artillery ──HTTP──▶ Next.js API ──encrypt/decrypt──▶ [ ZeroKMS | AWS KMS ]
+Artillery ──HTTP──▶ Next.js API ──batch encrypt/decrypt──▶ [ ZeroKMS | AWS KMS ]
                          │
-                         └──store ciphertext──▶ Postgres (users table)
+                         └──store ciphertext──▶ Postgres (records table)
 ```
 
-- `POST /api/users` — encrypts `email` + `name`, inserts the ciphertext (write path)
-- `GET /api/users/:id` — reads the row, decrypts both fields (read path)
+- `POST /api/records/insert` `{ count }` — generate `count` records, **bulk
+  encrypt** all `count×3` fields, multi-row insert (the **write** benchmark)
+- `GET /api/records/query?limit=N` — read a random window of `N` existing rows,
+  **bulk decrypt** all `N×3` fields (the **read** benchmark)
 - `GET /api/health` — checks DB + that the selected backend initializes
 
-The backend is chosen per server process by `ENCRYPTION_BACKEND`. All three
-store a serialized ciphertext string per field, so the table shape is
-identical; only the key-management work differs.
+The backend is chosen per server process by `ENCRYPTION_BACKEND`. The decisive
+difference: **ZeroKMS does a whole batch in one network round-trip**
+(`bulkEncryptModels`/`bulkDecryptModels`, up to 10,000 keys per call), while
+**AWS KMS has no bulk API** — under per-value mediation it makes one call per
+value (`count×3` per request). All three store a serialized ciphertext string
+per field, so the table shape is identical.
 
 ## Fairness: compare under equal security constraints
 
@@ -64,79 +73,66 @@ which means **per-value KMS operations, no data-key caching**:
 ```sh
 cd kms-app
 npm install
-cp .env.example .env.local   # fill in credentials
-npm run db:setup             # create the users table
+cp .env.example .env.local   # AWS key id + region; ZeroKMS uses your `stash` profile
+npm run db:setup             # create the records table
 ```
 
 ## Run a comparison
 
-Each backend is a separate server process. Build once, then for each backend:
-start the server with that backend, run the load profile, save the output.
+There are two benchmarks — **insert** (write) and **query** (read) — and three
+backends. The query benchmark reads existing rows, so **seed each backend by
+running its insert benchmark first**. Build once, then per backend:
 
 ```sh
 npm run build
 
-# --- ZeroKMS ---
-ENCRYPTION_BACKEND=zerokms npm start &        # or: npm run serve:zerokms
-curl -s localhost:3000/api/health             # expect {"ok":true,"backend":"zerokms"}
-npm run load:zerokms                           # writes results/zerokms.json
-kill %1
+# example for one backend (repeat for aws-kms, aws-kms-envelope):
+ENCRYPTION_BACKEND=zerokms npm start &
+curl -s localhost:3000/api/health                       # {"ok":true,"backend":"zerokms"}
 
-# --- AWS KMS (naive direct) ---
-ENCRYPTION_BACKEND=aws-kms npm start &
-curl -s localhost:3000/api/health             # expect {"ok":true,"backend":"aws-kms"}
-npm run load:aws-kms                           # writes results/aws-kms.json
+npm run load:insert -- -o results/insert-zerokms.json   # write benchmark (also seeds)
+npm run load:query  -- -o results/query-zerokms.json    # read benchmark
 kill %1
-
-# --- AWS KMS (envelope, production pattern) ---
-ENCRYPTION_BACKEND=aws-kms-envelope npm start &
-curl -s localhost:3000/api/health             # expect {"ok":true,"backend":"aws-kms-envelope"}
-npm run load:aws-kms-envelope                  # writes results/aws-kms-envelope.json
-kill %1
-
-# --- compare (skips any backend you didn't run) ---
-npm run report     # side-by-side latency percentiles + throughput
 ```
 
-`npm run report` prints an overall table plus a **per-endpoint** breakdown
-(write = `create`, read = `read`), so you can see encrypt vs decrypt cost
-separately rather than blended.
+Then compare (each skips any backend you didn't run):
 
-### The load profile (`load/users.yml`)
+```sh
+npm run report:insert   # write-path latency/throughput across backends
+npm run report:query    # read-path latency/throughput across backends
+```
 
-The default is a **sustained, fixed-rate** test: a short warmup, then one
-arrival rate held for 2 minutes. Holding a steady rate gives stable
-p50/p95/p99 at a known offered load, which is what you want when comparing
-backends. To find the saturation knee instead, comment out the `steady` phase
-and uncomment the `ramp` phase.
+Tune batch size in `load/insert.yml` (`count`) and `load/query.yml` (`limit`).
+Larger batches push ZeroKMS toward its 10k-keys-per-call ceiling while AWS's
+per-value call count grows linearly.
 
-Two things to keep honest:
+### The load profiles
 
-- **AWS KMS rate limits.** For the `aws-kms` (direct) backend, keep
-  `arrivalRate` well under your account's per-region KMS quota, or you'll be
-  measuring KMS throttling, not crypto cost. `aws-kms-envelope` with data-key
-  caching makes far fewer KMS calls and tolerates higher rates.
-- **`ensure` thresholds.** The profile fails the run if any virtual user errors
-  or p95 exceeds 1s, so a throttled/erroring backend can't quietly look "fast".
-  Adjust to your SLO.
+Both default to a **sustained, fixed-rate** test (short warmup, then one arrival
+rate held for 2 minutes) — stable percentiles at a known offered load. Keep
+`arrivalRate × count × 3` (the per-second KMS call rate) under your AWS region
+quota for the `aws-kms` backend, or you'll measure throttling, not crypto. Each
+profile's `ensure` block fails the run if any virtual user errors.
 
 ## Layout
 
 ```
 kms-app/
-  app/api/users/          POST (create+encrypt), GET (read+decrypt)
-  app/api/health/         readiness probe
-  lib/encryption/         backend abstraction + zerokms / aws-kms / aws-kms-envelope impls
-  lib/db.ts               Postgres pool
-  load/users.yml          Artillery profile (+ processor.cjs payload generator)
-  scripts/summarize.mjs   Artillery JSON → comparison table
-  sql/schema.sql          users table
-  results/                load-test outputs (gitignored)
+  app/api/records/insert/  POST { count } — bulk encrypt + insert
+  app/api/records/query/   GET ?limit=N  — bulk read + decrypt
+  app/api/health/          readiness probe
+  lib/encryption/          batch backend interface + zerokms / aws-kms / aws-kms-envelope
+  lib/records.ts           synthetic record generator
+  lib/db.ts                Postgres pool
+  load/insert.yml          write benchmark   load/query.yml  read benchmark
+  scripts/summarize.mjs    Artillery JSON → comparison table
+  sql/schema.sql           records table (3 encrypted columns)
+  results/                 load-test outputs (gitignored)
 ```
 
 ## TODO / next steps
 
 - [ ] Add a `report:build` that writes a Markdown report into `results/` for
       committing alongside the EQL benchmark reports
-- [ ] First real run: `npm install`, confirm the `@cipherstash/stack` API
-      surface, and capture baseline numbers per backend
+- [ ] Capture baseline numbers per backend across a couple of batch sizes;
+      run interleaved repeats before quoting figures
