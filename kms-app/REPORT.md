@@ -21,6 +21,10 @@ labeled baselines — see [Other runs](#other-runs).)
   stays clean.
 - **Throughput:** ZeroKMS sustains **~21,000 values/s**; AWS KMS collapses to
   **~250 values/s** under load — a **~85× gap**.
+- **Data-key reuse doesn't close the gap.** The usual AWS workaround (reuse one
+  data key across many records) speeds writes but collapses to one KMS call per
+  record on realistic *scattered* reads, while trading away per-record audit and
+  revocation — see [**`REUSE.md`**](REUSE.md).
 
 ## Latency — median p95 by batch size
 
