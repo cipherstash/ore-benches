@@ -12,7 +12,9 @@ HERE="$(cd "$(dirname "$0")/.." && pwd)"; cd "$HERE"
 BACKEND="${1:?usage: throughput.sh <backend>}"
 PORT=3321
 BATCH="${BATCH:-100}"          # records per request (×3 fields = values/request)
-RATES=(10 25 50 100)           # requests/sec offered
+# requests/sec offered; override to push higher (ZeroKMS didn't saturate at 100
+# on a laptop): RATES="50 100 200 400" bash scripts/throughput.sh zerokms
+IFS=' ' read -ra RATES <<< "${RATES:-10 25 50 100}"
 DW="${DW:-2}"; DS="${DS:-12}"
 OUT=results/throughput; mkdir -p "$OUT"
 CSV="$OUT/data.csv"

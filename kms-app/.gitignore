@@ -9,3 +9,4 @@ next-env.d.ts
 results/*.json
 results/**/*.json
 !results/sweep/*.json
+!results/throughput/*.json

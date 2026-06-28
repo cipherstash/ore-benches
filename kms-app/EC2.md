@@ -82,8 +82,17 @@ CS_CLIENT_KEY=...
 CS_CLIENT_ACCESS_KEY=...
 ENV
 npm run db:setup
+
+# latency sweep (batch size 20..1000)
 ROUNDS=3 DS=15 DW=3 bash scripts/sweep-repeat.sh
 node scripts/collect.mjs && node scripts/chart.mjs && node scripts/aggregate.mjs 3
+
+# throughput sweep — push higher rates than a laptop could, to find ZeroKMS's
+# real ceiling (it didn't saturate at 30k values/s on the laptop)
+for b in zerokms aws-kms aws-kms-envelope; do
+  RATES="50 100 200 400 800" BATCH=100 DS=15 bash scripts/throughput.sh "$b"
+done
+node scripts/throughput-chart.mjs
 ```
 
 Copy `results/sweep/` back (CSV + JSONs + SVG), then commit as the headline
