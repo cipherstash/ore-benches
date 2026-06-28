@@ -16,8 +16,8 @@ ROUNDS="${ROUNDS:-3}"; DW="${DW:-3}"; DS="${DS:-15}"
 mkdir -p results/sweep results/throughput
 
 restart_server(){ # backend — kill A's server, start fresh, wait healthy
-  ssh "${SSHO[@]}" ec2-user@"$A_IP" \
-    "pkill -f 'next start' >/dev/null 2>&1 || true; sleep 1; cd /opt/benches/kms-app && setsid env ENCRYPTION_BACKEND=$1 ENVELOPE_DATA_KEY_MAX_USES=1 npx next start -p 3000 -H 0.0.0.0 </dev/null >/tmp/srv.log 2>&1 & exit 0" >/dev/null 2>&1 || true
+  ssh "${SSHO[@]}" ec2-user@"$A_IP" "pkill -f next-server >/dev/null 2>&1; pkill -f 'next start' >/dev/null 2>&1; sleep 1" >/dev/null 2>&1 || true
+  ssh "${SSHO[@]}" ec2-user@"$A_IP" "cd /opt/benches/kms-app && nohup env ENCRYPTION_BACKEND=$1 ENVELOPE_DATA_KEY_MAX_USES=1 npx next start -p 3000 -H 0.0.0.0 >/tmp/srv.log 2>&1 </dev/null &" >/dev/null 2>&1 || true
   for i in $(seq 1 90); do curl -sf "$TARGET/api/health" >/dev/null 2>&1 && return 0; sleep 1; done
   echo "  !! server failed to come up for $1"; return 1
 }
