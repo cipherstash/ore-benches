@@ -15,9 +15,10 @@ TARGET="http://$A_IP:3000"
 ROUNDS="${ROUNDS:-3}"; DW="${DW:-3}"; DS="${DS:-15}"
 mkdir -p results/sweep results/throughput
 
-restart_server(){ # backend — kill A's server, start fresh, wait healthy
-  ssh "${SSHO[@]}" ec2-user@"$A_IP" "pkill -f next-server >/dev/null 2>&1; pkill -f 'next start' >/dev/null 2>&1; sleep 1" >/dev/null 2>&1 || true
-  ssh "${SSHO[@]}" ec2-user@"$A_IP" "cd /opt/benches/kms-app && nohup env ENCRYPTION_BACKEND=$1 ENVELOPE_DATA_KEY_MAX_USES=1 npx next start -p 3000 -H 0.0.0.0 >/tmp/srv.log 2>&1 </dev/null &" >/dev/null 2>&1 || true
+# Restart A's app server as a transient systemd unit (survives the SSH session,
+# cleanly stoppable — shell backgrounding doesn't work: Next traps SIGHUP).
+restart_server(){ # backend
+  ssh "${SSHO[@]}" ec2-user@"$A_IP" "sudo systemctl stop kmsapp 2>/dev/null; sleep 1; sudo systemd-run --unit=kmsapp --collect --working-directory=/opt/benches/kms-app --setenv=ENCRYPTION_BACKEND=$1 --setenv=ENVELOPE_DATA_KEY_MAX_USES=1 /usr/bin/npx next start -p 3000 -H 0.0.0.0" >/dev/null 2>&1 || true
   for i in $(seq 1 90); do curl -sf "$TARGET/api/health" >/dev/null 2>&1 && return 0; sleep 1; done
   echo "  !! server failed to come up for $1"; return 1
 }
@@ -62,7 +63,7 @@ for b in zerokms aws-kms aws-kms-envelope; do
   done
 done
 
-ssh "${SSHO[@]}" ec2-user@"$A_IP" "pkill -f 'next start' || true" >/dev/null 2>&1 || true
+ssh "${SSHO[@]}" ec2-user@"$A_IP" "sudo systemctl stop kmsapp 2>/dev/null || true" >/dev/null 2>&1 || true
 node scripts/collect.mjs; node scripts/chart.mjs; node scripts/aggregate.mjs "$ROUNDS"
 node scripts/throughput-chart.mjs
 echo "BENCH_DONE_2HOST"
