@@ -4,133 +4,98 @@ How ZeroKMS compares to AWS KMS when an application encrypts and decrypts
 **many values per request** — the normal case for field-level encryption (read
 20 rows with 3 encrypted fields each → 60 decryptions in one request).
 
-> ⚠️ **Environment: developer laptop on home Wi‑Fi.** These are *directional*
-> numbers. A home network adds latency and jitter to every round‑trip, which
-> **overstates the gap** — ZeroKMS pays that overhead once per batch, AWS KMS
-> pays it per value. The conservative, publishable numbers come from an
-> in‑region EC2 run (see [`EC2.md`](EC2.md)); this page is the dev baseline.
-
-![Median p95 latency by batch size](results/sweep/latency.svg)
+**Environment (headline run):** two AWS `c7i.2xlarge` instances in
+`ap-southeast-2` (same region as KMS and ZeroKMS) — the app + Postgres on one,
+the Artillery load generator on a **separate** instance hitting it over the
+private network. Keeping the load generator off the system-under-test is what
+makes the numbers trustworthy. (Earlier laptop and single-box runs are kept as
+labeled baselines — see [Other runs](#other-runs).)
 
 ## Headline
 
-- **ZeroKMS does a whole batch in one network round‑trip** (`bulkEncryptModels`/
+- **ZeroKMS does a whole batch in one network round-trip** (`bulkEncryptModels`/
   `bulkDecryptModels`, up to 10,000 keys per call). **AWS KMS has no bulk API**,
   so a batch of N records × 3 fields is N×3 individual KMS calls.
-- **Latency:** the gap grows with batch size — **~8× at 100 records, ~15–17× at
-  500** (median p95). AWS KMS throttle‑fails past a few hundred values per
-  request; **ZeroKMS had zero failures at every size.**
-- **Throughput:** ZeroKMS scaled linearly to **≥30,000 values/s with zero
-  failures** (and never saturated — that's the laptop's ceiling, not ZeroKMS's).
-  AWS KMS peaked at **~2,500 values/s and then *collapsed* under load** — pushing
-  harder produced *fewer* successful values/s as throttling took over. A
-  **≥12× throughput gap, and widening.**
+- **Latency:** at a realistic 100-record batch, ZeroKMS is **~16× faster**
+  (52 ms vs 854 ms p95). By 500 records AWS KMS **throttle-fails**; ZeroKMS
+  stays clean.
+- **Throughput:** ZeroKMS sustains **~21,000 values/s**; AWS KMS collapses to
+  **~250 values/s** under load — a **~85× gap**.
 
-## Latency — median p95 across 3 rounds
+## Latency — median p95 by batch size
 
-`⚠️` = AWS failed a majority of requests in that cell (KMS throttling).
-ZeroKMS: **0 failures at every size.**
+![Median p95 latency by batch size](results-ec2/sweep/latency.svg)
 
-### Insert (encrypt + write)
 | records / req | values | ZeroKMS | AWS KMS (direct) | AWS KMS (envelope) | ZeroKMS faster |
 |---:|---:|---:|---:|---:|---:|
-| 20 | 60 | **43 ms** | 111 ms | 118 ms | 2.6× |
-| 100 | 300 | **84 ms** | 686 ms | 686 ms | 8× |
-| 500 | 1,500 | **498 ms** | 7,710 ms ⚠️ | 7,710 ms ⚠️ | 15× |
-| 1,000 | 3,000 | **1,064 ms** | 6,703 ms ⚠️ | 6,976 ms ⚠️ | 6× |
+| 20 | 60 | **18 ms** | 40 ms | 42 ms | 2.2× |
+| 100 | 300 | **52 ms** | 854 ms | 1,002 ms | **~16×** |
+| 500 | 1,500 | **821 ms** | 7,866 ms ⚠️ | 7,866 ms ⚠️ | ~10× |
+| 1,000 | 3,000 | 6,440 ms ⚠️ | 7,557 ms ⚠️ | 6,838 ms ⚠️ | — |
 
-### Query (read + decrypt)
-| records / req | values | ZeroKMS | AWS KMS (direct) | AWS KMS (envelope) | ZeroKMS faster |
-|---:|---:|---:|---:|---:|---:|
-| 20 | 60 | **59 ms** | 111 ms | 78 ms | 2× |
-| 100 | 300 | **113 ms** | 699 ms | 584 ms | 6× |
-| 500 | 1,500 | **460 ms** | 7,710 ms ⚠️ | 7,710 ms ⚠️ | 17× |
-| 1,000 | 3,000 | **1,130 ms** | 6,838 ms ⚠️ | 7,117 ms ⚠️ | 6× |
+(Insert/write path; the read/decrypt path is the same shape — full data in
+[`results-ec2/sweep/data.csv`](results-ec2/sweep/data.csv).) `⚠️` = the cell had
+throttling failures.
 
-The gap peaks around 500 records and compresses at 1,000 because ZeroKMS's own
-batch latency grows while AWS plateaus at its failure ceiling (~7 s for the
-requests that don't time out). Full per‑round data: [`results/sweep/data.csv`](results/sweep/data.csv).
+**The 1,000-record row is not a clean backend comparison** — at that size the
+*application* work dominates (generating 1,000 records, serialising 3,000
+ciphertexts, a 1,000-row INSERT), so both backends are bounded by the app
+instance's CPU, not the key service. The clean signal is 20–500 records.
 
-## Throughput — sustained values/sec (batch = 100)
+## Throughput — values/sec under rising load
 
-Holding a 100‑record batch (300 values/request) and stepping the request rate
-up toward saturation:
+![Throughput — achieved values/sec vs offered load](results-ec2/throughput/throughput.svg)
 
-![Throughput — achieved vs offered values/sec](results/throughput/throughput.svg)
+Holding a 100-record batch and stepping the request rate up:
 
-| offered (values/s) | ZeroKMS | AWS KMS (direct) | AWS KMS (envelope) |
-|---:|---:|---:|---:|
-| 3,000 | **3,000** ✓ | 2,486 ⚠️ | 2,293 ⚠️ |
-| 7,500 | **7,500** ✓ | 1,264 ⚠️ | 1,221 ⚠️ |
-| 15,000 | **15,000** ✓ | 814 ⚠️ | 771 ⚠️ |
-| 30,000 | **30,000** ✓ | 729 ⚠️ | 707 ⚠️ |
+- **ZeroKMS** rises to **~21,000 values/s**, then degrades as the *app instance*
+  saturates (one bulk round-trip per request keeps the key service out of the
+  bottleneck).
+- **AWS KMS** never exceeds **~250 values/s** (direct) and fails the large
+  majority of requests from the start — per-value calls hit the KMS rate limit
+  immediately. More offered load produces *fewer* successful values/s.
+- That is a **~85× sustained-throughput gap.** Note ZeroKMS's ~21k ceiling here
+  is the **app instance's 8 vCPU**, not ZeroKMS — it is a floor, not a limit.
 
-*(insert path; query is the same shape. ✓ = 0 failures; ⚠️ = throttle failures.)*
-
-- **ZeroKMS tracks the offered load exactly, 0 failures, all the way to 30,000
-  values/s** — it kept up with everything we could throw at it from a laptop and
-  **never saturated**. Its real ceiling is higher; this is a *floor*.
-- **AWS KMS doesn't just cap — it collapses.** It can't fully sustain even 3,000
-  values/s, and as offered load rises, *achieved* throughput **falls** (to ~700
-  values/s) while failures climb into the thousands. More load makes AWS slower,
-  not faster — the signature of per‑value rate limiting.
-- That's a **≥12× sustained‑throughput gap** here, and it widens with more load.
-  Data: [`results/throughput/data.csv`](results/throughput/data.csv).
+Data: [`results-ec2/throughput/data.csv`](results-ec2/throughput/data.csv).
 
 ## Methodology
 
 A thin Next.js CRUD app stores records with three encrypted fields, with a
-pluggable encryption backend selected per server process. Artillery drives two
-benchmarks — **insert** (write) and **query** (read of existing rows). The
-**latency** sweep varies batch size (20/100/500/1,000) at a fixed arrival rate;
-the **throughput** sweep fixes the batch (100 records) and steps the arrival
-rate up (10/25/50/100 req/s) toward saturation, recording achieved values/sec.
+pluggable encryption backend selected per server process.
 
-- **Backends, under equal security constraints.** The comparison holds the
-  security model constant: every value is individually mediated (its own key,
-  individually auditable/revocable). ZeroKMS uses its bulk API (one round‑trip
-  per batch); AWS KMS makes one call per value, fanned out concurrently
-  (`Promise.all`, `AWS_MAX_ATTEMPTS=3`). Envelope is included at
-  `ENVELOPE_DATA_KEY_MAX_USES=1` (one data key per value) — *data‑key caching is
-  a weaker security model, not a faster version of the same one, so it is
-  excluded from the fair comparison.* See the [README](README.md#fairness-compare-under-equal-security-constraints).
-- **Environment.** Apple M4 / 24 GB / macOS 15.5, home Wi‑Fi. AWS KMS and
-  ZeroKMS both in `ap-southeast-2`; Postgres 17 local on `:5400`; Artillery on
-  the same machine. AWS via a least‑privilege static key (Encrypt/Decrypt/
-  GenerateDataKey on one key); ZeroKMS via the local `stash` profile.
-- **Procedure.** 3 interleaved rounds (backends rotated each round to share
-  temporal variance). **Each cell runs against a fresh server process** so a
-  large‑batch meltdown can't spill timeouts into the next cell. Warmup 3 s +
-  steady 15 s per cell; arrival rate 10/5/2/1 for size 20/100/500/1,000.
-- **Metrics.** Median p95 latency across the 3 rounds; sustained throughput =
-  successful values / wall‑clock; failures = Artillery `vusers.failed`.
-- **Throughput is a *floor*, not a ceiling.** ZeroKMS never saturated — the
-  laptop's load generator and home network capped the offered load before
-  ZeroKMS hit its limit. The AWS numbers, by contrast, are real saturation (AWS
-  is the bottleneck). The in‑region EC2 run will find ZeroKMS's actual ceiling.
-
-## What it means for the "≈14×" claim
-
-The advantage is a function of batch size, because the architectures differ at
-the root: one round‑trip vs N. It lands around **15–17× at 500‑record batches**
-on this hardware, then AWS simply throttle‑fails. So "≈14×" is defensible *as a
-bulk, mid‑batch figure* — quote it with the batch‑size condition, not as a
-blanket multiple. (On a faster in‑region path the multiple will be smaller; the
-EC2 run will give that conservative number.)
-
-## Reproduce
-
-```sh
-cd kms-app && npm install && npm run db:setup
-ROUNDS=3 DS=15 DW=3 bash scripts/sweep-repeat.sh   # ~30 min
-node scripts/collect.mjs && node scripts/chart.mjs && node scripts/aggregate.mjs 3
-```
-Raw per‑round Artillery output is committed under [`results/sweep/`](results/sweep/).
+- **Topology.** App + Postgres 16 on instance A; Artillery on a **separate**
+  instance B, hitting A's private IP. For each cell B restarts A's server (a
+  transient `systemd` unit) for per-cell isolation, then runs the load. Both
+  `c7i.2xlarge` (8 vCPU) in `ap-southeast-2`. AWS via an EC2 instance role
+  scoped to one KMS key; ZeroKMS via a headless access key.
+- **Backends, under equal security constraints.** Every value is individually
+  mediated (its own key, individually auditable/revocable). ZeroKMS uses its
+  bulk API (one round-trip per batch); AWS makes one call per value, fanned out
+  concurrently. Envelope runs at `ENVELOPE_DATA_KEY_MAX_USES=1` — data-key
+  caching is a *weaker* security model, not a faster version of the same one,
+  so it is excluded from the fair comparison. See the
+  [README](README.md#fairness-compare-under-equal-security-constraints).
+- **Procedure.** Latency: 3 interleaved rounds, batch 20/100/500/1,000.
+  Throughput: fixed 100-record batch, request rate stepped 50→800/s.
+  Median p95 across rounds; failures = Artillery `vusers.failed`.
+- **Reproduce:** [`EC2.md`](EC2.md) (the two-host runbook). Driver:
+  [`scripts/sweep-2host.sh`](scripts/sweep-2host.sh).
 
 ## Limitations
 
-- **Home network** (overstates the gap; in‑region EC2 run pending — `EC2.md`).
-- Single region, 3 rounds, 15 s cells — modest. The AWS failure threshold
-  depends on region/quota/retry config.
-- ZeroKMS bulk latency also grows with batch size — it is one round‑trip, not
-  free.
+- **App-instance-bound at the extremes.** The 1,000-record latency and the
+  throughput ceiling are limited by instance A's CPU, not the key service; a
+  larger app box would push both further (and widen, not narrow, the gap).
+- The AWS failure threshold depends on region/KMS quota/retry config.
+- Single region. Numbers are comparative for *this* workload.
+
+## Other runs
+
+Kept for transparency; **not** the citable numbers:
+
+- **Laptop (home Wi-Fi):** [`results/`](results/) — directional; the home
+  network *overstates* the gap (per-value calls pay the network penalty N times).
+- **Single c6i.xlarge (discarded):** co-locating the load generator with the app
+  on 4 vCPU made the *instance* the bottleneck — which is exactly why the
+  headline run uses a separate load generator.

@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="500" font-family="system-ui,-apple-system,sans-serif" font-size="12">
+<rect width="980" height="500" fill="white"/>
+<text x="490" y="24" text-anchor="middle" font-size="16" font-weight="600">Throughput — values/sec achieved as offered load rises (batch = 100 records)</text>
+<text x="281" y="40" text-anchor="middle" font-weight="600">Insert (encrypt)</text>
+<line x1="120" y1="404" x2="486" y2="404" stroke="#eef0f2"/>
+<text x="114" y="408" text-anchor="end" fill="#6b7280">0</text>
+<line x1="120" y1="317" x2="486" y2="317" stroke="#eef0f2"/>
+<text x="114" y="321" text-anchor="end" fill="#6b7280">6.25k</text>
+<line x1="120" y1="230" x2="486" y2="230" stroke="#eef0f2"/>
+<text x="114" y="234" text-anchor="end" fill="#6b7280">12.5k</text>
+<line x1="120" y1="143" x2="486" y2="143" stroke="#eef0f2"/>
+<text x="114" y="147" text-anchor="end" fill="#6b7280">18.75k</text>
+<line x1="120" y1="56" x2="486" y2="56" stroke="#eef0f2"/>
+<text x="114" y="60" text-anchor="end" fill="#6b7280">25k</text>
+<text x="120" y="424" text-anchor="middle" fill="#374151">50</text>
+<text x="207.5" y="424" text-anchor="middle" fill="#374151">100</text>
+<text x="295" y="424" text-anchor="middle" fill="#374151">200</text>
+<text x="382.5" y="424" text-anchor="middle" fill="#374151">400</text>
+<text x="470" y="424" text-anchor="middle" fill="#374151">800</text>
+<text x="20" y="230" text-anchor="middle" fill="#374151" transform="rotate(-90 20 230)">achieved (values/s)</text>
+<text x="281" y="448" text-anchor="middle" fill="#374151">offered load (requests/s)</text>
+<polyline fill="none" stroke="#16a34a" stroke-width="2.5" points="120.0,195.2 207.5,106.8 295.0,253.4 382.5,279.0 470.0,288.9"/>
+<circle cx="120.0" cy="195.2" r="4" fill="#16a34a"/>
+<circle cx="207.5" cy="106.8" r="4" fill="#16a34a"/>
+<circle cx="207.5" cy="106.8" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
+<circle cx="295.0" cy="253.4" r="4" fill="#16a34a"/>
+<circle cx="295.0" cy="253.4" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
+<circle cx="382.5" cy="279.0" r="4" fill="#16a34a"/>
+<circle cx="382.5" cy="279.0" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
+<circle cx="470.0" cy="288.9" r="4" fill="#16a34a"/>
+<circle cx="470.0" cy="288.9" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
+<polyline fill="none" stroke="#ea580c" stroke-width="2.5" points="120.0,400.3 207.5,400.3 295.0,400.8 382.5,401.2 470.0,401.0"/>
+<circle cx="120.0" cy="400.3" r="4" fill="#ea580c"/>
+<circle cx="120.0" cy="400.3" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
+<circle cx="207.5" cy="400.3" r="4" fill="#ea580c"/>
+<circle cx="207.5" cy="400.3" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
+<circle cx="295.0" cy="400.8" r="4" fill="#ea580c"/>
+<circle cx="295.0" cy="400.8" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
+<circle cx="382.5" cy="401.2" r="4" fill="#ea580c"/>
+<circle cx="382.5" cy="401.2" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
+<circle cx="470.0" cy="401.0" r="4" fill="#ea580c"/>
+<circle cx="470.0" cy="401.0" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
+<polyline fill="none" stroke="#7c3aed" stroke-width="2.5" points="120.0,400.3 207.5,400.5 295.0,401.0 382.5,401.2 470.0,401.5"/>
+<circle cx="120.0" cy="400.3" r="4" fill="#7c3aed"/>
+<circle cx="120.0" cy="400.3" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
+<circle cx="207.5" cy="400.5" r="4" fill="#7c3aed"/>
+<circle cx="207.5" cy="400.5" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
+<circle cx="295.0" cy="401.0" r="4" fill="#7c3aed"/>
+<circle cx="295.0" cy="401.0" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
+<circle cx="382.5" cy="401.2" r="4" fill="#7c3aed"/>
+<circle cx="382.5" cy="401.2" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
+<circle cx="470.0" cy="401.5" r="4" fill="#7c3aed"/>
+<circle cx="470.0" cy="401.5" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
+<text x="755" y="40" text-anchor="middle" font-weight="600">Query (decrypt)</text>
+<line x1="594" y1="404" x2="960" y2="404" stroke="#eef0f2"/>
+<text x="588" y="408" text-anchor="end" fill="#6b7280">0</text>
+<line x1="594" y1="317" x2="960" y2="317" stroke="#eef0f2"/>
+<text x="588" y="321" text-anchor="end" fill="#6b7280">6.25k</text>
+<line x1="594" y1="230" x2="960" y2="230" stroke="#eef0f2"/>
+<text x="588" y="234" text-anchor="end" fill="#6b7280">12.5k</text>
+<line x1="594" y1="143" x2="960" y2="143" stroke="#eef0f2"/>
+<text x="588" y="147" text-anchor="end" fill="#6b7280">18.75k</text>
+<line x1="594" y1="56" x2="960" y2="56" stroke="#eef0f2"/>
+<text x="588" y="60" text-anchor="end" fill="#6b7280">25k</text>
+<text x="594" y="424" text-anchor="middle" fill="#374151">50</text>
+<text x="681.5" y="424" text-anchor="middle" fill="#374151">100</text>
+<text x="769" y="424" text-anchor="middle" fill="#374151">200</text>
+<text x="856.5" y="424" text-anchor="middle" fill="#374151">400</text>
+<text x="944" y="424" text-anchor="middle" fill="#374151">800</text>
+<text x="494" y="230" text-anchor="middle" fill="#374151" transform="rotate(-90 494 230)">achieved (values/s)</text>
+<text x="755" y="448" text-anchor="middle" fill="#374151">offered load (requests/s)</text>
+<polyline fill="none" stroke="#16a34a" stroke-width="2.5" points="594.0,195.2 681.5,134.2 769.0,257.8 856.5,281.3 944.0,288.7"/>
+<circle cx="594.0" cy="195.2" r="4" fill="#16a34a"/>
+<circle cx="681.5" cy="134.2" r="4" fill="#16a34a"/>
+<circle cx="681.5" cy="134.2" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
+<circle cx="769.0" cy="257.8" r="4" fill="#16a34a"/>
+<circle cx="769.0" cy="257.8" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
+<circle cx="856.5" cy="281.3" r="4" fill="#16a34a"/>
+<circle cx="856.5" cy="281.3" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
+<circle cx="944.0" cy="288.7" r="4" fill="#16a34a"/>
+<circle cx="944.0" cy="288.7" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
+<polyline fill="none" stroke="#ea580c" stroke-width="2.5" points="594.0,401.0 681.5,401.0 769.0,401.2 856.5,401.5 944.0,401.7"/>
+<circle cx="594.0" cy="401.0" r="4" fill="#ea580c"/>
+<circle cx="594.0" cy="401.0" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
+<circle cx="681.5" cy="401.0" r="4" fill="#ea580c"/>
+<circle cx="681.5" cy="401.0" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
+<circle cx="769.0" cy="401.2" r="4" fill="#ea580c"/>
+<circle cx="769.0" cy="401.2" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
+<circle cx="856.5" cy="401.5" r="4" fill="#ea580c"/>
+<circle cx="856.5" cy="401.5" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
+<circle cx="944.0" cy="401.7" r="4" fill="#ea580c"/>
+<circle cx="944.0" cy="401.7" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
+<polyline fill="none" stroke="#7c3aed" stroke-width="2.5" points="594.0,365.0 681.5,353.2 769.0,365.3 856.5,373.6 944.0,379.6"/>
+<circle cx="594.0" cy="365.0" r="4" fill="#7c3aed"/>
+<circle cx="594.0" cy="365.0" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
+<circle cx="681.5" cy="353.2" r="4" fill="#7c3aed"/>
+<circle cx="681.5" cy="353.2" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
+<circle cx="769.0" cy="365.3" r="4" fill="#7c3aed"/>
+<circle cx="769.0" cy="365.3" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
+<circle cx="856.5" cy="373.6" r="4" fill="#7c3aed"/>
+<circle cx="856.5" cy="373.6" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
+<circle cx="944.0" cy="379.6" r="4" fill="#7c3aed"/>
+<circle cx="944.0" cy="379.6" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
+<rect x="76" y="475" width="14" height="3" fill="#16a34a"/>
+<text x="96" y="480" fill="#374151">ZeroKMS (bulk)</text>
+<rect x="208" y="475" width="14" height="3" fill="#ea580c"/>
+<text x="228" y="480" fill="#374151">AWS KMS (direct)</text>
+<rect x="354" y="475" width="14" height="3" fill="#7c3aed"/>
+<text x="374" y="480" fill="#374151">AWS KMS (envelope)</text>
+<circle cx="520" cy="476" r="6" fill="none" stroke="#dc2626" stroke-width="2"/>
+<text x="532" y="480" fill="#374151">= had failures</text>
+</svg>
