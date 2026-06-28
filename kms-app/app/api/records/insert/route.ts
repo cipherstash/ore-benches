@@ -17,7 +17,8 @@ export async function POST(request: Request) {
 
   try {
     const backend = await getBackend();
-    const encrypted = await backend.encryptBatch(makeRecords(count));
+    const stats = { kmsCalls: 0 };
+    const encrypted = await backend.encryptBatch(makeRecords(count), stats);
 
     // Build a single multi-row INSERT. Params: $1 = backend, then 3 per record.
     const cols = FIELDS.length;
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
        VALUES ${rowsSql}`,
       params,
     );
-    return NextResponse.json({ inserted: rowCount }, { status: 201 });
+    return NextResponse.json({ inserted: rowCount, kmsCalls: stats.kmsCalls }, { status: 201 });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : String(error) },

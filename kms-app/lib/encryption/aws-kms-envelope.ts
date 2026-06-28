@@ -4,50 +4,54 @@ import {
   DecryptCommand,
 } from "@aws-sdk/client-kms";
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
-import type { EncryptionBackend, PlainRecord, EncRecord } from "./types";
+import type { EncryptionBackend, PlainRecord, EncRecord, OpStats } from "./types";
 import { FIELDS } from "./types";
-import { regroup } from "./aws-kms";
 
 /**
- * AWS KMS envelope encryption.
+ * AWS KMS envelope encryption. KMS protects a local AES-256 data key (DEK); the
+ * value is encrypted locally with AES-256-GCM.
  *
- * KMS protects a local AES-256 data key (DEK); the value is encrypted locally
- * with AES-256-GCM. Like direct KMS, AWS has no bulk API — a batch of N×3
- * values is N×3 separate KMS operations (fired concurrently).
+ * Data-key REUSE (ENVELOPE_DATA_KEY_MAX_USES > 1): one DEK encrypts many values
+ * before a new one is generated, cutting GenerateDataKey calls on the write
+ * path. This experiment shows reuse helps INGEST and SEQUENTIAL reads but not
+ * SCATTERED reads — because a query's result set is keyed by *insert* locality,
+ * which has nothing to do with *retrieval* order.
  *
- * IMPORTANT — security model vs caching:
- *   - DEFAULT (ENVELOPE_DATA_KEY_MAX_USES=1): a fresh data key per value, so
- *     every operation is its own KMS call and each value's access is
- *     independently auditable/revocable — the EQUAL-SECURITY comparison vs
- *     ZeroKMS.
- *   - Caching (MAX_USES > 1) reuses one DEK across many records with its
- *     plaintext in app memory: FASTER but a WEAKER model (lose per-value
- *     audit/revocation). A different security posture, not a fair comparison.
+ *   - WRITE: reuse requires holding the plaintext DEK and encrypting
+ *     SEQUENTIALLY (concurrent fan-out would race getWriteKey and silently give
+ *     each value its own DEK). The DEK persists across requests until exhausted.
+ *   - READ: we de-duplicate the *distinct DEKs* in the result and KMS-Decrypt
+ *     each once, PER REQUEST (a cold cache each query — no cross-query warm
+ *     cache, which is the separable "caching" concern with cold-start + a
+ *     growing pool of plaintext DEKs in memory). So kmsCalls == distinct DEKs.
  *
- * Stored ciphertext is a JSON string: { edk, iv, tag, ct } (all base64).
+ * Reuse also weakens the model: one plaintext DEK in app memory now covers many
+ * records, losing per-value audit/revocation.
+ *
+ * Stored ciphertext per field: JSON { edk, iv, tag, ct } (all base64).
  */
 const ALGO = "aes-256-gcm";
-const READ_CACHE_MAX = 4096;
+
+type Field = (typeof FIELDS)[number];
 
 class AwsKmsEnvelopeBackend implements EncryptionBackend {
   readonly name = "aws-kms-envelope" as const;
   private client!: KMSClient;
   private keyId!: string;
   private maxUses!: number;
-
   private writeKey: { plaintext: Buffer; encrypted: Buffer; uses: number } | null = null;
-  private readCache = new Map<string, Buffer>();
 
   async init(): Promise<void> {
     const keyId = process.env.AWS_KMS_KEY_ID;
     if (!keyId) throw new Error("AWS_KMS_KEY_ID is required for the aws-kms-envelope backend");
     this.keyId = keyId;
     this.client = new KMSClient({ region: process.env.AWS_REGION });
-    // Default 1 = per-value data key (fair, equal-security). >1 = caching (weaker).
+    // 1 = per-value data key (fair equal-security default). >1 = reuse (faster
+    // writes, weaker model). Counted in values; 300 ≈ one DEK per 100 records.
     this.maxUses = Math.max(1, Number(process.env.ENVELOPE_DATA_KEY_MAX_USES ?? 1));
   }
 
-  private async getWriteKey() {
+  private async getWriteKey(stats?: OpStats) {
     if (this.writeKey && this.writeKey.uses < this.maxUses) {
       this.writeKey.uses += 1;
       return this.writeKey;
@@ -56,16 +60,12 @@ class AwsKmsEnvelopeBackend implements EncryptionBackend {
       new GenerateDataKeyCommand({ KeyId: this.keyId, KeySpec: "AES_256" }),
     );
     if (!res.Plaintext || !res.CiphertextBlob) throw new Error("GenerateDataKey returned no key");
-    this.writeKey = {
-      plaintext: Buffer.from(res.Plaintext),
-      encrypted: Buffer.from(res.CiphertextBlob),
-      uses: 1,
-    };
+    if (stats) stats.kmsCalls += 1;
+    this.writeKey = { plaintext: Buffer.from(res.Plaintext), encrypted: Buffer.from(res.CiphertextBlob), uses: 1 };
     return this.writeKey;
   }
 
-  private async encryptOne(plaintext: string): Promise<string> {
-    const dek = await this.getWriteKey();
+  private encryptOneWith(dek: { plaintext: Buffer; encrypted: Buffer }, plaintext: string): string {
     const iv = randomBytes(12);
     const cipher = createCipheriv(ALGO, dek.plaintext, iv);
     const ct = Buffer.concat([cipher.update(plaintext, "utf-8"), cipher.final()]);
@@ -77,44 +77,53 @@ class AwsKmsEnvelopeBackend implements EncryptionBackend {
     });
   }
 
-  private async getReadKey(edkB64: string): Promise<Buffer> {
-    const cached = this.readCache.get(edkB64);
-    if (cached) return cached;
-    const res = await this.client.send(
-      new DecryptCommand({ KeyId: this.keyId, CiphertextBlob: Buffer.from(edkB64, "base64") }),
-    );
-    if (!res.Plaintext) throw new Error("KMS Decrypt returned no data key");
-    const dek = Buffer.from(res.Plaintext);
-    if (this.readCache.size >= READ_CACHE_MAX) {
-      this.readCache.delete(this.readCache.keys().next().value as string);
+  async encryptBatch(input: PlainRecord[], stats?: OpStats): Promise<EncRecord[]> {
+    if (this.maxUses > 1) {
+      // SEQUENTIAL so the cached DEK is actually reused across values.
+      const out: EncRecord[] = [];
+      for (const r of input) {
+        const rec = {} as EncRecord;
+        for (const f of FIELDS) rec[f] = this.encryptOneWith(await this.getWriteKey(stats), r[f]);
+        out.push(rec);
+      }
+      return out;
     }
-    this.readCache.set(edkB64, dek);
-    return dek;
+    // per-value (maxUses=1): fresh DEK per value, fanned out concurrently.
+    return Promise.all(input.map(async (r) => {
+      const rec = {} as EncRecord;
+      for (const f of FIELDS) rec[f] = this.encryptOneWith(await this.getWriteKey(stats), r[f]);
+      return rec;
+    }));
   }
 
-  private async decryptOne(ciphertext: string): Promise<string> {
-    const { edk, iv, tag, ct } = JSON.parse(ciphertext);
-    const dek = await this.getReadKey(edk);
-    const decipher = createDecipheriv(ALGO, dek, Buffer.from(iv, "base64"));
-    decipher.setAuthTag(Buffer.from(tag, "base64"));
-    return Buffer.concat([
-      decipher.update(Buffer.from(ct, "base64")),
-      decipher.final(),
-    ]).toString("utf-8");
-  }
-
-  async encryptBatch(input: PlainRecord[]): Promise<EncRecord[]> {
-    const flat = await Promise.all(
-      input.flatMap((r) => FIELDS.map((f) => this.encryptOne(r[f]))),
+  async decryptBatch(input: EncRecord[], stats?: OpStats): Promise<PlainRecord[]> {
+    // Parse all fields; collect the DISTINCT data keys in this result set.
+    const parsed = input.map((r) =>
+      Object.fromEntries(FIELDS.map((f) => [f, JSON.parse(r[f])])) as Record<Field, { edk: string; iv: string; tag: string; ct: string }>,
     );
-    return regroup(flat);
-  }
-
-  async decryptBatch(input: EncRecord[]): Promise<PlainRecord[]> {
-    const flat = await Promise.all(
-      input.flatMap((r) => FIELDS.map((f) => this.decryptOne(r[f]))),
-    );
-    return regroup(flat);
+    const distinct = [...new Set(parsed.flatMap((p) => FIELDS.map((f) => p[f].edk)))];
+    // KMS-Decrypt each distinct DEK once (concurrently). This is the cost the
+    // reuse experiment measures: scattered query => distinct ≈ N records.
+    const dekFor = new Map<string, Buffer>();
+    await Promise.all(distinct.map(async (edk) => {
+      const res = await this.client.send(
+        new DecryptCommand({ KeyId: this.keyId, CiphertextBlob: Buffer.from(edk, "base64") }),
+      );
+      if (!res.Plaintext) throw new Error("KMS Decrypt returned no data key");
+      dekFor.set(edk, Buffer.from(res.Plaintext));
+    }));
+    if (stats) stats.kmsCalls += distinct.length;
+    // AES-decrypt every value locally with its (now in-memory) DEK.
+    return parsed.map((p) => {
+      const rec = {} as PlainRecord;
+      for (const f of FIELDS) {
+        const { edk, iv, tag, ct } = p[f];
+        const d = createDecipheriv(ALGO, dekFor.get(edk)!, Buffer.from(iv, "base64"));
+        d.setAuthTag(Buffer.from(tag, "base64"));
+        rec[f] = Buffer.concat([d.update(Buffer.from(ct, "base64")), d.final()]).toString("utf-8");
+      }
+      return rec;
+    });
   }
 }
 

@@ -3,7 +3,7 @@ import {
   EncryptCommand,
   DecryptCommand,
 } from "@aws-sdk/client-kms";
-import type { EncryptionBackend, PlainRecord, EncRecord } from "./types";
+import type { EncryptionBackend, PlainRecord, EncRecord, OpStats } from "./types";
 import { FIELDS } from "./types";
 
 /**
@@ -43,17 +43,19 @@ class AwsKmsBackend implements EncryptionBackend {
     return Buffer.from(res.Plaintext).toString("utf-8");
   }
 
-  async encryptBatch(input: PlainRecord[]): Promise<EncRecord[]> {
+  async encryptBatch(input: PlainRecord[], stats?: OpStats): Promise<EncRecord[]> {
     const flat = await Promise.all(
       input.flatMap((r) => FIELDS.map((f) => this.encryptOne(r[f]))),
     );
+    if (stats) stats.kmsCalls += flat.length; // one KMS Encrypt per value
     return regroup(flat);
   }
 
-  async decryptBatch(input: EncRecord[]): Promise<PlainRecord[]> {
+  async decryptBatch(input: EncRecord[], stats?: OpStats): Promise<PlainRecord[]> {
     const flat = await Promise.all(
       input.flatMap((r) => FIELDS.map((f) => this.decryptOne(r[f]))),
     );
+    if (stats) stats.kmsCalls += flat.length; // one KMS Decrypt per value
     return regroup(flat);
   }
 }

@@ -1,6 +1,6 @@
 import { Encryption } from "@cipherstash/stack";
 import { encryptedTable, encryptedColumn } from "@cipherstash/stack/schema";
-import type { EncryptionBackend, PlainRecord, EncRecord } from "./types";
+import type { EncryptionBackend, PlainRecord, EncRecord, OpStats } from "./types";
 import { FIELDS } from "./types";
 
 /**
@@ -30,8 +30,9 @@ class ZeroKmsBackend implements EncryptionBackend {
     this.client = await Encryption({ schemas: [records] });
   }
 
-  async encryptBatch(input: PlainRecord[]): Promise<EncRecord[]> {
+  async encryptBatch(input: PlainRecord[], stats?: OpStats): Promise<EncRecord[]> {
     const result = await this.client.bulkEncryptModels(input, records);
+    if (stats) stats.kmsCalls += 1; // one bulk round-trip, any batch size or pattern
     if (result.failure) {
       throw new Error(`zerokms bulkEncrypt failed: ${result.failure.message}`);
     }
@@ -42,12 +43,13 @@ class ZeroKmsBackend implements EncryptionBackend {
     });
   }
 
-  async decryptBatch(input: EncRecord[]): Promise<PlainRecord[]> {
+  async decryptBatch(input: EncRecord[], stats?: OpStats): Promise<PlainRecord[]> {
     // Rebuild encrypted models from the stored ciphertext strings.
     const models = input.map((r) =>
       Object.fromEntries(FIELDS.map((f) => [f, JSON.parse(r[f])])),
     );
     const result = await this.client.bulkDecryptModels(models);
+    if (stats) stats.kmsCalls += 1; // one bulk round-trip, regardless of access pattern
     if (result.failure) {
       throw new Error(`zerokms bulkDecrypt failed: ${result.failure.message}`);
     }
