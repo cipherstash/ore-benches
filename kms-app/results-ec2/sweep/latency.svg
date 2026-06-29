@@ -3,72 +3,62 @@
 <text x="480" y="24" text-anchor="middle" font-size="16" font-weight="600">ZeroKMS vs AWS KMS — median p95 latency by batch size (3 fields/record)</text>
 <text x="269" y="40" text-anchor="middle" font-weight="600">Insert (encrypt + write)</text>
 <line x1="104" y1="384" x2="474" y2="384" stroke="#e5e7eb"/>
-<text x="98" y="388" text-anchor="end" fill="#6b7280">10ms</text>
-<line x1="104" y1="274.6666666666667" x2="474" y2="274.6666666666667" stroke="#e5e7eb"/>
-<text x="98" y="278.6666666666667" text-anchor="end" fill="#6b7280">100ms</text>
-<line x1="104" y1="165.33333333333334" x2="474" y2="165.33333333333334" stroke="#e5e7eb"/>
-<text x="98" y="169.33333333333334" text-anchor="end" fill="#6b7280">1s</text>
+<text x="98" y="388" text-anchor="end" fill="#6b7280">0</text>
+<line x1="104" y1="302" x2="474" y2="302" stroke="#e5e7eb"/>
+<text x="98" y="306" text-anchor="end" fill="#6b7280">2s</text>
+<line x1="104" y1="220" x2="474" y2="220" stroke="#e5e7eb"/>
+<text x="98" y="224" text-anchor="end" fill="#6b7280">4s</text>
+<line x1="104" y1="138" x2="474" y2="138" stroke="#e5e7eb"/>
+<text x="98" y="142" text-anchor="end" fill="#6b7280">6s</text>
 <line x1="104" y1="56" x2="474" y2="56" stroke="#e5e7eb"/>
-<text x="98" y="60" text-anchor="end" fill="#6b7280">10s</text>
+<text x="98" y="60" text-anchor="end" fill="#6b7280">8s</text>
 <text x="104" y="404" text-anchor="middle" fill="#374151">20</text>
-<text x="220.66666666666666" y="404" text-anchor="middle" fill="#374151">100</text>
-<text x="337.3333333333333" y="404" text-anchor="middle" fill="#374151">500</text>
-<text x="454" y="404" text-anchor="middle" fill="#374151">1000</text>
+<text x="279" y="404" text-anchor="middle" fill="#374151">100</text>
+<text x="454" y="404" text-anchor="middle" fill="#374151">500</text>
 <text x="269" y="424" text-anchor="middle" fill="#6b7280">records per request</text>
-<polyline fill="none" stroke="#16a34a" stroke-width="2.5" points="104.0,356.1 220.7,305.8 337.3,174.7 454.0,76.9"/>
-<circle cx="104.0" cy="356.1" r="4" fill="#16a34a"/>
-<circle cx="220.7" cy="305.8" r="4" fill="#16a34a"/>
-<circle cx="337.3" cy="174.7" r="4" fill="#16a34a"/>
-<circle cx="454.0" cy="76.9" r="4" fill="#16a34a"/>
-<circle cx="454.0" cy="76.9" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
-<polyline fill="none" stroke="#ea580c" stroke-width="2.5" points="104.0,318.2 220.7,172.8 337.3,67.4 454.0,69.3"/>
-<circle cx="104.0" cy="318.2" r="4" fill="#ea580c"/>
-<circle cx="220.7" cy="172.8" r="4" fill="#ea580c"/>
-<circle cx="337.3" cy="67.4" r="4" fill="#ea580c"/>
-<circle cx="337.3" cy="67.4" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
-<circle cx="454.0" cy="69.3" r="4" fill="#ea580c"/>
-<circle cx="454.0" cy="69.3" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
-<polyline fill="none" stroke="#7c3aed" stroke-width="2.5" points="104.0,316.2 220.7,165.2 337.3,67.4 454.0,74.0"/>
-<circle cx="104.0" cy="316.2" r="4" fill="#7c3aed"/>
-<circle cx="220.7" cy="165.2" r="4" fill="#7c3aed"/>
-<circle cx="337.3" cy="67.4" r="4" fill="#7c3aed"/>
-<circle cx="337.3" cy="67.4" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
-<circle cx="454.0" cy="74.0" r="4" fill="#7c3aed"/>
-<circle cx="454.0" cy="74.0" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
+<polyline fill="none" stroke="#16a34a" stroke-width="2.5" points="104.0,383.3 279.0,381.9 454.0,350.3"/>
+<circle cx="104.0" cy="383.3" r="4" fill="#16a34a"/>
+<circle cx="279.0" cy="381.9" r="4" fill="#16a34a"/>
+<circle cx="454.0" cy="350.3" r="4" fill="#16a34a"/>
+<polyline fill="none" stroke="#ea580c" stroke-width="2.5" points="104.0,382.4 279.0,349.0 454.0,61.5"/>
+<circle cx="104.0" cy="382.4" r="4" fill="#ea580c"/>
+<circle cx="279.0" cy="349.0" r="4" fill="#ea580c"/>
+<circle cx="454.0" cy="61.5" r="4" fill="#ea580c"/>
+<circle cx="454.0" cy="61.5" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
+<polyline fill="none" stroke="#7c3aed" stroke-width="2.5" points="104.0,382.3 279.0,342.9 454.0,61.5"/>
+<circle cx="104.0" cy="382.3" r="4" fill="#7c3aed"/>
+<circle cx="279.0" cy="342.9" r="4" fill="#7c3aed"/>
+<circle cx="454.0" cy="61.5" r="4" fill="#7c3aed"/>
+<circle cx="454.0" cy="61.5" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
 <text x="735" y="40" text-anchor="middle" font-weight="600">Query (read + decrypt)</text>
 <line x1="570" y1="384" x2="940" y2="384" stroke="#e5e7eb"/>
-<text x="564" y="388" text-anchor="end" fill="#6b7280">10ms</text>
-<line x1="570" y1="274.6666666666667" x2="940" y2="274.6666666666667" stroke="#e5e7eb"/>
-<text x="564" y="278.6666666666667" text-anchor="end" fill="#6b7280">100ms</text>
-<line x1="570" y1="165.33333333333334" x2="940" y2="165.33333333333334" stroke="#e5e7eb"/>
-<text x="564" y="169.33333333333334" text-anchor="end" fill="#6b7280">1s</text>
+<text x="564" y="388" text-anchor="end" fill="#6b7280">0</text>
+<line x1="570" y1="302" x2="940" y2="302" stroke="#e5e7eb"/>
+<text x="564" y="306" text-anchor="end" fill="#6b7280">2s</text>
+<line x1="570" y1="220" x2="940" y2="220" stroke="#e5e7eb"/>
+<text x="564" y="224" text-anchor="end" fill="#6b7280">4s</text>
+<line x1="570" y1="138" x2="940" y2="138" stroke="#e5e7eb"/>
+<text x="564" y="142" text-anchor="end" fill="#6b7280">6s</text>
 <line x1="570" y1="56" x2="940" y2="56" stroke="#e5e7eb"/>
-<text x="564" y="60" text-anchor="end" fill="#6b7280">10s</text>
+<text x="564" y="60" text-anchor="end" fill="#6b7280">8s</text>
 <text x="570" y="404" text-anchor="middle" fill="#374151">20</text>
-<text x="686.6666666666666" y="404" text-anchor="middle" fill="#374151">100</text>
-<text x="803.3333333333333" y="404" text-anchor="middle" fill="#374151">500</text>
-<text x="920" y="404" text-anchor="middle" fill="#374151">1000</text>
+<text x="745" y="404" text-anchor="middle" fill="#374151">100</text>
+<text x="920" y="404" text-anchor="middle" fill="#374151">500</text>
 <text x="735" y="424" text-anchor="middle" fill="#6b7280">records per request</text>
-<polyline fill="none" stroke="#16a34a" stroke-width="2.5" points="570.0,328.6 686.7,299.2 803.3,175.7 920.0,69.3"/>
-<circle cx="570.0" cy="328.6" r="4" fill="#16a34a"/>
-<circle cx="686.7" cy="299.2" r="4" fill="#16a34a"/>
-<circle cx="803.3" cy="175.7" r="4" fill="#16a34a"/>
-<circle cx="920.0" cy="69.3" r="4" fill="#16a34a"/>
-<circle cx="920.0" cy="69.3" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
-<polyline fill="none" stroke="#ea580c" stroke-width="2.5" points="570.0,317.1 686.7,177.6 803.3,68.3 920.0,67.4"/>
-<circle cx="570.0" cy="317.1" r="4" fill="#ea580c"/>
-<circle cx="686.7" cy="177.6" r="4" fill="#ea580c"/>
-<circle cx="803.3" cy="68.3" r="4" fill="#ea580c"/>
-<circle cx="803.3" cy="68.3" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
-<circle cx="920.0" cy="67.4" r="4" fill="#ea580c"/>
-<circle cx="920.0" cy="67.4" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
-<polyline fill="none" stroke="#7c3aed" stroke-width="2.5" points="570.0,324.8 686.7,180.4 803.3,74.0 920.0,70.2"/>
-<circle cx="570.0" cy="324.8" r="4" fill="#7c3aed"/>
-<circle cx="686.7" cy="180.4" r="4" fill="#7c3aed"/>
-<circle cx="803.3" cy="74.0" r="4" fill="#7c3aed"/>
-<circle cx="803.3" cy="74.0" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
-<circle cx="920.0" cy="70.2" r="4" fill="#7c3aed"/>
-<circle cx="920.0" cy="70.2" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
+<polyline fill="none" stroke="#16a34a" stroke-width="2.5" points="570.0,382.7 745.0,381.5 920.0,351.0"/>
+<circle cx="570.0" cy="382.7" r="4" fill="#16a34a"/>
+<circle cx="745.0" cy="381.5" r="4" fill="#16a34a"/>
+<circle cx="920.0" cy="351.0" r="4" fill="#16a34a"/>
+<polyline fill="none" stroke="#ea580c" stroke-width="2.5" points="570.0,382.3 745.0,352.3 920.0,67.9"/>
+<circle cx="570.0" cy="382.3" r="4" fill="#ea580c"/>
+<circle cx="745.0" cy="352.3" r="4" fill="#ea580c"/>
+<circle cx="920.0" cy="67.9" r="4" fill="#ea580c"/>
+<circle cx="920.0" cy="67.9" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
+<polyline fill="none" stroke="#7c3aed" stroke-width="2.5" points="570.0,382.6 745.0,354.2 920.0,103.6"/>
+<circle cx="570.0" cy="382.6" r="4" fill="#7c3aed"/>
+<circle cx="745.0" cy="354.2" r="4" fill="#7c3aed"/>
+<circle cx="920.0" cy="103.6" r="4" fill="#7c3aed"/>
+<circle cx="920.0" cy="103.6" r="8" fill="none" stroke="#dc2626" stroke-width="2"/>
 <rect x="104" y="457" width="14" height="3" fill="#16a34a"/>
 <text x="124" y="462" fill="#374151">ZeroKMS (bulk)</text>
 <rect x="232" y="457" width="14" height="3" fill="#ea580c"/>

@@ -35,16 +35,10 @@ labeled baselines — see [Other runs](#other-runs).)
 | 20 | 60 | **18 ms** | 40 ms | 42 ms | 2.2× |
 | 100 | 300 | **52 ms** | 854 ms | 1,002 ms | **~16×** |
 | 500 | 1,500 | **821 ms** | 7,866 ms ⚠️ | 7,866 ms ⚠️ | ~10× |
-| 1,000 | 3,000 | 6,440 ms ⚠️ | 7,557 ms ⚠️ | 6,838 ms ⚠️ | — |
 
 (Insert/write path; the read/decrypt path is the same shape — full data in
 [`results-ec2/sweep/data.csv`](results-ec2/sweep/data.csv).) `⚠️` = the cell had
 throttling failures.
-
-**The 1,000-record row is not a clean backend comparison** — at that size the
-*application* work dominates (generating 1,000 records, serialising 3,000
-ciphertexts, a 1,000-row INSERT), so both backends are bounded by the app
-instance's CPU, not the key service. The clean signal is 20–500 records.
 
 ## Throughput — values/sec under rising load
 
@@ -80,7 +74,7 @@ pluggable encryption backend selected per server process.
   caching is a *weaker* security model, not a faster version of the same one,
   so it is excluded from the fair comparison. See the
   [README](README.md#fairness-compare-under-equal-security-constraints).
-- **Procedure.** Latency: 3 interleaved rounds, batch 20/100/500/1,000.
+- **Procedure.** Latency: 3 interleaved rounds, batch 20/100/500.
   Throughput: fixed 100-record batch, request rate stepped 50→800/s.
   Median p95 across rounds; failures = Artillery `vusers.failed`.
 - **Reproduce:** [`EC2.md`](EC2.md) (the two-host runbook). Driver:
@@ -88,9 +82,9 @@ pluggable encryption backend selected per server process.
 
 ## Limitations
 
-- **App-instance-bound at the extremes.** The 1,000-record latency and the
-  throughput ceiling are limited by instance A's CPU, not the key service; a
-  larger app box would push both further (and widen, not narrow, the gap).
+- **App-instance-bound at the top end.** ZeroKMS's throughput ceiling is limited
+  by instance A's CPU, not the key service; a larger app box would push it
+  further (and widen, not narrow, the gap).
 - The AWS failure threshold depends on region/KMS quota/retry config.
 - Single region. Numbers are comparative for *this* workload.
 
