@@ -12,8 +12,8 @@ load profile, only the encryption backend changes. Three backends ship:
 | `aws-kms` | Naive direct KMS Encrypt/Decrypt per value |
 | `aws-kms-envelope` | Production AWS pattern: KMS-wrapped AES-256 data key + local AES-GCM, with data-key caching |
 
-> Replaces the older, lost Next.js + Artillery comparison. Lives in `benches`
-> so the methodology and results sit alongside the EQL/PostgreSQL benchmarks.
+> Lives in `benches` so the methodology and results sit alongside the
+> EQL/PostgreSQL benchmarks.
 
 **📊 Results: [REPORT.md](REPORT.md)** · in‑region headline run: [EC2.md](EC2.md)
 
