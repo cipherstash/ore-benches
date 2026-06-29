@@ -1,0 +1,34 @@
+{
+  "name": "kms-comparison-harness",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "db:setup": "psql \"${DATABASE_URL:-postgres://postgres:postgres@localhost:5400/postgres}\" -v ON_ERROR_STOP=1 -f sql/schema.sql",
+    "serve:zerokms": "ENCRYPTION_BACKEND=zerokms next start",
+    "serve:aws-kms": "ENCRYPTION_BACKEND=aws-kms next start",
+    "serve:aws-kms-envelope": "ENCRYPTION_BACKEND=aws-kms-envelope next start",
+    "load:insert": "artillery run load/insert.yml",
+    "load:query": "artillery run load/query.yml",
+    "report:insert": "node scripts/summarize.mjs results/insert-zerokms.json results/insert-aws-kms.json results/insert-aws-kms-envelope.json",
+    "report:query": "node scripts/summarize.mjs results/query-zerokms.json results/query-aws-kms.json results/query-aws-kms-envelope.json",
+    "report:build": "node scripts/chart.mjs && SWEEP_DIR=results-ec2/sweep node scripts/chart.mjs && node scripts/throughput-chart.mjs && THRU_DIR=results-ec2/throughput node scripts/throughput-chart.mjs && node scripts/reuse-chart.mjs"
+  },
+  "dependencies": {
+    "@aws-sdk/client-kms": "^3.700.0",
+    "@cipherstash/stack": "latest",
+    "next": "^15.1.0",
+    "pg": "^8.13.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/pg": "^8.11.10",
+    "@types/react": "^19.0.0",
+    "artillery": "^2.0.0",
+    "typescript": "^5.7.0"
+  }
+}

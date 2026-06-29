@@ -1,0 +1,10 @@
+phase,backend,maxuses,pattern,p95_ms,failed,kms_calls
+ingest,zerokms,1,-,67.4,0,1
+ingest,aws-kms-envelope,300,-,19.1,0,1
+ingest,aws-kms-envelope,1,-,889.1,0,300
+query,zerokms,1,sequential,29.1,0,1
+query,zerokms,1,scattered,27.9,0,1
+query,aws-kms-envelope,300,sequential,12.1,0,2
+query,aws-kms-envelope,300,scattered,71.5,0,50
+query,aws-kms-envelope,1,sequential,7407.5,936,150
+query,aws-kms-envelope,1,scattered,99999,1000,150

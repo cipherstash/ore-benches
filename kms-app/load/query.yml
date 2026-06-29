@@ -1,0 +1,35 @@
+# Read benchmark: bulk-query + decrypt batches of records.
+#
+# Each request reads a random window of `limit` existing rows (3 encrypted
+# fields each) and bulk-decrypts limit×3 values. SEED FIRST by running the
+# insert benchmark against the same backend, or the query returns 409.
+#
+# Backend-agnostic — the server's ENCRYPTION_BACKEND decides decrypt cost
+# (1 ZeroKMS round trip vs limit×3 AWS KMS calls).
+
+config:
+  target: "http://localhost:3000" # override: artillery run --target http://host load/query.yml
+  plugins:
+    expect: {}
+    metrics-by-endpoint: {}
+  ensure:
+    - expression: "vusers.failed == 0"
+  phases:
+    - name: warmup
+      duration: 15
+      arrivalRate: 2
+    - name: steady
+      duration: 120
+      arrivalRate: 10
+  defaults:
+    headers:
+      content-type: application/json
+
+scenarios:
+  - name: bulk-query
+    flow:
+      - get:
+          name: "query"
+          url: "/api/records/query?limit=20"
+          expect:
+            - statusCode: 200

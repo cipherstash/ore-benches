@@ -1,0 +1,38 @@
+# Write benchmark: bulk-insert batches of records.
+#
+# Each request inserts `count` records (3 encrypted fields each), so the crypto
+# work per request is count×3 values. Backend-agnostic — the server's
+# ENCRYPTION_BACKEND decides how those values are encrypted (1 ZeroKMS round
+# trip vs count×3 AWS KMS calls).
+#
+# arrivalRate is intentionally modest: at count=20 each request is 60 encrypts,
+# so 10 req/s ≈ 600 crypto ops/s. Keep AWS runs under your KMS region quota.
+
+config:
+  target: "http://localhost:3000" # override: artillery run --target http://host load/insert.yml
+  plugins:
+    expect: {}
+    metrics-by-endpoint: {}
+  ensure:
+    - expression: "vusers.failed == 0"
+  phases:
+    - name: warmup
+      duration: 15
+      arrivalRate: 2
+    - name: steady
+      duration: 120
+      arrivalRate: 10
+  defaults:
+    headers:
+      content-type: application/json
+
+scenarios:
+  - name: bulk-insert
+    flow:
+      - post:
+          name: "insert"
+          url: "/api/records/insert"
+          json:
+            count: 20
+          expect:
+            - statusCode: 201
