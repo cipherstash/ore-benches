@@ -13,7 +13,8 @@
     "load:insert": "artillery run load/insert.yml",
     "load:query": "artillery run load/query.yml",
     "report:insert": "node scripts/summarize.mjs results/insert-zerokms.json results/insert-aws-kms.json results/insert-aws-kms-envelope.json",
-    "report:query": "node scripts/summarize.mjs results/query-zerokms.json results/query-aws-kms.json results/query-aws-kms-envelope.json"
+    "report:query": "node scripts/summarize.mjs results/query-zerokms.json results/query-aws-kms.json results/query-aws-kms-envelope.json",
+    "report:build": "node scripts/chart.mjs && SWEEP_DIR=results-ec2/sweep node scripts/chart.mjs && node scripts/throughput-chart.mjs && THRU_DIR=results-ec2/throughput node scripts/throughput-chart.mjs && node scripts/reuse-chart.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-kms": "^3.700.0",

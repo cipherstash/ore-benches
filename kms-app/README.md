@@ -132,9 +132,9 @@ kms-app/
   results/                 load-test outputs (gitignored)
 ```
 
-## TODO / next steps
+## Regenerating the charts
 
-- [ ] Add a `report:build` that writes a Markdown report into `results/` for
-      committing alongside the EQL benchmark reports
-- [ ] Capture baseline numbers per backend across a couple of batch sizes;
-      run interleaved repeats before quoting figures
+After a run updates the `data.csv` files, `npm run report:build` regenerates
+every committed chart (laptop + in-region latency, throughput, and the reuse
+experiment) from that data — no need to remember the per-chart input-dir env
+vars. The analysis prose lives in [REPORT.md](REPORT.md) and [REUSE.md](REUSE.md).
