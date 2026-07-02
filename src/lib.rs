@@ -266,7 +266,7 @@ impl IngestOptions {
             let out = encrypt_eql(scoped_cipher.clone(), prepared, &Default::default()).await?;
 
             QueryBuilder::new(format!("INSERT INTO {} (value) ", self.identifier.table()))
-                .push_values(out.into_iter(), |mut b, v| {
+                .push_values(out, |mut b, v| {
                     // Every PreparedPlaintext above used EqlOperation::Store, so
                     // encrypt_eql yields only EqlOutput::Store. alpha.9 split the
                     // storage and query payload shapes — unwrap the storage
@@ -337,13 +337,13 @@ impl Dummy<FakeJsonLarge> for WrappedJson {
         ]
         .iter()
         .take((1..6).fake())
-        .last()
+        .next_back()
         .unwrap()
         .to_string();
         let type_ = ["Home", "Work", "Billing", "Shipping"]
             .iter()
             .take((1..4).fake())
-            .last()
+            .next_back()
             .unwrap()
             .to_string();
         let status = [
@@ -356,13 +356,13 @@ impl Dummy<FakeJsonLarge> for WrappedJson {
         ]
         .iter()
         .take((1..6).fake())
-        .last()
+        .next_back()
         .unwrap()
         .to_string();
         let relationship = ["Spouse", "Parent", "Sibling", "Friend", "Other"]
             .iter()
             .take((1..5).fake())
-            .last()
+            .next_back()
             .unwrap()
             .to_string();
 
