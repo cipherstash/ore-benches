@@ -169,6 +169,41 @@ psql -v ON_ERROR_STOP=1 -U postgres -d postgres < sql/schema.sql
 echo "Database setup complete!"
 """
 
+[tasks.setup-db-v3]
+description = "Install the EQL v3 SQL (eql_v3 schema) and create the _v3 bench tables. Additive: run after (or independently of) setup-db — v2 objects are untouched."
+depends = ["postgres"]
+run = """
+#!/usr/bin/env bash
+set -e
+
+echo "Waiting for PostgreSQL to be ready..."
+until pg_isready -U postgres > /dev/null 2>&1; do
+  sleep 1
+done
+
+# There is no released v3 artifact yet — the installer comes from a local
+# EQL repo build (`mise run build` writes release/cipherstash-encrypt.sql).
+# EQL_V3_SQL overrides the default sibling-checkout location, mirroring the
+# EQL_SQL override on setup-db:
+#   EQL_V3_SQL=/path/to/cipherstash-encrypt.sql mise run setup-db-v3
+EQL_V3_SQL="${EQL_V3_SQL:-../encrypt-query-language/release/cipherstash-encrypt.sql}"
+
+if [ ! -f "$EQL_V3_SQL" ]; then
+  echo "Error: EQL v3 installer not found at $EQL_V3_SQL"
+  echo "Build it in the EQL repo first:  mise run build"
+  echo "or point EQL_V3_SQL at an existing cipherstash-encrypt.sql (v3 build)."
+  exit 1
+fi
+
+echo "Installing EQL v3 from $EQL_V3_SQL ..."
+psql -v ON_ERROR_STOP=1 -U postgres -d postgres < "$EQL_V3_SQL"
+
+echo "Creating _v3 tables..."
+psql -v ON_ERROR_STOP=1 -U postgres -d postgres < sql/schema-v3.sql
+
+echo "EQL v3 database setup complete!"
+"""
+
 [tasks."bench:build"]
 description = "Build all binaries in release mode"
 run = """
@@ -366,6 +401,111 @@ psql -U postgres -d postgres -c "ANALYZE $TABLE_NAME;"
 FINAL_ROWS=$(psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM $TABLE_NAME;" | tr -d ' ')
 echo "Preparation complete! Final row count: $FINAL_ROWS"
 """
+
+[tasks."prepare:v3:_table"]
+description = "Internal: Prepare a _v3 table with target row count (v3 twin of prepare:_table — index scripts come from sql/indexes/v3/)"
+depends = ["postgres", "bench:build"]
+run = """
+#!/usr/bin/env bash
+set -e
+
+BASE_TABLE="$1"
+BINARY_NAME="$2"
+TARGET_ROWS="$3"
+
+if [ -z "$BASE_TABLE" ] || [ -z "$BINARY_NAME" ] || [ -z "$TARGET_ROWS" ]; then
+  echo "Error: BASE_TABLE, BINARY_NAME, and TARGET_ROWS arguments required"
+  echo "Usage: mise run prepare:v3:_table <base_table> <binary_name> <target_rows>"
+  exit 1
+fi
+
+case "$TARGET_ROWS" in
+  10000|100000|1000000|10000000)
+    ;;
+  *)
+    echo "Error: TARGET_ROWS must be one of: 10000, 100000, 1000000, 10000000"
+    exit 1
+    ;;
+esac
+
+TABLE_NAME="${BASE_TABLE}_${TARGET_ROWS}"
+
+echo "Waiting for PostgreSQL to be ready..."
+until pg_isready -U postgres > /dev/null 2>&1; do
+  sleep 1
+done
+
+echo "Counting rows in $TABLE_NAME table..."
+CURRENT_ROWS=$(psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM $TABLE_NAME;" | tr -d ' ')
+
+echo "Current rows: $CURRENT_ROWS"
+echo "Target rows: $TARGET_ROWS"
+
+if [ "$CURRENT_ROWS" -ge "$TARGET_ROWS" ]; then
+  echo "Table already has $CURRENT_ROWS rows (>= $TARGET_ROWS). No action needed."
+  exit 0
+fi
+
+echo "Dropping indexes..."
+psql -U postgres -d postgres < sql/indexes/v3/${TABLE_NAME}_down.sql
+
+# Same ZeroKMS-transient retry loop as prepare:_table — the v3 bins write
+# rows transactionally per batch, so a re-run picks up from the current
+# row count.
+MAX_ATTEMPTS=30
+attempt=1
+while true; do
+  CURRENT_ROWS=$(psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM $TABLE_NAME;" | tr -d ' ')
+  if [ "$CURRENT_ROWS" -ge "$TARGET_ROWS" ]; then
+    echo "Table reached $CURRENT_ROWS rows (>= $TARGET_ROWS)."
+    break
+  fi
+  if [ "$attempt" -gt "$MAX_ATTEMPTS" ]; then
+    echo "Error: exceeded $MAX_ATTEMPTS attempts, table has $CURRENT_ROWS / $TARGET_ROWS rows."
+    exit 1
+  fi
+  ROWS_TO_INSERT=$((TARGET_ROWS - CURRENT_ROWS))
+  echo "Attempt $attempt: inserting $ROWS_TO_INSERT additional rows..."
+  if NUM_RECORDS=$ROWS_TO_INSERT TABLE_SUFFIX="_${TARGET_ROWS}" ./target/release/$BINARY_NAME; then
+    echo "Attempt $attempt: succeeded."
+  else
+    echo "Attempt $attempt: failed (likely ZeroKMS transient), retrying after backoff..."
+    sleep 5
+  fi
+  attempt=$((attempt + 1))
+done
+
+echo "Creating indexes..."
+psql -U postgres -d postgres < sql/indexes/v3/${TABLE_NAME}_up.sql
+
+# ANALYZE for accurate functional-index selectivity stats — see the
+# rationale on prepare:_table.
+echo "Running ANALYZE..."
+psql -U postgres -d postgres -c "ANALYZE $TABLE_NAME;"
+
+FINAL_ROWS=$(psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM $TABLE_NAME;" | tr -d ' ')
+echo "Preparation complete! Final row count: $FINAL_ROWS"
+"""
+
+[tasks."prepare:v3:string_encrypted"]
+description = "Prepare string_encrypted_v3 table with target row count"
+run = "mise run prepare:v3:_table string_encrypted_v3 encrypt_string_v3 $1"
+
+[tasks."prepare:v3:integer_encrypted"]
+description = "Prepare integer_encrypted_v3 table with target row count"
+run = "mise run prepare:v3:_table integer_encrypted_v3 encrypt_int_v3 $1"
+
+[tasks."prepare:v3:category_encrypted"]
+description = "Prepare category_encrypted_v3_<size> table with ~250 low-cardinality categorical values"
+run = "mise run prepare:v3:_table category_encrypted_v3 encrypt_category_v3 $1"
+
+[tasks."prepare:v3:combo_encrypted"]
+description = "Prepare combo_encrypted_v3_<size> table with three encrypted columns (name + age + category)"
+run = "mise run prepare:v3:_table combo_encrypted_v3 encrypt_combo_v3 $1"
+
+[tasks."prepare:v3:json_ste_vec_small"]
+description = "Prepare json_ste_vec_small_encrypted_v3 table with target row count"
+run = "mise run prepare:v3:_table json_ste_vec_small_encrypted_v3 encrypt_ste_vec_small_v3 $1"
 
 [tasks."prepare:string_encrypted"]
 description = "Prepare string_encrypted table with target row count"
@@ -827,4 +967,188 @@ description = "Overview of ingest benchmark results — throughput per scenario,
 run = """
 #!/usr/bin/env bash
 python3 report_ingest.py "$@"
+"""
+
+# ---------------------------------------------------------------------------
+# EQL v3 benchmark tasks. Additive twins of the v2 tasks above — nothing in
+# the v2 path changes. Requires `mise run setup-db-v3` (installs the eql_v3
+# schema + _v3 tables) on top of the usual setup-db.
+# ---------------------------------------------------------------------------
+
+[tasks."bench:query:_run_v3"]
+description = "Internal: Run one v3 query benchmark (prepare + criterion + result file)"
+run = """
+#!/usr/bin/env bash
+set -e
+
+PREPARE_TASK="$1"    # e.g. prepare:v3:string_encrypted
+BENCH_NAME="$2"      # e.g. exact_v3 (criterion bench target)
+GROUP_NAME="$3"      # e.g. EXACT_V3 (criterion group dir)
+TARGET_ROWS="$4"
+
+if [ -z "$PREPARE_TASK" ] || [ -z "$BENCH_NAME" ] || [ -z "$GROUP_NAME" ] || [ -z "$TARGET_ROWS" ]; then
+  echo "Error: PREPARE_TASK, BENCH_NAME, GROUP_NAME and TARGET_ROWS arguments required"
+  echo "Usage: mise run bench:query:_run_v3 <prepare_task> <bench_name> <group_name> <target_rows>"
+  exit 1
+fi
+
+if ! [[ "$TARGET_ROWS" =~ ^[0-9]+$ ]]; then
+  echo "Error: target row count must be a positive integer"
+  exit 1
+fi
+
+echo "Preparing table via $PREPARE_TASK with $TARGET_ROWS rows..."
+mise run "$PREPARE_TASK" "$TARGET_ROWS"
+
+echo "Cleaning old benchmark data..."
+rm -rf "target/criterion/data/main/$GROUP_NAME" "target/criterion/reports/$GROUP_NAME"
+
+echo "Running $BENCH_NAME query benchmark..."
+mkdir -p results/query
+OUTPUT_FILE="results/query/${BENCH_NAME}_rows_${TARGET_ROWS}.json"
+TARGET_ROWS="$TARGET_ROWS" cargo criterion --bench "$BENCH_NAME" --message-format json > "$OUTPUT_FILE"
+
+echo "Benchmark complete! Results written to $OUTPUT_FILE"
+"""
+
+[tasks."bench:query:exact:v3"]
+description = "Run EXACT_V3 query benchmark (string_encrypted_v3, eql_v3.text_search)"
+run = "mise run bench:query:_run_v3 prepare:v3:string_encrypted exact_v3 EXACT_V3 $1"
+
+[tasks."bench:query:match:v3"]
+description = "Run MATCH_V3 query benchmark (bloom containment only — v3 removes LIKE)"
+run = "mise run bench:query:_run_v3 prepare:v3:string_encrypted match_v3 MATCH_V3 $1"
+
+[tasks."bench:query:ore:v3"]
+description = "Run ORE_V3 query benchmark (integer_encrypted_v3, eql_v3.int4_ord_ore)"
+run = "mise run bench:query:_run_v3 prepare:v3:integer_encrypted ore_v3 ORE_V3 $1"
+
+[tasks."bench:query:group_by:v3"]
+description = "Run GROUP_BY_V3 query benchmark (encrypted scenarios only — plaintext baselines stay in the v2 family)"
+run = "mise run bench:query:_run_v3 prepare:v3:category_encrypted group_by_v3 GROUP_BY_V3 $1"
+
+[tasks."bench:query:combo:v3"]
+description = "Run COMBO_V3 query benchmark (composite predicates on combo_encrypted_v3)"
+run = "mise run bench:query:_run_v3 prepare:v3:combo_encrypted combo_v3 COMBO_V3 $1"
+
+[tasks."bench:query:json:v3"]
+description = "Run JSON_V3 / ste_vec query benchmark (containment + selector scenarios)"
+run = "mise run bench:query:_run_v3 prepare:v3:json_ste_vec_small json_v3 JSON_V3 $1"
+
+[tasks."bench:query:all:v3"]
+description = "Run all v3 query benchmarks across row-count tiers (10k, 100k, 1M, 10M). Optional arg caps the largest tier."
+run = """
+#!/usr/bin/env bash
+set -e
+
+MAX_ROWS="${1:-}"
+
+if [ -n "$MAX_ROWS" ] && ! [[ "$MAX_ROWS" =~ ^[0-9]+$ ]]; then
+  echo "Error: max row count must be a positive integer"
+  echo "Usage: mise run bench:query:all:v3 [max_rows]"
+  exit 1
+fi
+
+ALL_ROW_COUNTS=(10000 100000 1000000 10000000)
+ROW_COUNTS=()
+for ROWS in "${ALL_ROW_COUNTS[@]}"; do
+  if [ -z "$MAX_ROWS" ] || [ "$ROWS" -le "$MAX_ROWS" ]; then
+    ROW_COUNTS+=("$ROWS")
+  fi
+done
+
+if [ -z "${ROW_COUNTS[*]}" ]; then
+  echo "Error: max_rows=$MAX_ROWS excludes every tier (smallest is 10000)"
+  exit 1
+fi
+
+echo "========================================"
+echo "Starting v3 benchmark suite"
+echo "Row counts: ${ROW_COUNTS[*]}"
+echo "Benchmarks: exact_v3, match_v3, ore_v3, group_by_v3, combo_v3, json_v3"
+echo "========================================"
+echo ""
+
+START_TIME=$(date +%s)
+
+for ROWS in "${ROW_COUNTS[@]}"; do
+  echo "========================================"
+  echo "Running v3 benchmarks with $ROWS rows"
+  echo "========================================"
+  echo ""
+
+  echo "[1/6] Running EXACT_V3 benchmark with $ROWS rows..."
+  mise run bench:query:exact:v3 "$ROWS"
+  echo ""
+
+  echo "[2/6] Running MATCH_V3 benchmark with $ROWS rows..."
+  mise run bench:query:match:v3 "$ROWS"
+  echo ""
+
+  echo "[3/6] Running ORE_V3 benchmark with $ROWS rows..."
+  mise run bench:query:ore:v3 "$ROWS"
+  echo ""
+
+  echo "[4/6] Running GROUP_BY_V3 benchmark with $ROWS rows..."
+  mise run bench:query:group_by:v3 "$ROWS"
+  echo ""
+
+  echo "[5/6] Running COMBO_V3 benchmark with $ROWS rows..."
+  mise run bench:query:combo:v3 "$ROWS"
+  echo ""
+
+  echo "[6/6] Running JSON_V3 benchmark with $ROWS rows..."
+  mise run bench:query:json:v3 "$ROWS"
+  echo ""
+
+  echo "Completed v3 benchmarks for $ROWS rows"
+  echo ""
+done
+
+END_TIME=$(date +%s)
+ELAPSED=$((END_TIME - START_TIME))
+HOURS=$((ELAPSED / 3600))
+MINUTES=$(((ELAPSED % 3600) / 60))
+SECONDS=$((ELAPSED % 60))
+
+echo "========================================"
+echo "All v3 benchmarks complete!"
+echo "Total time: ${HOURS}h ${MINUTES}m ${SECONDS}s"
+echo "Results saved in results/query/"
+echo "========================================"
+"""
+
+[tasks."bench:ingest:encrypt_int:v3"]
+description = "Run encrypt_int_v3 ingest benchmark (encrypt + from_v2 convert + insert) and combine results"
+run = "mise run bench:ingest:_run encrypt_int_v3 integer_encrypted_v3"
+
+[tasks."bench:ingest:encrypt_string:v3"]
+description = "Run encrypt_string_v3 ingest benchmark (encrypt + from_v2 convert + insert; note the extra ORE term vs v2 — see the bin docs)"
+run = "mise run bench:ingest:_run encrypt_string_v3 string_encrypted_v3"
+
+[tasks."bench:ingest:json-ste-vec-small:v3"]
+description = "Run encrypt_ste_vec_small_v3 (SteVec → eql_v3.json) ingest benchmark"
+run = "mise run bench:ingest:_run encrypt_ste_vec_small_v3 json_ste_vec_small_encrypted_v3 $1"
+
+[tasks."bench:ingest:convert-overhead"]
+description = "Run the conversion-overhead scenario: identical encrypt workload with and without the from_v2 v2→v3 conversion, no database writes. The delta between the two families is pure conversion cost."
+depends = ["bench:build"]
+run = """
+#!/usr/bin/env bash
+set -e
+[ -f .env ] && set -a && source .env && set +a
+
+NUM_RECORDS="${1:-500,1000,10000}"
+
+for MODE in encrypt_only encrypt_convert; do
+  BENCH_NAME="convert_overhead_${MODE}"
+  echo "Running $BENCH_NAME benchmark..."
+  mise x -- hyperfine --export-json "target/${BENCH_NAME}_hyperfine.json" \
+    -L num_records "${NUM_RECORDS}" --runs 2 \
+    "NUM_RECORDS={num_records} CONVERT_MODE=${MODE} ./target/release/convert_overhead"
+
+  echo "Combining results..."
+  ./target/release/combine_benchmark "$BENCH_NAME"
+  echo "Results written to results/ingest/${BENCH_NAME}_combined.json"
+done
 """
