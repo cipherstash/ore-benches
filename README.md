@@ -91,6 +91,86 @@ Three categories of queries are benchmarked:
 
 Each query is tested with and without decryption of results.
 
+## 🆕 EQL v3 Scenarios
+
+The suite carries an **EQL version axis**: every v2 scenario family has an
+additive v3 twin that runs the same scenario intent against the `eql_v3`
+schema (per-scalar-per-capability jsonb domains, term extractor functions,
+no generic envelope type). Nothing in the v2 path changes — v2 filenames,
+tables and tasks are untouched.
+
+### How v3 payloads are produced
+
+cipherstash-client 0.38 emits EQL v2.3 wire payloads only. The v3 paths
+encrypt through the unchanged v2 pipeline and convert each STORED payload
+with [`eql-bindings`](https://github.com/cipherstash/encrypt-query-language)'s
+`from_v2` (currently a path dependency on the EQL repo checkout). Scalar
+QUERY conversion is unsupported upstream (no v3 scalar query wire shape
+exists), so the v3 query benches encrypt each probe value as a storage
+payload, convert it, and compare via the `eql_v3.*_term` extractors (or the
+inlinable typed operators, which reduce to the same expressions), e.g.:
+
+```sql
+WHERE eql_v3.eq_term(value) = eql_v3.eq_term($1::eql_v3.text_search)
+```
+
+### Table / domain mapping
+
+| v2 table | v3 twin | Domain | Notes |
+|---|---|---|---|
+| `string_encrypted` | `string_encrypted_v3` | `eql_v3.text_search` | Only single-column v3 domain serving both EXACT (hm) and MATCH (bf); requires an extra `ob` ORE term the v2 string ingest doesn't encrypt — `encrypt_string_v3` throughput is therefore not directly comparable to `encrypt_string`. |
+| `integer_encrypted` | `integer_encrypted_v3` | `eql_v3.int4_ord_ore` | v2 encrypts `i32` (int4). |
+| `category_encrypted` | `category_encrypted_v3` | `eql_v3.text_eq` | |
+| `combo_encrypted` | `combo_encrypted_v3` | `text_match` / `int4_ord_ore` / `text_eq` | Per-column capability match. |
+| `json_ste_vec_small_encrypted` | `json_ste_vec_small_encrypted_v3` | `eql_v3.json` | SteVec document domain. |
+| plaintext baselines | *(shared)* | — | Version-independent; not duplicated. |
+
+### Scenario changes vs v2
+
+- **MATCH**: v3 removes `LIKE` / `ILIKE` — the two v2 `eql_cast_*` LIKE
+  scenarios have no twin. Bloom containment (`@>`) is the only encrypted
+  text-matching surface; the v3 bench adds an `eql_bloom_bare` scenario to
+  price the typed-operator inlining.
+- **GROUP BY**: v3 runs encrypted scenarios only; compare against the
+  shared plaintext baselines in the v2 family.
+- **JSON**: containment uses the canonical v3 recipe
+  (`value @> $1::eql_v3.jsonb_query` over a
+  `GIN ((eql_v3.to_ste_vec_query(value))::jsonb jsonb_path_ops)` index);
+  `field_eq/bare` becomes index-capable (the v3 `->` is inlinable SQL,
+  unlike v2's plpgsql).
+- **ORE (OPE)**: the `eql_v3.*_ord_ope` domains (OPE-CLLW ordering, wire
+  key `op`) are scaffolded but **disabled** — cipherstash-client 0.38.0
+  does not emit `op` (CIP-3280 unreleased). See the TODOs in
+  `sql/schema-v3.sql` and `benches/ore_v3.rs`.
+- A dedicated **conversion-overhead** ingest family
+  (`convert_overhead_encrypt_only` vs `convert_overhead_encrypt_convert`)
+  quantifies the pure `from_v2` cost: identical encrypt workloads, no
+  database writes, delta = conversion.
+
+### Version axis in results and reports
+
+v3 result files carry a `_v3` family prefix (`exact_v3_rows_10000.json`,
+`exact_v3_metadata_10000.json`) and every sidecar scenario records
+`"version": 3` (absent / `2` = v2, so old files parse unchanged). The
+report generators group by version and sort each `_V3` family next to its
+v2 counterpart for side-by-side comparison.
+
+### Running the v3 suite
+
+```bash
+# Build the v3 SQL installer in the EQL repo (no released artifact yet):
+#   (cd ../encrypt-query-language && mise run build)
+mise run setup-db-v3        # install eql_v3 + create the _v3 tables
+
+# Query benches (per family / tier, or the full sweep)
+mise run bench:query:exact:v3 10000
+mise run bench:query:all:v3 1000000
+
+# Ingest benches + the conversion-overhead scenario
+mise run bench:ingest:encrypt_string:v3
+mise run bench:ingest:convert-overhead
+```
+
 ## 🚀 Running Benchmarks
 
 ### Prerequisites
