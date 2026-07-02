@@ -81,6 +81,32 @@ path = "src/bin/encrypt_category.rs"
 name = "encrypt_combo"
 path = "src/bin/encrypt_combo.rs"
 
+# --- EQL v3 ingest bins (encrypt via v2 pipeline, convert with from_v2) ---
+
+[[bin]]
+name = "encrypt_string_v3"
+path = "src/bin/encrypt_string_v3.rs"
+
+[[bin]]
+name = "encrypt_int_v3"
+path = "src/bin/encrypt_int_v3.rs"
+
+[[bin]]
+name = "encrypt_category_v3"
+path = "src/bin/encrypt_category_v3.rs"
+
+[[bin]]
+name = "encrypt_combo_v3"
+path = "src/bin/encrypt_combo_v3.rs"
+
+[[bin]]
+name = "encrypt_ste_vec_small_v3"
+path = "src/bin/encrypt_ste_vec_small_v3.rs"
+
+[[bin]]
+name = "convert_overhead"
+path = "src/bin/convert_overhead.rs"
+
 [[bench]]
 name = "ore"
 harness = false
