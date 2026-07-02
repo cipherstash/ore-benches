@@ -150,14 +150,19 @@ fn criterion_benchmark(c: &mut Criterion) {
             b.to_async(&rt).iter(|| async {
                 let rows =
                     bench_assert(sqlx::query(&query_str).fetch_all(&pool).await, &scenario_id);
-                // Drain results to force aggregation to materialise. The
-                // count-wrapped scenarios return a single i64; the top-N
-                // scenarios return up to 10 (group-key bytes, count) rows
-                // and we just sum the counts.
-                if rows.len() == 1 {
-                    black_box(rows[0].get::<i64, _>(0));
-                } else {
-                    black_box(rows.iter().map(|r| r.get::<i64, _>(1)).sum::<i64>());
+                // Drain results to force aggregation to materialise.
+                // Discriminate by column count, not row count: the
+                // count-wrapped scenarios return one 1-column i64 row, the
+                // top-N scenarios return (group key, count) 2-column rows —
+                // a top-N result that happened to contain exactly one group
+                // would misdecode under a row-count heuristic.
+                match rows.first() {
+                    Some(first) if first.columns().len() == 1 => {
+                        black_box(first.get::<i64, _>(0));
+                    }
+                    _ => {
+                        black_box(rows.iter().map(|r| r.get::<i64, _>(1)).sum::<i64>());
+                    }
                 }
             })
         });

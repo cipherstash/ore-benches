@@ -323,16 +323,22 @@ ore-benches/
 ├── benches/              # Criterion benchmark definitions
 │   ├── exact.rs          # EXACT query benchmarks
 │   ├── match.rs          # MATCH query benchmarks
-│   └── ore.rs            # ORE range query benchmarks
+│   ├── ore.rs            # ORE range query benchmarks
+│   └── *_v3.rs           # EQL v3 twins (exact_v3, match_v3, ore_v3,
+│                         #   group_by_v3, combo_v3, json_v3)
 ├── src/
 │   ├── bin/              # Binary utilities
 │   │   ├── encrypt_int.rs
 │   │   ├── encrypt_string.rs
+│   │   ├── encrypt_*_v3.rs      # EQL v3 ingest twins
+│   │   ├── convert_overhead.rs  # from_v2 conversion-cost scenario
 │   │   └── combine_benchmark.rs
-│   └── lib.rs            # Shared benchmark code
+│   └── lib.rs            # Shared benchmark code (incl. the v3 module)
 ├── sql/
-│   ├── schema.sql        # Database schema
+│   ├── schema.sql        # Database schema (EQL v2 tables)
+│   ├── schema-v3.sql     # EQL v3 twin tables (eql_v3 domains)
 │   └── indexes/          # Index creation scripts
+│       └── v3/           # EQL v3 functional index scripts
 ├── results/              # Benchmark results (JSON)
 │   ├── ingest/           # Ingest throughput results
 │   └── query/            # Query performance results

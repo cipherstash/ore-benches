@@ -87,6 +87,13 @@ pub mod v3 {
     /// terms — and could not: v3's `bf` is signed, v2's is unsigned).
     pub fn v3_scalar_to_v2_envelope(v3: &serde_json::Value) -> Result<serde_json::Value> {
         let obj = v3.as_object().context("v3 payload must be a JSON object")?;
+        // Fail closed on anything that isn't a v3 payload — a v2 `ct`
+        // payload also carries `c` + `i` and would otherwise silently
+        // re-wrap.
+        let version = obj.get("v").and_then(serde_json::Value::as_u64);
+        if version != Some(3) {
+            anyhow::bail!("expected EQL payload version 3, found {:?}", version);
+        }
         let c = obj
             .get("c")
             .context("expected a v3 scalar payload carrying `c` — SteVec documents (`sv`) have no scalar envelope")?;
@@ -1098,6 +1105,20 @@ mod tests {
                 "i": {"t": "string_encrypted_v3", "c": "value"},
                 "c": "mBbLGB85%OPAQUE-RECORD",
             })
+        );
+    }
+
+    #[test]
+    fn v3_scalar_to_v2_envelope_rejects_non_v3_payloads() {
+        // A v2 `ct` payload also carries `c` + `i` — without a version
+        // check it would silently re-wrap. Fail closed instead, consistent
+        // with the module's conversion design.
+        let v2 = v2_text_store_payload();
+        let err = v3_scalar_to_v2_envelope(&v2).unwrap_err();
+        let msg = format!("{:#}", err);
+        assert!(
+            msg.contains("version"),
+            "error should name the version mismatch: {msg}"
         );
     }
 

@@ -1311,7 +1311,16 @@ class BenchmarkReporter:
             type_results = [r for r in self.query_results if r.query_type == qt]
             if not type_results:
                 continue
-            version = eql_version_for(qt)
+            # The sidecar-recorded version is the source of truth when the
+            # family's sidecars agree; fall back to the (name-derived)
+            # QueryResult version for families without metadata — criterion's
+            # NDJSON carries no version field.
+            meta_versions = {m.version for m in self.metadata.values()
+                             if m.query_type == qt}
+            if len(meta_versions) == 1:
+                version = meta_versions.pop()
+            else:
+                version = type_results[0].version
             scenarios = sorted(set(r.query_name for r in type_results))
             tiers = sorted(set(r.row_count for r in type_results))
             tiers_str = ", ".join(f"{t:,}" for t in tiers)
