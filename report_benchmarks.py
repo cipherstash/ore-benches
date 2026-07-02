@@ -36,15 +36,23 @@ class IngestResult:
     avg_memory_mb: float
 
 
+def eql_version_for(query_type: str) -> int:
+    """EQL version axis for a query-type family: the `_V3` families run
+    against the eql_v3 schema; everything else (including pre-version
+    result files) is v2."""
+    return 3 if query_type.endswith("_V3") else 2
+
+
 @dataclass
 class QueryResult:
     """Results from a query benchmark"""
-    query_type: str  # e.g., "EXACT", "MATCH", "ORE"
+    query_type: str  # e.g., "EXACT", "MATCH", "ORE", "EXACT_V3"
     query_name: str  # e.g., "eql_cast", "range_gt_10"
     row_count: int
     decrypt: bool
     mean_ns: float
     median_ns: float
+    version: int = 2  # EQL version axis (2 | 3)
 
 
 @dataclass
@@ -67,6 +75,9 @@ class ScenarioMetadata:
     # sidecar predates the actual-rows capture and we're falling back to
     # the planner estimate from `explain[0]["Plan"]["Plan Rows"]`.
     rows_returned: Optional[int] = None
+    # EQL version axis (2 | 3). Sidecars written before the axis existed
+    # carry no `version` field and are v2.
+    version: int = 2
 
 
 class BenchmarkReporter:
@@ -82,19 +93,31 @@ class BenchmarkReporter:
         self.index_cache: Dict[str, str] = {}  # Cache for index SQL
 
     def load_ingest_results(self):
-        """Load ingest benchmark results"""
+        """Load ingest benchmark results.
+
+        Discovers every `*_combined.json` under results/ingest (rather than
+        a hardcoded family list) so the `encrypt_*_v3` and
+        `convert_overhead_*` families are picked up alongside the v2 ones.
+        The bench type is the filename minus a leading `encrypt_` and the
+        trailing `_combined` — v2 names are unchanged (`int`, `string`, …)
+        and the v3 twins sort adjacent to them (`int_v3`, `string_v3`, …)
+        for side-by-side reading.
+        """
         ingest_dir = self.results_dir / "ingest"
-        
-        for bench_type in ["int", "json_small", "json_large", "string", "ste_vec_small", "ste_vec_large"]:
-            file_path = ingest_dir / f"encrypt_{bench_type}_combined.json"
-            
-            if not file_path.exists():
-                print(f"Warning: {file_path} not found, skipping", file=sys.stderr)
-                continue
-            
+        if not ingest_dir.is_dir():
+            print(f"Warning: {ingest_dir} not found, skipping ingest results", file=sys.stderr)
+            return
+
+        for file_path in sorted(ingest_dir.glob("*_combined.json")):
+            bench_type = file_path.stem
+            if bench_type.endswith("_combined"):
+                bench_type = bench_type[:-len("_combined")]
+            if bench_type.startswith("encrypt_"):
+                bench_type = bench_type[len("encrypt_"):]
+
             with open(file_path) as f:
                 data = json.load(f)
-            
+
             for result in data.get("results", []):
                 self.ingest_results.append(IngestResult(
                     bench_type=bench_type,
@@ -161,7 +184,8 @@ class BenchmarkReporter:
                         row_count=row_count,
                         decrypt=decrypt,
                         mean_ns=mean_ns,
-                        median_ns=median_ns
+                        median_ns=median_ns,
+                        version=eql_version_for(query_type)
                     ))
 
     def load_query_metadata(self):
@@ -197,6 +221,8 @@ class BenchmarkReporter:
                     explain=s.get("explain", []),
                     indexes_used=s.get("indexes_used", []),
                     rows_returned=s.get("rows_returned"),
+                    # Absent field = pre-version sidecar = v2.
+                    version=s.get("version", 2),
                 )
 
     def format_time(self, ns: float, include_indicator: bool = True) -> str:
@@ -384,6 +410,123 @@ class BenchmarkReporter:
                 "field_order/functional": (
                     "SELECT id FROM {TABLE} "
                     "ORDER BY <ore_extractor>(value -> '<selector-hash>'::text) LIMIT 10",
+                    ""
+                )
+            },
+            # --- EQL v3 twins. Probe parameters are STORED-shape payloads
+            # converted with from_v2 (no v3 scalar query wire shape exists);
+            # the SQL compares via the eql_v3.*_term extractors or the
+            # inlinable typed operators.
+            "EXACT_V3": {
+                "eql_cast": (
+                    "SELECT id, value::jsonb FROM {TABLE} "
+                    "WHERE value = $1::eql_v3.text_search LIMIT 1",
+                    "<sampled row plaintext>"
+                ),
+                "eql_hash": (
+                    "SELECT id, value::jsonb FROM {TABLE} "
+                    "WHERE eql_v3.eq_term(value) = eql_v3.eq_term($1::eql_v3.text_search) LIMIT 1",
+                    "<sampled row plaintext>"
+                )
+            },
+            "MATCH_V3": {
+                "eql_bloom": (
+                    "SELECT id, value::jsonb FROM {TABLE} "
+                    "WHERE eql_v3.match_term(value) @> eql_v3.match_term($1::eql_v3.text_search) LIMIT 10",
+                    "Johnson"
+                ),
+                "eql_bloom_bare": (
+                    "SELECT id, value::jsonb FROM {TABLE} "
+                    "WHERE value @> $1::eql_v3.text_search LIMIT 10",
+                    "Johnson"
+                )
+            },
+            "ORE_V3": {
+                "range_gt_10": (
+                    "SELECT id, value::jsonb FROM {TABLE} "
+                    "WHERE value > $1::eql_v3.int4_ord_ore LIMIT 10",
+                    "5000"
+                ),
+                "range_gt_100": (
+                    "SELECT id, value::jsonb FROM {TABLE} "
+                    "WHERE value > $1::eql_v3.int4_ord_ore LIMIT 100",
+                    "5000"
+                ),
+                "range_lt_10": (
+                    "SELECT id, value::jsonb FROM {TABLE} "
+                    "WHERE value < $1::eql_v3.int4_ord_ore LIMIT 10",
+                    "5000"
+                ),
+                "range_lt_100": (
+                    "SELECT id, value::jsonb FROM {TABLE} "
+                    "WHERE value < $1::eql_v3.int4_ord_ore LIMIT 100",
+                    "5000"
+                ),
+                "range_lt_ordered_10": (
+                    "SELECT id, value::jsonb FROM {TABLE} "
+                    "WHERE value < $1::eql_v3.int4_ord_ore "
+                    "ORDER BY eql_v3.ord_term(value) LIMIT 10",
+                    "5000"
+                )
+            },
+            "GROUP_BY_V3": {
+                "low_cardinality_groups_encrypted": (
+                    "SELECT count(*) FROM "
+                    "(SELECT 1 FROM {TABLE} GROUP BY eql_v3.eq_term(value)) g",
+                    ""
+                ),
+                "top_n_groups_encrypted": (
+                    "SELECT eql_v3.eq_term(value), count(*) FROM {TABLE} "
+                    "GROUP BY 1 ORDER BY count(*) DESC LIMIT 10",
+                    ""
+                )
+            },
+            "COMBO_V3": {
+                "bloom_ore_order_limit": (
+                    "SELECT id FROM {TABLE} "
+                    "WHERE eql_v3.match_term(name) @> eql_v3.match_term($1::eql_v3.text_match) "
+                    "ORDER BY eql_v3.ord_term(age) LIMIT 10",
+                    "Bob"
+                ),
+                "filtered_group_by": (
+                    "SELECT eql_v3.eq_term(category), count(*) FROM {TABLE} "
+                    "WHERE eql_v3.match_term(name) @> eql_v3.match_term($1::eql_v3.text_match) "
+                    "GROUP BY 1",
+                    "Bob"
+                ),
+                "top_n_filtered_group_by": (
+                    "SELECT eql_v3.eq_term(category), count(*) FROM {TABLE} "
+                    "WHERE eql_v3.match_term(name) @> eql_v3.match_term($1::eql_v3.text_match) "
+                    "GROUP BY 1 ORDER BY count(*) DESC LIMIT 10",
+                    "Bob"
+                )
+            },
+            "JSON_V3": {
+                "contains/functional": (
+                    "SELECT id FROM {TABLE} "
+                    "WHERE value @> $1::jsonb::eql_v3.jsonb_query LIMIT 10",
+                    "<sampled row via eql_v3.to_ste_vec_query>"
+                ),
+                "field_eq/bare": (
+                    "SELECT id FROM {TABLE} "
+                    "WHERE (value -> '<selector-hash>'::text) = $1::jsonb::eql_v3.jsonb_entry "
+                    "LIMIT 10",
+                    "<sampled sv entry as jsonb>"
+                ),
+                "field_eq/extractor": (
+                    "SELECT id FROM {TABLE} "
+                    "WHERE value @> $1::jsonb::eql_v3.jsonb_query LIMIT 10",
+                    "{\"sv\":[{\"s\":\"<selector-hash>\",\"hm\":\"<hmac>\"}]}"
+                ),
+                "field_eq/functional": (
+                    "SELECT id FROM {TABLE} "
+                    "WHERE eql_v3.eq_term(value -> '<selector-hash>'::text) "
+                    "= eql_v3.eq_term($1::jsonb::eql_v3.jsonb_entry) LIMIT 10",
+                    "<sampled sv entry as jsonb>"
+                ),
+                "field_order/functional": (
+                    "SELECT id FROM {TABLE} "
+                    "ORDER BY eql_v3.ore_cllw(value -> '<selector-hash>'::text) LIMIT 10",
                     ""
                 )
             }
@@ -665,6 +808,139 @@ class BenchmarkReporter:
                     "LIMIT (no Sort node). When absent (older bench run / index not yet "
                     "rebuilt), falls back to Seq Scan + Top-N sort."
                 )
+            },
+            # --- EQL v3 twins ---
+            "EXACT_V3": {
+                "eql_cast": (
+                    "EQL v3 exact match using the inlinable `=` operator",
+                    "Table: `string_encrypted_v3_{rows}` (column `eql_v3.text_search`). "
+                    "Index: `hash (eql_v3.eq_term(value))`. The typed `=` inlines to "
+                    "`eql_v3.eq_term(a) = eql_v3.eq_term(b)` and engages the index."
+                ),
+                "eql_hash": (
+                    "EQL v3 exact match using the `eql_v3.eq_term` extractor",
+                    "Table: `string_encrypted_v3_{rows}` (column `eql_v3.text_search`). "
+                    "Index: `hash (eql_v3.eq_term(value))` — the explicit extractor form "
+                    "of `eql_cast`, structurally identical after operator inlining."
+                )
+            },
+            "MATCH_V3": {
+                "eql_bloom": (
+                    "EQL v3 bloom-filter token containment via the `eql_v3.match_term` extractor",
+                    "Table: `string_encrypted_v3_{rows}` (column `eql_v3.text_search`). "
+                    "Index: `GIN (eql_v3.match_term(value))`. v3 removes LIKE/ILIKE — the "
+                    "two v2 `eql_cast_*` LIKE scenarios have no v3 twin; bloom containment "
+                    "is the only encrypted text-matching surface."
+                ),
+                "eql_bloom_bare": (
+                    "EQL v3 bloom containment via the bare typed `@>` operator",
+                    "Table: `string_encrypted_v3_{rows}` (column `eql_v3.text_search`). "
+                    "The ORM-shaped form: `value @> $1::eql_v3.text_search` inlines to the "
+                    "same match_term expression as `eql_bloom` and should engage the same "
+                    "GIN — the scenario prices exactly that inlining."
+                )
+            },
+            "ORE_V3": {
+                "range_gt_10": (
+                    "EQL v3 range query (greater than) returning 10 results",
+                    "Table: `integer_encrypted_v3_{rows}` (column `eql_v3.int4_ord_ore`). "
+                    "Index: `btree (eql_v3.ord_term(value))`. Bare-form range operators "
+                    "inline to ord_term comparisons and match the index; planner usage is "
+                    "a selectivity question exactly as in the v2 family."
+                ),
+                "range_gt_100": (
+                    "EQL v3 range query (greater than) returning 100 results",
+                    "Table: `integer_encrypted_v3_{rows}` (column `eql_v3.int4_ord_ore`). "
+                    "Index: `btree (eql_v3.ord_term(value))`."
+                ),
+                "range_lt_10": (
+                    "EQL v3 range query (less than) returning 10 results",
+                    "Table: `integer_encrypted_v3_{rows}` (column `eql_v3.int4_ord_ore`). "
+                    "Index: `btree (eql_v3.ord_term(value))`."
+                ),
+                "range_lt_100": (
+                    "EQL v3 range query (less than) returning 100 results",
+                    "Table: `integer_encrypted_v3_{rows}` (column `eql_v3.int4_ord_ore`). "
+                    "Index: `btree (eql_v3.ord_term(value))`."
+                ),
+                "range_lt_ordered_10": (
+                    "EQL v3 ordered range query (extractor ORDER BY)",
+                    "Table: `integer_encrypted_v3_{rows}` (column `eql_v3.int4_ord_ore`). "
+                    "Index: `btree (eql_v3.ord_term(value))`. `ORDER BY eql_v3.ord_term(value)` "
+                    "matches the index expression, so rows stream out already sorted — no "
+                    "Sort node. Same sort-key rule as v2."
+                )
+            },
+            "GROUP_BY_V3": {
+                "low_cardinality_groups_encrypted": (
+                    "EQL v3 low-cardinality GROUP BY (~250 buckets) on `eql_v3.eq_term(value)`",
+                    "Table: `category_encrypted_v3_{rows}` (column `eql_v3.text_eq`, "
+                    "same CAT_001..CAT_250 distribution as the v2 family). HashAggregate "
+                    "keyed on the small deterministic eq_term. Compare against the shared "
+                    "`low_cardinality_groups_plaintext` baseline in the v2 GROUP_BY family "
+                    "— the plaintext tables are version-independent and not re-run for v3."
+                ),
+                "top_n_groups_encrypted": (
+                    "EQL v3 dashboard analytic: top 10 categories by frequency",
+                    "Table: `category_encrypted_v3_{rows}` (column `eql_v3.text_eq`). "
+                    "Same shape as the v2 scenario with `eql_v3.eq_term` as the group key. "
+                    "Plaintext baseline lives in the v2 GROUP_BY family."
+                )
+            },
+            "COMBO_V3": {
+                "bloom_ore_order_limit": (
+                    "EQL v3 composite: bloom containment filter + ORE ORDER BY + LIMIT",
+                    "Table: `combo_encrypted_v3_{rows}` (name `eql_v3.text_match`, age "
+                    "`eql_v3.int4_ord_ore`, category `eql_v3.text_eq`). The v2 LIKE filter "
+                    "becomes `eql_v3.match_term(name) @> eql_v3.match_term($1)` (v3 removes "
+                    "LIKE); ORDER BY uses `eql_v3.ord_term(age)`."
+                ),
+                "filtered_group_by": (
+                    "EQL v3 composite: bloom containment filter + GROUP BY category",
+                    "Table: `combo_encrypted_v3_{rows}`. Bloom GIN narrows the input; "
+                    "HashAggregate groups by `eql_v3.eq_term(category)`."
+                ),
+                "top_n_filtered_group_by": (
+                    "EQL v3 dashboard analytic: top 10 categories for a bloom-filtered set",
+                    "Table: `combo_encrypted_v3_{rows}`. Same as filtered_group_by plus "
+                    "`ORDER BY count(*) DESC LIMIT 10`."
+                )
+            },
+            "JSON_V3": {
+                "contains/functional": (
+                    "EQL v3 whole-document containment via the typed `@>` + jsonb_query needle",
+                    "Table: `json_ste_vec_small_encrypted_v3_{rows}` (column `eql_v3.json`). "
+                    "Index: `GIN ((eql_v3.to_ste_vec_query(value))::jsonb jsonb_path_ops)`. "
+                    "The typed `@>` inlines to a native jsonb `@>` over the same expression. "
+                    "Replaces the v2 `eql_v2.jsonb_array(...) @> ...` recipe; the needle is "
+                    "the sampled row's own normalized query shape."
+                ),
+                "field_eq/bare": (
+                    "EQL v3 field-level equality via `value -> 'sel' = $1` (inlinable)",
+                    "Table: `json_ste_vec_small_encrypted_v3_{rows}`. Unlike v2 (plpgsql "
+                    "`->`, unmatchable by the planner), the v3 `->` and `=` are inlinable — "
+                    "the predicate reduces to eq_term comparisons and can engage the "
+                    "per-selector `btree (eql_v3.eq_term(value -> '<sel>'::text))` index "
+                    "the bench builds at startup."
+                ),
+                "field_eq/extractor": (
+                    "EQL v3 field-level equality via the jsonb_query containment needle",
+                    "Table: `json_ste_vec_small_encrypted_v3_{rows}`. Single-field needle "
+                    "`{\"sv\":[{s,hm}]}` through the same to_ste_vec_query GIN as "
+                    "contains/functional — one index covers every selector."
+                ),
+                "field_eq/functional": (
+                    "EQL v3 field-level equality via the explicit `eql_v3.eq_term` form",
+                    "Table: `json_ste_vec_small_encrypted_v3_{rows}`. The explicit extractor "
+                    "spelling of field_eq/bare; engages the same per-selector btree."
+                ),
+                "field_order/functional": (
+                    "EQL v3 field-level ORDER BY via `eql_v3.ore_cllw` on the extracted entry",
+                    "Table: `json_ste_vec_small_encrypted_v3_{rows}`. Index: per-selector "
+                    "`btree (eql_v3.ore_cllw(value -> '<sel>'::text))` built at bench "
+                    "startup (the `eql_v3.ore_cllw_ops` opclass is DEFAULT for the type). "
+                    "In v3 the only per-entry orderable tag is `oc` — no ob/op variants."
+                )
             }
         }
 
@@ -716,14 +992,19 @@ class BenchmarkReporter:
         if table_name in self.index_cache:
             return self.index_cache[table_name]
         
+        # v3 tables keep their index scripts under sql/indexes/v3/.
+        index_dir = self.sql_dir / "indexes"
+        if "_v3" in table_name:
+            index_dir = index_dir / "v3"
+
         # Try to find the index file
-        index_file = self.sql_dir / "indexes" / f"{table_name}_up.sql"
-        
+        index_file = index_dir / f"{table_name}_up.sql"
+
         if not index_file.exists():
             # Try without row count suffix (base table)
             # e.g., string_encrypted_10000 -> string_encrypted
             base_table = re.sub(r'_(\d+)$', '', table_name)
-            index_file = self.sql_dir / "indexes" / f"{base_table}_up.sql"
+            index_file = index_dir / f"{base_table}_up.sql"
         
         if not index_file.exists():
             return None
@@ -810,6 +1091,27 @@ class BenchmarkReporter:
                 "string": "Tests insertion of encrypted string values.",
                 "ste_vec_small": "Tests insertion of small JSON objects with SteVec (searchable encrypted vector) indexing.",
                 "ste_vec_large": "Tests insertion of large JSON objects with SteVec (searchable encrypted vector) indexing.",
+                "int_v3": "EQL v3 twin of `int`: same encrypt workload plus a from_v2 "
+                          "v2→v3 conversion per payload, inserting into "
+                          "`integer_encrypted_v3` (eql_v3.int4_ord_ore).",
+                "string_v3": "EQL v3 twin of `string`, inserting into `string_encrypted_v3` "
+                             "(eql_v3.text_search). NOTE: not directly comparable to "
+                             "`string` — text_search requires the `ob` term, so this "
+                             "workload encrypts an additional ORE index that v2's "
+                             "encrypt_string does not.",
+                "ste_vec_small_v3": "EQL v3 twin of `ste_vec_small`: same SteVec encrypt "
+                                    "workload plus the from_v2 document conversion, "
+                                    "inserting into `json_ste_vec_small_encrypted_v3` "
+                                    "(eql_v3.json).",
+                "convert_overhead_encrypt_only": "Conversion-overhead baseline: encrypt the "
+                                                 "string_v3 workload (hm+bf+ob) with NO "
+                                                 "conversion and NO database writes.",
+                "convert_overhead_encrypt_convert": "Conversion-overhead treatment: identical "
+                                                    "workload to `convert_overhead_encrypt_only` "
+                                                    "plus a from_v2 v2→v3 conversion per payload "
+                                                    "(still no database writes). The delta "
+                                                    "between the two families is pure from_v2 "
+                                                    "cost.",
             }
             
             if bench_type in descriptions:
@@ -999,13 +1301,17 @@ class BenchmarkReporter:
         f.write("## Query Performance\n\n")
         f.write("Per-query-type detail is broken out into separate pages — click into a "
                 "scenario family for the SQL, per-tier timings, the indexes the planner "
-                "picked, and the EXPLAIN plan tree.\n\n")
-        f.write("| Query Type | Scenarios | Tiers | Largest-tier median (no decrypt) | Detail |\n")
-        f.write("|-|-|-|-|-|\n")
+                "picked, and the EXPLAIN plan tree. The EQL column is the version axis: "
+                "`_V3` families run the same scenario intents against the `eql_v3` "
+                "schema, and sort next to their v2 counterparts for side-by-side "
+                "comparison.\n\n")
+        f.write("| Query Type | EQL | Scenarios | Tiers | Largest-tier median (no decrypt) | Detail |\n")
+        f.write("|-|-|-|-|-|-|\n")
         for qt in sorted(scenario_pages.keys()):
             type_results = [r for r in self.query_results if r.query_type == qt]
             if not type_results:
                 continue
+            version = eql_version_for(qt)
             scenarios = sorted(set(r.query_name for r in type_results))
             tiers = sorted(set(r.row_count for r in type_results))
             tiers_str = ", ".join(f"{t:,}" for t in tiers)
@@ -1023,7 +1329,7 @@ class BenchmarkReporter:
             else:
                 med_str = "—"
             page = scenario_pages[qt]
-            f.write(f"| {qt} | {scenarios_str} | {tiers_str} | {med_str} | [open]({page}) |\n")
+            f.write(f"| {qt} | v{version} | {scenarios_str} | {tiers_str} | {med_str} | [open]({page}) |\n")
         f.write("\n")
 
     def _write_query_type_page_content(self, f, query_type: str):
@@ -1068,26 +1374,34 @@ class BenchmarkReporter:
 
         # Add index information for one of the row counts (they all use same indexes)
         if results:
-            # Determine table name based on query type / scenario.
+            # Determine table name based on query type / scenario. The _V3
+            # families map to the same base tables with a `_v3` infix
+            # (e.g. string_encrypted_v3_10000).
             sample_row_count = results[0].row_count
-            if query_type == "GROUP_BY" and query_name.endswith("_plaintext"):
+            base_type = query_type
+            v3_infix = ""
+            if query_type.endswith("_V3"):
+                base_type = query_type[:-len("_V3")]
+                v3_infix = "_v3"
+            if base_type == "GROUP_BY" and query_name.endswith("_plaintext"):
                 # Plaintext baselines run against a plain TEXT column — no
                 # functional EQL indexes; lookup will return None and the
-                # Indexes block will be skipped.
+                # Indexes block will be skipped. (v2 only — the v3 family
+                # has no plaintext scenarios.)
                 table_name = f"category_plaintext_{sample_row_count}"
-            elif query_type == "GROUP_BY":
+            elif base_type == "GROUP_BY":
                 # Encrypted GROUP BY scenarios run against the categorical
                 # 250-bucket table family.
-                table_name = f"category_encrypted_{sample_row_count}"
-            elif query_type in ["EXACT", "MATCH"]:
+                table_name = f"category_encrypted{v3_infix}_{sample_row_count}"
+            elif base_type in ["EXACT", "MATCH"]:
                 # String-encrypted scenarios.
-                table_name = f"string_encrypted_{sample_row_count}"
-            elif query_type == "ORE":
-                table_name = f"integer_encrypted_{sample_row_count}"
-            elif query_type == "JSON":
-                table_name = f"json_ste_vec_small_encrypted_{sample_row_count}"
-            elif query_type == "COMBO":
-                table_name = f"combo_encrypted_{sample_row_count}"
+                table_name = f"string_encrypted{v3_infix}_{sample_row_count}"
+            elif base_type == "ORE":
+                table_name = f"integer_encrypted{v3_infix}_{sample_row_count}"
+            elif base_type == "JSON":
+                table_name = f"json_ste_vec_small_encrypted{v3_infix}_{sample_row_count}"
+            elif base_type == "COMBO":
+                table_name = f"combo_encrypted{v3_infix}_{sample_row_count}"
             else:
                 table_name = ""
 

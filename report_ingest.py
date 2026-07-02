@@ -54,6 +54,17 @@ def format_age(mtime: float, now: float) -> str:
     return f"{delta // (86400 * 7)}w ago"
 
 
+def bench_version(bench: str) -> int:
+    """EQL version axis for an ingest bench name. `_v3`-suffixed benches
+    write v3 payloads; `convert_overhead_encrypt_convert` performs the
+    v2→v3 conversion (its `encrypt_only` twin is the v2-shaped baseline).
+    Everything else — including all pre-existing result files — is v2.
+    """
+    if bench.endswith("_v3") or bench == "convert_overhead_encrypt_convert":
+        return 3
+    return 2
+
+
 def collect_ingest(results_dir, prefix):
     """Walk `results_dir/ingest/*_combined.json` and flatten the inner results.
 
@@ -119,11 +130,12 @@ def main():
     print()
 
     now = time.time()
-    print(f"{'throughput':>16}  {'records':>11}  {'time':>9}  {'last run':>9}  bench")
-    print(f"{'-' * 16}  {'-' * 11}  {'-' * 9}  {'-' * 9}  {'-' * 40}")
+    print(f"{'throughput':>16}  {'records':>11}  {'time':>9}  {'last run':>9}  {'eql':>3}  bench")
+    print(f"{'-' * 16}  {'-' * 11}  {'-' * 9}  {'-' * 9}  {'-' * 3}  {'-' * 40}")
     for throughput, records, total_time, mtime, bench in rows:
         print(f"{format_throughput(throughput)}  {format_records(records)}  "
-              f"{format_seconds(total_time)}  {format_age(mtime, now):>9}  {bench}")
+              f"{format_seconds(total_time)}  {format_age(mtime, now):>9}  "
+              f"{'v' + str(bench_version(bench)):>3}  {bench}")
 
 
 if __name__ == "__main__":
