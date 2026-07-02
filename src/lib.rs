@@ -57,7 +57,8 @@ pub mod v3 {
     /// `target`. Thin context-adding wrapper over
     /// [`eql_bindings::from_v2::from_v2`] — see the module docs there for
     /// the conversion rules (terms the target doesn't require are dropped,
-    /// `bf` is reinterpreted into signed `smallint[]`, `k` is removed).
+    /// `bf` is reinterpreted into signed `smallint[]`, the scalar `k: "ct"`
+    /// discriminator is removed while SteVec documents keep `k: "sv"`).
     pub fn v2_store_to_v3(
         v2: &serde_json::Value,
         target: TargetDomain,
@@ -1040,8 +1041,9 @@ mod tests {
             v3["hm"],
             json!("a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90")
         );
-        // v3 payloads carry no `k` discriminator, and text_eq requires only
-        // `hm` — the bloom and ORE terms must be dropped.
+        // v3 SCALAR payloads carry no `k` discriminator (only SteVec
+        // documents keep `k: "sv"`), and text_eq requires only `hm` — the
+        // bloom and ORE terms must be dropped.
         let obj = v3.as_object().unwrap();
         assert!(!obj.contains_key("k"));
         assert!(!obj.contains_key("bf"));
@@ -1124,8 +1126,11 @@ mod tests {
 
     #[test]
     fn v3_scalar_to_v2_envelope_rejects_ste_vec_documents() {
+        // Real v3 SteVec documents carry the k:"sv" form discriminator (v3
+        // scalars have no k) — mirror the actual wire shape.
         let v3_doc = json!({
             "v": 3,
+            "k": "sv",
             "i": {"t": "json_ste_vec_small_encrypted_v3", "c": "value"},
             "sv": [{"s": "abc", "c": "OPAQUE", "hm": "a1"}],
         });

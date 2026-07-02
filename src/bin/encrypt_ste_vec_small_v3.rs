@@ -5,8 +5,8 @@
 //! `json_ste_vec_small_encrypted_v3` (or a `TABLE_SUFFIX` variant).
 //!
 //! Target domain: `eql_v3.json` — the SteVec document domain
-//! (`{v: 3, i, sv: [...]}`, per-entry `s` + `c` + exactly one of `hm` XOR
-//! `oc`). Standard SteVec mode matches the v2 bin, so the encryption
+//! (`{v: 3, k: "sv", i, sv: [...]}`, per-entry `s` + `c` + exactly one of
+//! `hm` XOR `oc`). Standard SteVec mode matches the v2 bin, so the encryption
 //! workload is identical and the ingest numbers differ only by the from_v2
 //! conversion. `sv` entry order is preserved by the converter — `sv[0]` is
 //! the decryption root.
