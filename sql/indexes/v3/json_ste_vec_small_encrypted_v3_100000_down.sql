@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS json_ste_vec_small_encrypted_v3_100000_ste_vec_query_index;

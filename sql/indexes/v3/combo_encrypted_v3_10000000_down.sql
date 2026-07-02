@@ -1,0 +1,3 @@
+DROP INDEX IF EXISTS combo_encrypted_v3_10000000_name_match_term_index;
+DROP INDEX IF EXISTS combo_encrypted_v3_10000000_age_ord_term_index;
+DROP INDEX IF EXISTS combo_encrypted_v3_10000000_category_eq_term_index;

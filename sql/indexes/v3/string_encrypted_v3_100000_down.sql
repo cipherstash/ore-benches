@@ -1,0 +1,2 @@
+DROP INDEX IF EXISTS string_encrypted_v3_100000_eq_term_index;
+DROP INDEX IF EXISTS string_encrypted_v3_100000_match_term_index;

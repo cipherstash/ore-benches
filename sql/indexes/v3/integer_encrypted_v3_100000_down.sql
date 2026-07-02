@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS integer_encrypted_v3_100000_ord_term_index;
