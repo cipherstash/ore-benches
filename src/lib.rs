@@ -39,6 +39,246 @@ use std::env;
 use std::fmt::Debug;
 use std::sync::Arc;
 
+/// EQL v3 support: wire conversion (v2.3 → v3 via `eql_bindings::from_v2`)
+/// plus the v3 twins of the query-bench machinery.
+///
+/// cipherstash-client 0.38 emits EQL v2.3 payloads only, so every v3 bench
+/// path encrypts through the existing v2 pipeline and converts the STORED
+/// payload with [`eql_bindings::from_v2::from_v2`]. Scalar QUERY conversion
+/// is unsupported upstream (`FromV2Error::UnsupportedQueryTarget` — no v3
+/// scalar query wire shape exists), so v3 query benches derive probe terms
+/// from converted stored payloads and compare via the `eql_v3.*_term`
+/// extractor functions.
+pub mod v3 {
+    use super::*;
+    pub use eql_bindings::from_v2::{from_v2, from_v2_query, FromV2Error, TargetDomain};
+
+    /// Convert a serialised EQL v2.3 STORED payload into the v3 payload for
+    /// `target`. Thin context-adding wrapper over
+    /// [`eql_bindings::from_v2::from_v2`] — see the module docs there for
+    /// the conversion rules (terms the target doesn't require are dropped,
+    /// `bf` is reinterpreted into signed `smallint[]`, `k` is removed).
+    pub fn v2_store_to_v3(
+        v2: &serde_json::Value,
+        target: TargetDomain,
+    ) -> Result<serde_json::Value> {
+        from_v2(v2, target)
+            .map_err(anyhow::Error::new)
+            .context("v2→v3 conversion failed")
+    }
+
+    /// Convert a cipherstash-client storage ciphertext into the v3 payload
+    /// for `target`. Serialises the payload to its v2.3 wire form first —
+    /// `from_v2` operates on the wire shape, not the Rust type.
+    pub fn ciphertext_to_v3(
+        ciphertext: &EqlCiphertext,
+        target: TargetDomain,
+    ) -> Result<serde_json::Value> {
+        let v2 = serde_json::to_value(ciphertext)
+            .context("failed to serialise v2 ciphertext to its wire form")?;
+        v2_store_to_v3(&v2, target)
+    }
+
+    /// Rebuild the v2 `ct` envelope from a v3 SCALAR payload, for
+    /// decryption. v3 scalar payloads drop the `k` discriminator but keep
+    /// the record ciphertext (`c`) and identifier (`i`) verbatim, so the
+    /// envelope cipherstash-client's decrypt path needs is recoverable
+    /// without a reverse term conversion (decryption never reads the index
+    /// terms — and could not: v3's `bf` is signed, v2's is unsigned).
+    pub fn v3_scalar_to_v2_envelope(v3: &serde_json::Value) -> Result<serde_json::Value> {
+        let obj = v3.as_object().context("v3 payload must be a JSON object")?;
+        let c = obj
+            .get("c")
+            .context("expected a v3 scalar payload carrying `c` — SteVec documents (`sv`) have no scalar envelope")?;
+        let i = obj.get("i").context("v3 payload missing `i` identifier")?;
+        Ok(json!({
+            "v": 2,
+            "k": "ct",
+            "i": i,
+            "c": c,
+        }))
+    }
+
+    /// Parse a v3 SCALAR payload back into an [`EqlCiphertext`] for
+    /// client-side decryption via `decrypt_eql`.
+    pub fn v3_scalar_to_ciphertext(v3: &serde_json::Value) -> Result<EqlCiphertext> {
+        let envelope = v3_scalar_to_v2_envelope(v3)?;
+        serde_json::from_value(envelope)
+            .context("rebuilt v2 envelope did not parse as EqlCiphertext")
+    }
+
+    /// Sample a single plaintext string from a v3 encrypted table by
+    /// decrypting the first row. The v3 twin of
+    /// [`super::sample_plaintext_string`]: v3 columns are jsonb domains, so
+    /// the row decodes as plain jsonb (`value::jsonb` — no composite
+    /// wrapper) and decryption goes through the rebuilt v2 `ct` envelope.
+    pub async fn sample_plaintext_string_v3(
+        pool: &sqlx::PgPool,
+        cipher: Arc<ScopedCipher<AutoStrategy>>,
+        table_name: &str,
+    ) -> Result<String> {
+        let row: (Json<serde_json::Value>,) =
+            sqlx::query_as(&format!("SELECT value::jsonb FROM {} LIMIT 1", table_name))
+                .fetch_one(pool)
+                .await
+                .with_context(|| format!("sample query failed against {}", table_name))?;
+
+        let ciphertext = v3_scalar_to_ciphertext(&row.0 .0)?;
+        let decrypted = decrypt_eql(cipher, vec![ciphertext], &Default::default())
+            .await
+            .context("sample decrypt failed")?;
+
+        let pt = decrypted
+            .into_iter()
+            .next()
+            .ok_or_else(|| anyhow::anyhow!("decrypt_eql returned empty Vec for {}", table_name))?;
+        match &pt {
+            Plaintext::Text(Some(s)) => Ok(s.clone()),
+            other => anyhow::bail!("expected Text sample from {}, got {:?}", table_name, other),
+        }
+    }
+
+    /// v3 twin of [`super::EncryptedQueryBuilder`]. Scalar QUERY conversion
+    /// is unsupported upstream, so the probe is encrypted as a STORAGE
+    /// payload (`EqlOperation::Store`) through the existing v2 pipeline and
+    /// converted with `from_v2` — the SQL then compares via the
+    /// `eql_v3.*_term` extractor functions (or the inlinable operators,
+    /// which reduce to the same extractor expressions).
+    pub struct EncryptedQueryBuilderV3 {
+        pub column_config: ColumnConfig,
+        pub identifier: Identifier,
+        pub target: TargetDomain,
+        pub statement: Option<String>,
+    }
+
+    impl EncryptedQueryBuilderV3 {
+        pub fn new(
+            column_config: ColumnConfig,
+            identifier: Identifier,
+            target: TargetDomain,
+        ) -> Self {
+            Self {
+                column_config,
+                identifier,
+                target,
+                statement: None,
+            }
+        }
+
+        pub fn statement(mut self, statement: impl Into<String>) -> Self {
+            self.statement = Some(statement.into());
+            self
+        }
+
+        pub async fn build_query<T>(
+            self,
+            plaintext: T,
+            cipher: Arc<ScopedCipher<AutoStrategy>>,
+        ) -> Result<EncryptedQueryV3>
+        where
+            T: Into<Plaintext> + Send + Debug,
+        {
+            let prepared = PreparedPlaintext::new(
+                Cow::Owned(self.column_config),
+                self.identifier.clone(),
+                plaintext.into(),
+                EqlOperation::Store,
+            );
+
+            let mut out =
+                encrypt_eql(Arc::clone(&cipher), vec![prepared], &Default::default()).await?;
+
+            // Store operations always yield EqlOutput::Store — same
+            // invariant as the v2 ingest path in `IngestOptions::ingest`.
+            let EqlOutput::Store(ciphertext) = out.remove(0) else {
+                unreachable!("storage probe must yield EqlOutput::Store");
+            };
+
+            let param = ciphertext_to_v3(&ciphertext, self.target)
+                .context("probe payload failed v2→v3 conversion")?;
+
+            Ok(EncryptedQueryV3 {
+                param,
+                statement: self.statement.context("statement must be set")?,
+                scoped_cipher: cipher,
+            })
+        }
+    }
+
+    /// A bound v3 bench query: SQL statement + the converted v3 probe
+    /// payload. The probe binds as jsonb (`Json<serde_json::Value>`) and the
+    /// SQL casts it to the target domain (`$1::eql_v3.text_search`, …) so
+    /// the encrypted operators / extractors resolve instead of native jsonb.
+    pub struct EncryptedQueryV3 {
+        pub param: serde_json::Value,
+        pub statement: String,
+        scoped_cipher: Arc<ScopedCipher<AutoStrategy>>,
+    }
+
+    impl EncryptedQueryV3 {
+        /// Execute and decode `(id, value)` rows. v3 encrypted columns are
+        /// jsonb-backed domains, so the value decodes as plain jsonb — the
+        /// bench SQL projects `value::jsonb` explicitly (sqlx cannot decode
+        /// a bare domain-typed column as `Json<Value>`, and no v3 scenario
+        /// puts the raw column in an ORDER BY, so the historic v2 sort-key
+        /// folding trap does not apply).
+        pub async fn execute(
+            &self,
+            pool: &sqlx::PgPool,
+        ) -> Result<Vec<(i32, Json<serde_json::Value>)>> {
+            let results: Vec<(i32, Json<serde_json::Value>)> = sqlx::query_as(&self.statement)
+                .bind(Json(&self.param))
+                .fetch_all(pool)
+                .await?;
+            Ok(results)
+        }
+
+        /// Execute, then decrypt the result payloads client-side by
+        /// rebuilding the v2 `ct` envelope per row (see
+        /// [`v3_scalar_to_ciphertext`]).
+        pub async fn execute_and_decrypt<T>(&self, pool: &sqlx::PgPool) -> Result<Vec<T>>
+        where
+            T: TryFrom<Plaintext>,
+            <T as TryFrom<Plaintext>>::Error: Debug,
+        {
+            let results = self.execute(pool).await?;
+
+            let ciphertexts = results
+                .into_iter()
+                .map(|(_, value)| v3_scalar_to_ciphertext(&value.0))
+                .collect::<Result<Vec<_>>>()?;
+
+            let decrypted = decrypt_eql(
+                Arc::clone(&self.scoped_cipher),
+                ciphertexts,
+                &Default::default(),
+            )
+            .await?
+            .into_iter()
+            .map(|pt| T::try_from(pt).expect("failed to convert plaintext"))
+            .collect();
+
+            Ok(decrypted)
+        }
+
+        /// Run `EXPLAIN (FORMAT JSON)` on the bound query — v3 twin of
+        /// [`super::EncryptedQuery::explain`].
+        pub async fn explain(&self, pool: &sqlx::PgPool) -> Result<serde_json::Value> {
+            let explain_sql = format!("EXPLAIN (FORMAT JSON) {}", self.statement);
+            let row: (Json<serde_json::Value>,) = sqlx::query_as(&explain_sql)
+                .bind(Json(&self.param))
+                .fetch_one(pool)
+                .await?;
+            Ok(row.0 .0)
+        }
+
+        /// The bound v3 parameter for metadata logging.
+        pub fn parameter_json(&self) -> serde_json::Value {
+            self.param.clone()
+        }
+    }
+}
+
 /// Generator for low-cardinality categorical strings of the form `CAT_001`
 /// .. `CAT_250`, uniform random over 250 distinct values. Used by the
 /// `category_encrypted_*` and `category_plaintext_*` tables that drive the
@@ -151,6 +391,10 @@ pub struct IngestOptions {
     pub batch_size: usize,
     pub identifier: Identifier,
     pub column_config: ColumnConfig,
+    /// When set, every storage payload is converted v2→v3 for this target
+    /// domain (via `eql_bindings::from_v2`) before the INSERT — the v3
+    /// ingest path. `None` binds the v2 ciphertext unchanged.
+    pub eql_target: Option<v3::TargetDomain>,
 }
 
 pub struct IngestOptionsBuilder {
@@ -159,6 +403,7 @@ pub struct IngestOptionsBuilder {
     batch_size: Option<usize>,
     identifier: Option<Identifier>,
     column_config: Option<ColumnConfig>,
+    eql_target: Option<v3::TargetDomain>,
 }
 
 impl IngestOptionsBuilder {
@@ -172,6 +417,7 @@ impl IngestOptionsBuilder {
             batch_size: None,
             identifier: None,
             column_config: None,
+            eql_target: None,
         }
     }
 
@@ -195,6 +441,13 @@ impl IngestOptionsBuilder {
         self
     }
 
+    /// Convert every storage payload v2→v3 for `target` before the INSERT
+    /// (the v3 ingest path). See [`IngestOptions::eql_target`].
+    pub fn convert_to_v3(mut self, target: v3::TargetDomain) -> Self {
+        self.eql_target = Some(target);
+        self
+    }
+
     pub fn build(self) -> Result<IngestOptions> {
         Ok(IngestOptions {
             bench_name: self.bench_name,
@@ -202,6 +455,7 @@ impl IngestOptionsBuilder {
             batch_size: self.batch_size.unwrap_or(Self::DEFAULT_BATCH_SIZE),
             identifier: self.identifier.context("identifier is required")?,
             column_config: self.column_config.context("column_config is required")?,
+            eql_target: self.eql_target,
         })
     }
 }
@@ -261,20 +515,48 @@ impl IngestOptions {
 
             let out = encrypt_eql(scoped_cipher.clone(), prepared, &Default::default()).await?;
 
-            QueryBuilder::new(format!("INSERT INTO {} (value) ", self.identifier.table()))
-                .push_values(out, |mut b, v| {
-                    // Every PreparedPlaintext above used EqlOperation::Store, so
-                    // encrypt_eql yields only EqlOutput::Store. cipherstash-client
-                    // splits the storage and query payload shapes (since
-                    // 0.34.1-alpha.9) — unwrap the storage ciphertext for binding.
-                    let EqlOutput::Store(ciphertext) = v else {
-                        unreachable!("storage batch must yield EqlOutput::Store");
-                    };
-                    b.push_bind(Json(ciphertext));
-                })
-                .build()
-                .execute(&pool)
-                .await?;
+            match self.eql_target {
+                None => {
+                    QueryBuilder::new(format!("INSERT INTO {} (value) ", self.identifier.table()))
+                        .push_values(out, |mut b, v| {
+                            // Every PreparedPlaintext above used EqlOperation::Store, so
+                            // encrypt_eql yields only EqlOutput::Store. cipherstash-client
+                            // splits the storage and query payload shapes (since
+                            // 0.34.1-alpha.9) — unwrap the storage ciphertext for binding.
+                            let EqlOutput::Store(ciphertext) = v else {
+                                unreachable!("storage batch must yield EqlOutput::Store");
+                            };
+                            b.push_bind(Json(ciphertext));
+                        })
+                        .build()
+                        .execute(&pool)
+                        .await?;
+                }
+                Some(target) => {
+                    // v3 path: convert each storage payload before binding.
+                    // The converted payload binds as jsonb; PostgreSQL's
+                    // assignment cast to the column's eql_v3 domain runs the
+                    // domain CHECK on INSERT (defense in depth — from_v2
+                    // already strict-validated the payload client-side).
+                    let converted = out
+                        .into_iter()
+                        .map(|v| {
+                            let EqlOutput::Store(ciphertext) = v else {
+                                unreachable!("storage batch must yield EqlOutput::Store");
+                            };
+                            v3::ciphertext_to_v3(&ciphertext, target)
+                        })
+                        .collect::<Result<Vec<_>>>()?;
+
+                    QueryBuilder::new(format!("INSERT INTO {} (value) ", self.identifier.table()))
+                        .push_values(converted, |mut b, v| {
+                            b.push_bind(Json(v));
+                        })
+                        .build()
+                        .execute(&pool)
+                        .await?;
+                }
+            }
         }
 
         let result = json!({
@@ -574,6 +856,11 @@ pub struct ScenarioMetadata {
     /// trivial relative to criterion's warmup phase, and gives us a real
     /// number rather than the planner's estimate from `Plan Rows`.
     pub rows_returned: u64,
+    /// EQL wire/SQL-surface version the scenario ran against: `2` for the
+    /// original `eql_v2` scenarios, `3` for the `_v3` twins. The Python
+    /// reporters treat an absent field (pre-version sidecars) as 2, so the
+    /// v2 filenames and payload shapes stay backwards-compatible.
+    pub version: u8,
 }
 
 /// Walk an `EXPLAIN (FORMAT JSON)` tree and collect every `Index Name`.
@@ -708,4 +995,141 @@ pub fn write_metadata_file(
     std::fs::write(&path, serde_json::to_string_pretty(&payload)?)?;
     eprintln!("bench metadata written to {}", path.display());
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::v3::{v2_store_to_v3, v3_scalar_to_v2_envelope};
+    use eql_bindings::from_v2::TargetDomain;
+    use serde_json::json;
+
+    /// A representative EQL v2.3 STORED scalar payload as cipherstash-client
+    /// emits it for a text column configured with unique + match + ore
+    /// indexes: `k: "ct"` envelope carrying all three term keys. The `c`
+    /// ciphertext is opaque to the conversion layer (copied verbatim), so a
+    /// placeholder string is a faithful fixture.
+    fn v2_text_store_payload() -> serde_json::Value {
+        json!({
+            "v": 2,
+            "k": "ct",
+            "i": {"t": "string_encrypted_v3", "c": "value"},
+            "c": "mBbLGB85%OPAQUE-RECORD",
+            "hm": "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90",
+            "bf": [1, 77, 40000],
+            "ob": ["deadbeef", "cafef00d"],
+        })
+    }
+
+    #[test]
+    fn v2_store_to_v3_keeps_required_terms_and_drops_the_rest() {
+        let target = TargetDomain::parse("text_eq").unwrap();
+        let v3 = v2_store_to_v3(&v2_text_store_payload(), target).unwrap();
+
+        assert_eq!(v3["v"], json!(3));
+        assert_eq!(v3["i"], json!({"t": "string_encrypted_v3", "c": "value"}));
+        assert_eq!(v3["c"], json!("mBbLGB85%OPAQUE-RECORD"));
+        assert_eq!(
+            v3["hm"],
+            json!("a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90")
+        );
+        // v3 payloads carry no `k` discriminator, and text_eq requires only
+        // `hm` — the bloom and ORE terms must be dropped.
+        let obj = v3.as_object().unwrap();
+        assert!(!obj.contains_key("k"));
+        assert!(!obj.contains_key("bf"));
+        assert!(!obj.contains_key("ob"));
+    }
+
+    #[test]
+    fn v2_store_to_v3_reinterprets_bloom_bits_as_signed_smallints() {
+        let target = TargetDomain::parse("text_match").unwrap();
+        let v3 = v2_store_to_v3(&v2_text_store_payload(), target).unwrap();
+
+        // v2 emits unsigned u16 bit positions; the v3 `bloom_filter` domain
+        // is `smallint[]`, so the upper half wraps negative (two's
+        // complement). 40000 - 65536 = -25536.
+        assert_eq!(v3["bf"], json!([1, 77, -25536]));
+    }
+
+    #[test]
+    fn v2_store_to_v3_fails_closed_when_a_required_term_is_missing() {
+        // An integer payload with only the ORE term cannot convert to a
+        // target that requires `hm`.
+        let v2 = json!({
+            "v": 2,
+            "k": "ct",
+            "i": {"t": "integer_encrypted_v3", "c": "value"},
+            "c": "OPAQUE",
+            "ob": ["deadbeef"],
+        });
+        let target = TargetDomain::parse("int4_eq").unwrap();
+        let err = v2_store_to_v3(&v2, target).unwrap_err();
+        let msg = format!("{:#}", err);
+        assert!(
+            msg.contains("hm"),
+            "error should name the missing term: {msg}"
+        );
+        assert!(
+            msg.contains("int4_eq"),
+            "error should name the target domain: {msg}"
+        );
+    }
+
+    #[test]
+    fn v3_scalar_to_v2_envelope_rebuilds_the_ct_shape_for_decryption() {
+        let v3 = json!({
+            "v": 3,
+            "i": {"t": "string_encrypted_v3", "c": "value"},
+            "c": "mBbLGB85%OPAQUE-RECORD",
+            "hm": "a1b2",
+            "bf": [1, -25536],
+        });
+        let envelope = v3_scalar_to_v2_envelope(&v3).unwrap();
+        // Exactly the v2 `ct` envelope cipherstash-client's decrypt path
+        // needs — terms are NOT carried over (v2 `bf` is unsigned; a v3
+        // signed bloom would fail the round-trip, and decryption only needs
+        // `c` + `i`).
+        assert_eq!(
+            envelope,
+            json!({
+                "v": 2,
+                "k": "ct",
+                "i": {"t": "string_encrypted_v3", "c": "value"},
+                "c": "mBbLGB85%OPAQUE-RECORD",
+            })
+        );
+    }
+
+    #[test]
+    fn v3_scalar_to_v2_envelope_rejects_ste_vec_documents() {
+        let v3_doc = json!({
+            "v": 3,
+            "i": {"t": "json_ste_vec_small_encrypted_v3", "c": "value"},
+            "sv": [{"s": "abc", "c": "OPAQUE", "hm": "a1"}],
+        });
+        let err = v3_scalar_to_v2_envelope(&v3_doc).unwrap_err();
+        let msg = format!("{:#}", err);
+        assert!(
+            msg.contains("scalar"),
+            "error should say a scalar payload was expected: {msg}"
+        );
+    }
+
+    #[test]
+    fn scenario_metadata_serialises_the_version_axis() {
+        let metadata = ScenarioMetadata {
+            id: "EXACT_V3/exact/eql_hash/10000".to_string(),
+            query: "SELECT 1".to_string(),
+            parameters: vec![],
+            explain: json!([]),
+            indexes_used: vec![],
+            rows_returned: 1,
+            version: 3,
+        };
+        let value = serde_json::to_value(&metadata).unwrap();
+        // The Python reporters key v2/v3 grouping off this field; absent
+        // (pre-version sidecars) means 2.
+        assert_eq!(value["version"], json!(3));
+    }
 }

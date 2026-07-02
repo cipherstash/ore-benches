@@ -491,6 +491,7 @@ fn criterion_benchmark(c: &mut Criterion) {
                 explain,
                 indexes_used,
                 rows_returned: rows.len() as u64,
+                version: 2,
             }
         }
 

@@ -155,6 +155,7 @@ fn criterion_benchmark(c: &mut Criterion) {
                 explain,
                 indexes_used,
                 rows_returned,
+                version: 2,
             });
         }
         out

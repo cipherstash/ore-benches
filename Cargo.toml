@@ -24,6 +24,11 @@ rand = "0.8.5"
 # mise.toml's setup-db task stays at eql-2.3.0. Bump both together.
 cipherstash-client = { version = "=0.38.0", features = ["tokio"] }
 stack-profile = "=0.38.0"
+# EQL v2.3 → v3 wire conversion (`from_v2`) + canonical v3 payload types.
+# Consumed as a path dependency off the EQL repo's `feat/eql-bindings-from-v2`
+# branch while the crate is unreleased.
+# TODO(crates.io): switch to `eql-bindings = "0.2.0"` once 0.2.0 is published.
+eql-bindings = { path = "../encrypt-query-language/crates/eql-bindings" }
 anyhow = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
