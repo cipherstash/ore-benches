@@ -130,3 +130,29 @@ harness = false
 [[bench]]
 name = "combo"
 harness = false
+
+# --- EQL v3 query-bench twins ---
+
+[[bench]]
+name = "ore_v3"
+harness = false
+
+[[bench]]
+name = "match_v3"
+harness = false
+
+[[bench]]
+name = "exact_v3"
+harness = false
+
+[[bench]]
+name = "group_by_v3"
+harness = false
+
+[[bench]]
+name = "json_v3"
+harness = false
+
+[[bench]]
+name = "combo_v3"
+harness = false

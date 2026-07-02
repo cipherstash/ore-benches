@@ -1,0 +1,176 @@
+//! EQL v3 twin of `benches/match.rs` — pattern-style matching against
+//! `string_encrypted_v3_<N>` (column typed `eql_v3.text_search`).
+//!
+//! **Dropped scenarios vs v2:** `eql_cast_firstname` and `eql_cast_lastname`
+//! (both `WHERE value LIKE $1`) have no v3 equivalent — EQL v3 removes
+//! `LIKE` / `ILIKE` entirely (the operators route to blocker functions that
+//! RAISE). Encrypted text matching in v3 is bloom-filter token containment
+//! via `@>`, so this bench carries the `eql_bloom` scenario only, in two
+//! forms:
+//!
+//!   * `eql_bloom`      — extractor form, the direct v2 analog:
+//!     `eql_v3.match_term(value) @> eql_v3.match_term($1)`. Engages the
+//!     `GIN (eql_v3.match_term(value))` index.
+//!   * `eql_bloom_bare` — bare operator form `value @> $1::eql_v3.text_search`,
+//!     the shape an ORM caller writes. The typed `@>` inlines to the same
+//!     match_term expression, so it should engage the same GIN — the
+//!     scenario exists to verify (and price) exactly that inlining.
+//!
+//! Probe flow: storage-payload conversion (target `text_search`) — see
+//! `benches/exact_v3.rs` for why query-payload conversion is not possible.
+
+use cipherstash_client::{
+    encryption::ScopedCipher,
+    eql::Identifier,
+    schema::{column::Index, ColumnConfig, ColumnType},
+    AutoStrategy,
+};
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use dbbenches::{
+    bench_assert, extract_indexes_used, init_scoped_cipher,
+    v3::{EncryptedQueryBuilderV3, EncryptedQueryV3, TargetDomain},
+    write_metadata_file, ScenarioMetadata,
+};
+use sqlx::postgres::PgPoolOptions;
+use std::sync::Arc;
+use tokio::runtime::Runtime;
+
+// (sql_template, probe_value, scenario_name). "Johnson" matches the v2
+// eql_bloom scenario's probe so the two versions measure the same
+// containment workload.
+static QUERY_TEMPLATES: &[(&str, &str, &str)] = &[
+    (
+        "SELECT id, value::jsonb FROM {TABLE} \
+         WHERE eql_v3.match_term(value) @> eql_v3.match_term($1::eql_v3.text_search) LIMIT 10",
+        "Johnson",
+        "eql_bloom",
+    ),
+    (
+        "SELECT id, value::jsonb FROM {TABLE} \
+         WHERE value @> $1::eql_v3.text_search LIMIT 10",
+        "Johnson",
+        "eql_bloom_bare",
+    ),
+];
+
+async fn build_query(
+    cipher: Arc<ScopedCipher<AutoStrategy>>,
+    query: &str,
+    x: &str,
+    table_name: &str,
+) -> EncryptedQueryV3 {
+    // Same column config as encrypt_string_v3 — the probe must carry every
+    // term text_search requires (hm + bf + ob) to pass the conversion.
+    let column_config = ColumnConfig::build("value")
+        .casts_as(ColumnType::Text)
+        .add_index(Index::new_unique())
+        .add_index(Index::new_match())
+        .add_index(Index::new_ore());
+
+    let identifier = Identifier::new(table_name, "value");
+    let target = TargetDomain::parse("text_search").expect("text_search is a v3 domain");
+
+    EncryptedQueryBuilderV3::new(column_config, identifier, target)
+        .statement(query)
+        .build_query(x.to_string(), cipher)
+        .await
+        .expect("Failed to build encrypted v3 query")
+}
+
+fn criterion_benchmark(c: &mut Criterion) {
+    let rt = Runtime::new().unwrap();
+
+    let target_rows = std::env::var("TARGET_ROWS").unwrap_or_else(|_| "unknown".to_string());
+
+    let table_suffix = match target_rows.as_str() {
+        "10000" | "100000" | "1000000" | "10000000" => format!("_{}", target_rows),
+        _ => String::new(),
+    };
+    let table_name = format!("string_encrypted_v3{}", table_suffix);
+
+    let (pool, cipher) = rt.block_on(async {
+        let database_url =
+            std::env::var("DATABASE_URL").expect("DATABASE_URL environment variable must be set");
+
+        let pool = PgPoolOptions::new()
+            .max_connections(5)
+            .connect(&database_url)
+            .await
+            .expect("Failed to connect to database");
+
+        let cipher = init_scoped_cipher()
+            .await
+            .expect("Failed to initialize ScopedCipher");
+
+        (pool, cipher)
+    });
+
+    let queries = rt.block_on(async {
+        let mut queries = Vec::with_capacity(QUERY_TEMPLATES.len());
+        for (query_template, x, _) in QUERY_TEMPLATES {
+            let query_str = query_template.replace("{TABLE}", &table_name);
+            let query = build_query(Arc::clone(&cipher), &query_str, x, &table_name).await;
+            queries.push(query);
+        }
+        queries
+    });
+
+    let metadata = rt.block_on(async {
+        let mut out = Vec::with_capacity(queries.len());
+        for (i, query) in queries.iter().enumerate() {
+            let (_, _, scenario) = QUERY_TEMPLATES[i];
+            let bench_id = format!("MATCH_V3/match/{}/{}", scenario, target_rows);
+            let explain = query.explain(&pool).await.expect("EXPLAIN failed");
+            let indexes_used = extract_indexes_used(&explain);
+            let parameters = vec![query.parameter_json()];
+            let rows = query
+                .execute(&pool)
+                .await
+                .expect("execute for row-count failed");
+            let rows_returned = rows.len() as u64;
+            out.push(ScenarioMetadata {
+                id: bench_id,
+                query: query.statement.clone(),
+                parameters,
+                explain,
+                indexes_used,
+                rows_returned,
+                version: 3,
+            });
+        }
+        out
+    });
+    write_metadata_file("match_v3", &target_rows, metadata)
+        .expect("failed to write bench metadata sidecar");
+
+    let mut group = c.benchmark_group("MATCH_V3");
+    group.sample_size(10);
+
+    for (i, query) in queries.into_iter().enumerate() {
+        let (_, _, scenario) = QUERY_TEMPLATES[i];
+        let exec_id = format!("MATCH_V3/match/{}/{}", scenario, target_rows);
+        let decrypt_id = format!("MATCH_V3/match_decrypt/{}/{}", scenario, target_rows);
+
+        let exec_id_inner = exec_id.clone();
+        group.bench_function(format!("match/{}/{}", scenario, target_rows), |b| {
+            b.to_async(&rt).iter(|| async {
+                let _: Vec<_> = bench_assert(query.execute(&pool).await, &exec_id_inner);
+            })
+        });
+
+        let decrypt_id_inner = decrypt_id.clone();
+        group.bench_function(format!("match_decrypt/{}/{}", scenario, target_rows), |b| {
+            b.to_async(&rt).iter(|| async {
+                let _r: Vec<String> = black_box(bench_assert(
+                    query.execute_and_decrypt(&pool).await,
+                    &decrypt_id_inner,
+                ));
+            })
+        });
+    }
+
+    group.finish();
+}
+
+criterion_group!(benches, criterion_benchmark);
+criterion_main!(benches);
