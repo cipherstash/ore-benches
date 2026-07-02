@@ -46,8 +46,7 @@ async fn build_query(
 fn criterion_benchmark(c: &mut Criterion) {
     let rt = Runtime::new().unwrap();
 
-    let target_rows = std::env::var("TARGET_ROWS")
-        .unwrap_or_else(|_| "unknown".to_string());
+    let target_rows = std::env::var("TARGET_ROWS").unwrap_or_else(|_| "unknown".to_string());
 
     // Determine table suffix based on TARGET_ROWS
     let table_suffix = match target_rows.as_str() {

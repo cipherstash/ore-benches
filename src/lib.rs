@@ -89,11 +89,7 @@ pub async fn sample_plaintext_string(
         .ok_or_else(|| anyhow::anyhow!("decrypt_eql returned empty Vec for {}", table_name))?;
     match &pt {
         Plaintext::Text(Some(s)) => Ok(s.clone()),
-        other => anyhow::bail!(
-            "expected Text sample from {}, got {:?}",
-            table_name,
-            other
-        ),
+        other => anyhow::bail!("expected Text sample from {}, got {:?}", table_name, other),
     }
 }
 
@@ -511,7 +507,9 @@ impl EncryptedQuery {
 
         let decrypted = decrypt_eql(
             Arc::clone(&self.scoped_cipher),
-            results.into_iter().map(|(_, value)| value.into_ciphertext()),
+            results
+                .into_iter()
+                .map(|(_, value)| value.into_ciphertext()),
             &Default::default(),
         )
         .await?

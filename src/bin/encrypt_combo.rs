@@ -137,18 +137,15 @@ async fn main() -> Result<()> {
             .map(|c| (c[0].clone(), c[1].clone(), c[2].clone()))
             .collect();
 
-        QueryBuilder::new(format!(
-            "INSERT INTO {} (name, age, category) ",
-            table_name
-        ))
-        .push_values(rows, |mut b, (name, age, category)| {
-            b.push_bind(Json(name));
-            b.push_bind(Json(age));
-            b.push_bind(Json(category));
-        })
-        .build()
-        .execute(&pool)
-        .await?;
+        QueryBuilder::new(format!("INSERT INTO {} (name, age, category) ", table_name))
+            .push_values(rows, |mut b, (name, age, category)| {
+                b.push_bind(Json(name));
+                b.push_bind(Json(age));
+                b.push_bind(Json(category));
+            })
+            .build()
+            .execute(&pool)
+            .await?;
     }
 
     Ok(())
