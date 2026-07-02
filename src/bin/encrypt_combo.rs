@@ -117,9 +117,9 @@ async fn main() -> Result<()> {
         let out = encrypt_eql(scoped_cipher.clone(), prepared, &Default::default()).await?;
 
         // Every PreparedPlaintext above used EqlOperation::Store, so encrypt_eql
-        // yields only EqlOutput::Store. alpha.9 split the storage / query payload
-        // shapes — unwrap to the storage ciphertext (which, unlike EqlOutput, is
-        // Clone) before reassembling rows.
+        // yields only EqlOutput::Store. cipherstash-client splits the storage /
+        // query payload shapes (since 0.34.1-alpha.9) — unwrap to the storage
+        // ciphertext (which, unlike EqlOutput, is Clone) before reassembling rows.
         let ciphertexts: Vec<EqlCiphertext> = out
             .into_iter()
             .map(|o| match o {
