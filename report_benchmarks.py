@@ -444,27 +444,27 @@ class BenchmarkReporter:
             "ORE_V3": {
                 "range_gt_10": (
                     "SELECT id, value::jsonb FROM {TABLE} "
-                    "WHERE value > $1::eql_v3.int4_ord_ore LIMIT 10",
+                    "WHERE value > $1::eql_v3.integer_ord_ore LIMIT 10",
                     "5000"
                 ),
                 "range_gt_100": (
                     "SELECT id, value::jsonb FROM {TABLE} "
-                    "WHERE value > $1::eql_v3.int4_ord_ore LIMIT 100",
+                    "WHERE value > $1::eql_v3.integer_ord_ore LIMIT 100",
                     "5000"
                 ),
                 "range_lt_10": (
                     "SELECT id, value::jsonb FROM {TABLE} "
-                    "WHERE value < $1::eql_v3.int4_ord_ore LIMIT 10",
+                    "WHERE value < $1::eql_v3.integer_ord_ore LIMIT 10",
                     "5000"
                 ),
                 "range_lt_100": (
                     "SELECT id, value::jsonb FROM {TABLE} "
-                    "WHERE value < $1::eql_v3.int4_ord_ore LIMIT 100",
+                    "WHERE value < $1::eql_v3.integer_ord_ore LIMIT 100",
                     "5000"
                 ),
                 "range_lt_ordered_10": (
                     "SELECT id, value::jsonb FROM {TABLE} "
-                    "WHERE value < $1::eql_v3.int4_ord_ore "
+                    "WHERE value < $1::eql_v3.integer_ord_ore "
                     "ORDER BY eql_v3.ord_term(value) LIMIT 10",
                     "5000"
                 )
@@ -843,29 +843,29 @@ class BenchmarkReporter:
             "ORE_V3": {
                 "range_gt_10": (
                     "EQL v3 range query (greater than) returning 10 results",
-                    "Table: `integer_encrypted_v3_{rows}` (column `eql_v3.int4_ord_ore`). "
+                    "Table: `integer_encrypted_v3_{rows}` (column `eql_v3.integer_ord_ore`). "
                     "Index: `btree (eql_v3.ord_term(value))`. Bare-form range operators "
                     "inline to ord_term comparisons and match the index; planner usage is "
                     "a selectivity question exactly as in the v2 family."
                 ),
                 "range_gt_100": (
                     "EQL v3 range query (greater than) returning 100 results",
-                    "Table: `integer_encrypted_v3_{rows}` (column `eql_v3.int4_ord_ore`). "
+                    "Table: `integer_encrypted_v3_{rows}` (column `eql_v3.integer_ord_ore`). "
                     "Index: `btree (eql_v3.ord_term(value))`."
                 ),
                 "range_lt_10": (
                     "EQL v3 range query (less than) returning 10 results",
-                    "Table: `integer_encrypted_v3_{rows}` (column `eql_v3.int4_ord_ore`). "
+                    "Table: `integer_encrypted_v3_{rows}` (column `eql_v3.integer_ord_ore`). "
                     "Index: `btree (eql_v3.ord_term(value))`."
                 ),
                 "range_lt_100": (
                     "EQL v3 range query (less than) returning 100 results",
-                    "Table: `integer_encrypted_v3_{rows}` (column `eql_v3.int4_ord_ore`). "
+                    "Table: `integer_encrypted_v3_{rows}` (column `eql_v3.integer_ord_ore`). "
                     "Index: `btree (eql_v3.ord_term(value))`."
                 ),
                 "range_lt_ordered_10": (
                     "EQL v3 ordered range query (extractor ORDER BY)",
-                    "Table: `integer_encrypted_v3_{rows}` (column `eql_v3.int4_ord_ore`). "
+                    "Table: `integer_encrypted_v3_{rows}` (column `eql_v3.integer_ord_ore`). "
                     "Index: `btree (eql_v3.ord_term(value))`. `ORDER BY eql_v3.ord_term(value)` "
                     "matches the index expression, so rows stream out already sorted — no "
                     "Sort node. Same sort-key rule as v2."
@@ -891,7 +891,7 @@ class BenchmarkReporter:
                 "bloom_ore_order_limit": (
                     "EQL v3 composite: bloom containment filter + ORE ORDER BY + LIMIT",
                     "Table: `combo_encrypted_v3_{rows}` (name `eql_v3.text_match`, age "
-                    "`eql_v3.int4_ord_ore`, category `eql_v3.text_eq`). The v2 LIKE filter "
+                    "`eql_v3.integer_ord_ore`, category `eql_v3.text_eq`). The v2 LIKE filter "
                     "becomes `eql_v3.match_term(name) @> eql_v3.match_term($1)` (v3 removes "
                     "LIKE); ORDER BY uses `eql_v3.ord_term(age)`."
                 ),
@@ -1093,7 +1093,7 @@ class BenchmarkReporter:
                 "ste_vec_large": "Tests insertion of large JSON objects with SteVec (searchable encrypted vector) indexing.",
                 "int_v3": "EQL v3 twin of `int`: same encrypt workload plus a from_v2 "
                           "v2→v3 conversion per payload, inserting into "
-                          "`integer_encrypted_v3` (eql_v3.int4_ord_ore).",
+                          "`integer_encrypted_v3` (eql_v3.integer_ord_ore).",
                 "string_v3": "EQL v3 twin of `string`, inserting into `string_encrypted_v3` "
                              "(eql_v3.text_search). NOTE: not directly comparable to "
                              "`string` — text_search requires the `ob` term, so this "

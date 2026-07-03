@@ -1072,7 +1072,7 @@ mod tests {
             "c": "OPAQUE",
             "ob": ["deadbeef"],
         });
-        let target = TargetDomain::parse("int4_eq").unwrap();
+        let target = TargetDomain::parse("integer_eq").unwrap();
         let err = v2_store_to_v3(&v2, target).unwrap_err();
         let msg = format!("{:#}", err);
         assert!(
@@ -1080,7 +1080,7 @@ mod tests {
             "error should name the missing term: {msg}"
         );
         assert!(
-            msg.contains("int4_eq"),
+            msg.contains("integer_eq"),
             "error should name the target domain: {msg}"
         );
     }

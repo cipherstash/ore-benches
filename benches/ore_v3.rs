@@ -1,11 +1,11 @@
 //! EQL v3 twin of `benches/ore.rs` — range + ordered-range queries against
-//! `integer_encrypted_v3_<N>` (column typed `eql_v3.int4_ord_ore`).
+//! `integer_encrypted_v3_<N>` (column typed `eql_v3.integer_ord_ore`).
 //!
 //! Scenario parity with v2:
 //!
 //!   * The four non-selective range baselines (`range_gt_10/100`,
 //!     `range_lt_10/100`) carry over unchanged in intent — bare-form
-//!     `value <op> $1::eql_v3.int4_ord_ore` inlines to
+//!     `value <op> $1::eql_v3.integer_ord_ore` inlines to
 //!     `eql_v3.ord_term(a) <op> eql_v3.ord_term(b)` and structurally
 //!     matches the `btree (eql_v3.ord_term(value))` index. Whether the
 //!     planner uses it is a selectivity question, exactly as in v2 (see
@@ -19,7 +19,7 @@
 //!     operand hides selectivity from the planner in v3 exactly as in v2.
 //!
 //! Probe flow: the threshold (5000) is encrypted as a STORAGE payload and
-//! converted (target `int4_ord_ore`) because no v3 scalar QUERY wire shape
+//! converted (target `integer_ord_ore`) because no v3 scalar QUERY wire shape
 //! exists — see benches/exact_v3.rs.
 //!
 //! TODO(CIP-3280) — `_ord_ope` scenario stub. eql_v3 ships `int4_ord_ope`
@@ -70,31 +70,31 @@ use tokio::runtime::Runtime;
 static QUERY_TEMPLATES: &[(&str, i32, &str)] = &[
     (
         "SELECT id, value::jsonb FROM {TABLE} \
-         WHERE value > $1::eql_v3.int4_ord_ore LIMIT 10",
+         WHERE value > $1::eql_v3.integer_ord_ore LIMIT 10",
         5000,
         "range_gt_10",
     ),
     (
         "SELECT id, value::jsonb FROM {TABLE} \
-         WHERE value > $1::eql_v3.int4_ord_ore LIMIT 100",
+         WHERE value > $1::eql_v3.integer_ord_ore LIMIT 100",
         5000,
         "range_gt_100",
     ),
     (
         "SELECT id, value::jsonb FROM {TABLE} \
-         WHERE value < $1::eql_v3.int4_ord_ore LIMIT 10",
+         WHERE value < $1::eql_v3.integer_ord_ore LIMIT 10",
         5000,
         "range_lt_10",
     ),
     (
         "SELECT id, value::jsonb FROM {TABLE} \
-         WHERE value < $1::eql_v3.int4_ord_ore LIMIT 100",
+         WHERE value < $1::eql_v3.integer_ord_ore LIMIT 100",
         5000,
         "range_lt_100",
     ),
     (
         "SELECT id, value::jsonb FROM {TABLE} \
-         WHERE value < $1::eql_v3.int4_ord_ore \
+         WHERE value < $1::eql_v3.integer_ord_ore \
          ORDER BY eql_v3.ord_term(value) LIMIT 10",
         5000,
         "range_lt_ordered_10",
@@ -112,7 +112,7 @@ async fn build_query(
         .add_index(Index::new_ore());
 
     let identifier = Identifier::new(table_name, "value");
-    let target = TargetDomain::parse("int4_ord_ore").expect("int4_ord_ore is a v3 domain");
+    let target = TargetDomain::parse("integer_ord_ore").expect("integer_ord_ore is a v3 domain");
 
     EncryptedQueryBuilderV3::new(column_config, identifier, target)
         .statement(query)

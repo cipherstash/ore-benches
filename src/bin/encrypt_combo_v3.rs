@@ -8,7 +8,7 @@
 //!   * `name`     → `eql_v3.text_match`   (bf — bloom containment; v3 has
 //!     no LIKE, so the v2 unique+match config's `hm` term is dropped by
 //!     the conversion)
-//!   * `age`      → `eql_v3.int4_ord_ore` (ob — ORE ordering)
+//!   * `age`      → `eql_v3.integer_ord_ore` (ob — ORE ordering)
 //!   * `category` → `eql_v3.text_eq`      (hm — hmac equality / GROUP BY)
 //!
 //! Environment variables: DATABASE_URL, NUM_RECORDS (default 10000),
@@ -72,7 +72,8 @@ async fn main() -> Result<()> {
     let category_ident = Identifier::new(&table_name, "category");
 
     let name_target = TargetDomain::parse("text_match").expect("text_match is a v3 domain");
-    let age_target = TargetDomain::parse("int4_ord_ore").expect("int4_ord_ore is a v3 domain");
+    let age_target =
+        TargetDomain::parse("integer_ord_ore").expect("integer_ord_ore is a v3 domain");
     let category_target = TargetDomain::parse("text_eq").expect("text_eq is a v3 domain");
 
     for batch_start in (0..num_records).step_by(batch_size) {

@@ -1,5 +1,5 @@
 -- eql_v3 functional index for integer_encrypted_v3_10000000
--- (column typed eql_v3.int4_ord_ore — ob).
+-- (column typed eql_v3.integer_ord_ore — ob).
 --
 -- ord_term returns eql_v3.ore_block_256, whose btree operator class is the
 -- DEFAULT for the type — bare-form range predicates (`value > $1`) inline

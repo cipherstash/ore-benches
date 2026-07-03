@@ -1020,7 +1020,7 @@ description = "Run MATCH_V3 query benchmark (bloom containment only — v3 remov
 run = "mise run bench:query:_run_v3 prepare:v3:string_encrypted match_v3 MATCH_V3 $1"
 
 [tasks."bench:query:ore:v3"]
-description = "Run ORE_V3 query benchmark (integer_encrypted_v3, eql_v3.int4_ord_ore)"
+description = "Run ORE_V3 query benchmark (integer_encrypted_v3, eql_v3.integer_ord_ore)"
 run = "mise run bench:query:_run_v3 prepare:v3:integer_encrypted ore_v3 ORE_V3 $1"
 
 [tasks."bench:query:group_by:v3"]

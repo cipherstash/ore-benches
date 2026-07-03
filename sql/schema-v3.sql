@@ -15,12 +15,12 @@
 --       encrypts an ORE term (`ob`) that v2's encrypt_string does not, which
 --       is visible in the encrypt_string_v3 ingest numbers (documented in
 --       the bin and README).
---   integer_encrypted   → eql_v3.int4_ord_ore  (ob)
+--   integer_encrypted   → eql_v3.integer_ord_ore  (ob)
 --       The v2 int scenarios encrypt `i32` via ColumnType::Int (int4, not
 --       int8) with an ORE index only.
 --   category_encrypted  → eql_v3.text_eq       (hm)
 --       Equality/GROUP BY only.
---   combo_encrypted     → name eql_v3.text_match / age eql_v3.int4_ord_ore /
+--   combo_encrypted     → name eql_v3.text_match / age eql_v3.integer_ord_ore /
 --                         category eql_v3.text_eq
 --       Per-column capability match for the composite-predicate scenarios
 --       (bloom containment + ORE order + hmac GROUP BY). v3 removes LIKE, so
@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS string_encrypted_v3 (
 
 CREATE TABLE IF NOT EXISTS integer_encrypted_v3 (
     id SERIAL PRIMARY KEY,
-    value eql_v3.int4_ord_ore NOT NULL
+    value eql_v3.integer_ord_ore NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS json_ste_vec_small_encrypted_v3 (
@@ -82,22 +82,22 @@ CREATE TABLE IF NOT EXISTS string_encrypted_v3_10000000 (
 
 CREATE TABLE IF NOT EXISTS integer_encrypted_v3_10000 (
     id SERIAL PRIMARY KEY,
-    value eql_v3.int4_ord_ore NOT NULL
+    value eql_v3.integer_ord_ore NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS integer_encrypted_v3_100000 (
     id SERIAL PRIMARY KEY,
-    value eql_v3.int4_ord_ore NOT NULL
+    value eql_v3.integer_ord_ore NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS integer_encrypted_v3_1000000 (
     id SERIAL PRIMARY KEY,
-    value eql_v3.int4_ord_ore NOT NULL
+    value eql_v3.integer_ord_ore NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS integer_encrypted_v3_10000000 (
     id SERIAL PRIMARY KEY,
-    value eql_v3.int4_ord_ore NOT NULL
+    value eql_v3.integer_ord_ore NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS category_encrypted_v3_10000 (
@@ -123,28 +123,28 @@ CREATE TABLE IF NOT EXISTS category_encrypted_v3_10000000 (
 CREATE TABLE IF NOT EXISTS combo_encrypted_v3_10000 (
     id SERIAL PRIMARY KEY,
     name eql_v3.text_match NOT NULL,
-    age eql_v3.int4_ord_ore NOT NULL,
+    age eql_v3.integer_ord_ore NOT NULL,
     category eql_v3.text_eq NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS combo_encrypted_v3_100000 (
     id SERIAL PRIMARY KEY,
     name eql_v3.text_match NOT NULL,
-    age eql_v3.int4_ord_ore NOT NULL,
+    age eql_v3.integer_ord_ore NOT NULL,
     category eql_v3.text_eq NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS combo_encrypted_v3_1000000 (
     id SERIAL PRIMARY KEY,
     name eql_v3.text_match NOT NULL,
-    age eql_v3.int4_ord_ore NOT NULL,
+    age eql_v3.integer_ord_ore NOT NULL,
     category eql_v3.text_eq NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS combo_encrypted_v3_10000000 (
     id SERIAL PRIMARY KEY,
     name eql_v3.text_match NOT NULL,
-    age eql_v3.int4_ord_ore NOT NULL,
+    age eql_v3.integer_ord_ore NOT NULL,
     category eql_v3.text_eq NOT NULL
 );
 

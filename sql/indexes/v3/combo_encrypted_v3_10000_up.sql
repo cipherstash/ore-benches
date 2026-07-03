@@ -2,7 +2,7 @@
 -- capability twins of the v2 combo indexes:
 --   name     eql_v3.text_match   → GIN on match_term (bloom containment;
 --                                   replaces the v2 bloom_filter GIN + LIKE)
---   age      eql_v3.int4_ord_ore → btree on ord_term (ORE ordering)
+--   age      eql_v3.integer_ord_ore → btree on ord_term (ORE ordering)
 --   category eql_v3.text_eq      → hash on eq_term (hmac equality)
 
 CREATE INDEX

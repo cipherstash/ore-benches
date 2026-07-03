@@ -3,7 +3,7 @@
 //! payload with `eql_bindings::from_v2`, and inserts into
 //! `integer_encrypted_v3` (or a `TABLE_SUFFIX` variant).
 //!
-//! Target domain: `eql_v3.int4_ord_ore` (ob) — same ColumnType::Int / ORE
+//! Target domain: `eql_v3.integer_ord_ore` (ob) — same ColumnType::Int / ORE
 //! index configuration as the v2 bin, so the encryption workload is
 //! identical and the ingest numbers differ only by the from_v2 conversion.
 //!
@@ -38,7 +38,9 @@ async fn main() -> Result<()> {
                 .casts_as(ColumnType::Int)
                 .add_index(Index::new_ore()),
         )
-        .convert_to_v3(TargetDomain::parse("int4_ord_ore").expect("int4_ord_ore is a v3 domain"))
+        .convert_to_v3(
+            TargetDomain::parse("integer_ord_ore").expect("integer_ord_ore is a v3 domain"),
+        )
         .build()?
         .ingest::<i32, _>(Faker)
         .await?;

@@ -119,9 +119,9 @@ WHERE eql_v3.eq_term(value) = eql_v3.eq_term($1::eql_v3.text_search)
 | v2 table | v3 twin | Domain | Notes |
 |---|---|---|---|
 | `string_encrypted` | `string_encrypted_v3` | `eql_v3.text_search` | Only single-column v3 domain serving both EXACT (hm) and MATCH (bf); requires an extra `ob` ORE term the v2 string ingest doesn't encrypt — `encrypt_string_v3` throughput is therefore not directly comparable to `encrypt_string`. |
-| `integer_encrypted` | `integer_encrypted_v3` | `eql_v3.int4_ord_ore` | v2 encrypts `i32` (int4). |
+| `integer_encrypted` | `integer_encrypted_v3` | `eql_v3.integer_ord_ore` | v2 encrypts `i32` (int4). |
 | `category_encrypted` | `category_encrypted_v3` | `eql_v3.text_eq` | |
-| `combo_encrypted` | `combo_encrypted_v3` | `text_match` / `int4_ord_ore` / `text_eq` | Per-column capability match. |
+| `combo_encrypted` | `combo_encrypted_v3` | `text_match` / `integer_ord_ore` / `text_eq` | Per-column capability match. |
 | `json_ste_vec_small_encrypted` | `json_ste_vec_small_encrypted_v3` | `eql_v3.json` | SteVec document domain. |
 | plaintext baselines | *(shared)* | — | Version-independent; not duplicated. |
 

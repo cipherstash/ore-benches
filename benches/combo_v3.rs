@@ -1,6 +1,6 @@
 //! EQL v3 twin of `benches/combo.rs` — composite-predicate scenarios over
 //! `combo_encrypted_v3_<N>` (name `eql_v3.text_match`, age
-//! `eql_v3.int4_ord_ore`, category `eql_v3.text_eq`).
+//! `eql_v3.integer_ord_ore`, category `eql_v3.text_eq`).
 //!
 //! The v2 scenarios filter with `name LIKE $1`; v3 removes LIKE, so every
 //! scenario filters with the bloom containment recipe instead:
