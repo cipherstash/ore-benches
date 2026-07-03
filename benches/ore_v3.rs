@@ -1,5 +1,7 @@
 //! EQL v3 twin of `benches/ore.rs` — range + ordered-range queries against
-//! `integer_encrypted_v3_<N>` (column typed `eql_v3.integer_ord_ore`).
+//! `integer_encrypted_v3_<N>` (column typed `eql_v3.integer_ord_ore`),
+//! plus the v3-only OPE ordering scenarios against
+//! `integer_ope_encrypted_v3_<N>` (column typed `eql_v3.integer_ord_ope`).
 //!
 //! Scenario parity with v2:
 //!
@@ -22,32 +24,16 @@
 //! converted (target `integer_ord_ore`) because no v3 scalar QUERY wire shape
 //! exists — see benches/exact_v3.rs.
 //!
-//! TODO(CIP-3280) — `_ord_ope` scenario stub. eql_v3 ships `int4_ord_ope`
-//! (wire key `op`, extractor `eql_v3.ord_ope_term`, ordering by native
-//! bytea comparison of the OPE-CLLW ciphertext — no per-row plpgsql
-//! compare). cipherstash-client 0.38.0 does not emit the `op` term
-//! (CIP-3280 unreleased), so the scenario cannot be driven yet. When a
-//! client release emits `op`:
-//!   1. create the `integer_ope_encrypted_v3*` tables (schema-v3.sql TODO),
-//!   2. add an `encrypt_int_ope_v3` ingest bin targeting `int4_ord_ope`,
-//!   3. enable OPE_QUERY_TEMPLATES below against those tables with a
-//!      `btree (eql_v3.ord_ope_term(value))` index.
-//
-// static OPE_QUERY_TEMPLATES: &[(&str, i32, &str)] = &[
-//     (
-//         "SELECT id, value::jsonb FROM {OPE_TABLE} \
-//          WHERE value > $1::eql_v3.int4_ord_ope LIMIT 10",
-//         5000,
-//         "ope_range_gt_10",
-//     ),
-//     (
-//         "SELECT id, value::jsonb FROM {OPE_TABLE} \
-//          WHERE value < $1::eql_v3.int4_ord_ope \
-//          ORDER BY eql_v3.ord_ope_term(value) LIMIT 10",
-//         5000,
-//         "ope_range_lt_ordered_10",
-//     ),
-// ];
+//! `_ord_ope` scenarios (CIP-3348; was the CIP-3280 stub): eql_v3 ships
+//! `integer_ord_ope` (wire key `op`, extractor `eql_v3.ord_ope_term`,
+//! ordering by native bytea comparison of the OPE-CLLW ciphertext — no
+//! per-row plpgsql compare). cipherstash-client 0.38.1 emits the scalar
+//! `op` term (CIP-3280), so OPE_QUERY_TEMPLATES below run against the
+//! `integer_ope_encrypted_v3_<N>` tables (populated by the
+//! encrypt_int_ope_v3 ingest bin) over a
+//! `btree (eql_v3.ord_ope_term(value))` index. The `ope_*` scenarios keep
+//! the ORE thresholds so the two ordering implementations line up
+//! side-by-side in the reports.
 
 use cipherstash_client::{
     encryption::ScopedCipher,
@@ -101,20 +87,66 @@ static QUERY_TEMPLATES: &[(&str, i32, &str)] = &[
     ),
 ];
 
+// OPE twins of the two headline ORE shapes: the non-selective range
+// baseline and the extractor-ordered stream. Same thresholds, `ope_`
+// scenario-name prefix, run against the `integer_ope_encrypted_v3*`
+// tables ({OPE_TABLE}).
+static OPE_QUERY_TEMPLATES: &[(&str, i32, &str)] = &[
+    (
+        "SELECT id, value::jsonb FROM {OPE_TABLE} \
+         WHERE value > $1::eql_v3.integer_ord_ope LIMIT 10",
+        5000,
+        "ope_range_gt_10",
+    ),
+    (
+        "SELECT id, value::jsonb FROM {OPE_TABLE} \
+         WHERE value < $1::eql_v3.integer_ord_ope \
+         ORDER BY eql_v3.ord_ope_term(value) LIMIT 10",
+        5000,
+        "ope_range_lt_ordered_10",
+    ),
+];
+
+/// Which ordering implementation a scenario drives — selects the client
+/// index config (so the probe carries the right term) and the v3 target
+/// domain the storage payload converts into.
+#[derive(Clone, Copy)]
+enum Ordering {
+    Ore,
+    Ope,
+}
+
+impl Ordering {
+    fn index(self) -> Index {
+        match self {
+            Self::Ore => Index::new_ore(),
+            Self::Ope => Index::new_ope(),
+        }
+    }
+
+    fn target(self) -> TargetDomain {
+        let name = match self {
+            Self::Ore => "integer_ord_ore",
+            Self::Ope => "integer_ord_ope",
+        };
+        TargetDomain::parse(name).expect("known v3 ordering domain")
+    }
+}
+
 async fn build_query(
     cipher: Arc<ScopedCipher<AutoStrategy>>,
     query: &str,
     x: i32,
     table_name: &str,
+    ordering: Ordering,
 ) -> EncryptedQueryV3 {
     let column_config = ColumnConfig::build("value")
         .casts_as(ColumnType::Int)
-        .add_index(Index::new_ore());
+        .add_index(ordering.index());
 
     let identifier = Identifier::new(table_name, "value");
-    let target = TargetDomain::parse("integer_ord_ore").expect("integer_ord_ore is a v3 domain");
 
-    EncryptedQueryBuilderV3::new(column_config, identifier, target)
+    EncryptedQueryBuilderV3::new(column_config, identifier, ordering.target())
         .statement(query)
         .build_query(x, cipher)
         .await
@@ -133,6 +165,30 @@ fn criterion_benchmark(c: &mut Criterion) {
         _ => String::new(),
     };
     let table_name = format!("integer_encrypted_v3{}", table_suffix);
+    let ope_table_name = format!("integer_ope_encrypted_v3{}", table_suffix);
+
+    // (bound sql, probe, scenario, ordering) — the ORE templates followed
+    // by their OPE twins, all in the one ORE_V3 criterion group so the
+    // reports show the two ordering implementations side-by-side.
+    let scenarios: Vec<(String, i32, &str, Ordering)> = QUERY_TEMPLATES
+        .iter()
+        .map(|(tpl, x, scenario)| {
+            (
+                tpl.replace("{TABLE}", &table_name),
+                *x,
+                *scenario,
+                Ordering::Ore,
+            )
+        })
+        .chain(OPE_QUERY_TEMPLATES.iter().map(|(tpl, x, scenario)| {
+            (
+                tpl.replace("{OPE_TABLE}", &ope_table_name),
+                *x,
+                *scenario,
+                Ordering::Ope,
+            )
+        }))
+        .collect();
 
     let (pool, cipher) = rt.block_on(async {
         let database_url =
@@ -152,10 +208,14 @@ fn criterion_benchmark(c: &mut Criterion) {
     });
 
     let queries = rt.block_on(async {
-        let mut queries = Vec::with_capacity(QUERY_TEMPLATES.len());
-        for (query_template, x, _) in QUERY_TEMPLATES {
-            let query_str = query_template.replace("{TABLE}", &table_name);
-            let query = build_query(Arc::clone(&cipher), &query_str, *x, &table_name).await;
+        let mut queries = Vec::with_capacity(scenarios.len());
+        for (query_str, x, _, ordering) in &scenarios {
+            let query_table = match ordering {
+                Ordering::Ore => &table_name,
+                Ordering::Ope => &ope_table_name,
+            };
+            let query =
+                build_query(Arc::clone(&cipher), query_str, *x, query_table, *ordering).await;
             queries.push(query);
         }
         queries
@@ -164,7 +224,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     let metadata = rt.block_on(async {
         let mut out = Vec::with_capacity(queries.len());
         for (i, query) in queries.iter().enumerate() {
-            let (_, _, scenario) = QUERY_TEMPLATES[i];
+            let (_, _, scenario, _) = &scenarios[i];
             let bench_id = format!("ORE_V3/ore/{}/{}", scenario, target_rows);
             let explain = query.explain(&pool).await.expect("EXPLAIN failed");
             let indexes_used = extract_indexes_used(&explain);
@@ -193,7 +253,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     group.sample_size(10);
 
     for (i, query) in queries.into_iter().enumerate() {
-        let (_, _, scenario) = QUERY_TEMPLATES[i];
+        let (_, _, scenario, _) = &scenarios[i];
         let exec_id = format!("ORE_V3/ore/{}/{}", scenario, target_rows);
         let decrypt_id = format!("ORE_V3/ore_decrypt/{}/{}", scenario, target_rows);
 

@@ -120,6 +120,7 @@ WHERE eql_v3.eq_term(value) = eql_v3.eq_term($1::eql_v3.text_search)
 |---|---|---|---|
 | `string_encrypted` | `string_encrypted_v3` | `eql_v3.text_search` | Only single-column v3 domain serving both EXACT (hm) and MATCH (bf); requires an extra `ob` ORE term the v2 string ingest doesn't encrypt — `encrypt_string_v3` throughput is therefore not directly comparable to `encrypt_string`. |
 | `integer_encrypted` | `integer_encrypted_v3` | `eql_v3.integer_ord_ore` | v2 encrypts `i32` (int4). |
+| *(none — v3-only)* | `integer_ope_encrypted_v3` | `eql_v3.integer_ord_ope` | OPE-CLLW ordering (wire key `op`); requires cipherstash-client >= 0.38.1. |
 | `category_encrypted` | `category_encrypted_v3` | `eql_v3.text_eq` | |
 | `combo_encrypted` | `combo_encrypted_v3` | `text_match` / `integer_ord_ore` / `text_eq` | Per-column capability match. |
 | `json_ste_vec_small_encrypted` | `json_ste_vec_small_encrypted_v3` | `eql_v3.json` | SteVec document domain. |
@@ -138,10 +139,13 @@ WHERE eql_v3.eq_term(value) = eql_v3.eq_term($1::eql_v3.text_search)
   `GIN ((eql_v3.to_ste_vec_query(value))::jsonb jsonb_path_ops)` index);
   `field_eq/bare` becomes index-capable (the v3 `->` is inlinable SQL,
   unlike v2's plpgsql).
-- **ORE (OPE)**: the `eql_v3.*_ord_ope` domains (OPE-CLLW ordering, wire
-  key `op`) are scaffolded but **disabled** — cipherstash-client 0.38.0
-  does not emit `op` (CIP-3280 unreleased). See the TODOs in
-  `sql/schema-v3.sql` and `benches/ore_v3.rs`.
+- **ORE (OPE)**: the ORE_V3 family adds `ope_*` scenarios against
+  `integer_ope_encrypted_v3` (`eql_v3.integer_ord_ope` — OPE-CLLW ordering,
+  wire key `op`, extractor `eql_v3.ord_ope_term`, native bytea comparison
+  over a `btree (eql_v3.ord_ope_term(value))` index). Requires
+  cipherstash-client >= 0.38.1, which emits the scalar `op` term
+  (CIP-3280). The `ope_*` scenarios share thresholds with their ORE twins
+  for a direct ORE-vs-OPE comparison.
 - A dedicated **conversion-overhead** ingest family
   (`convert_overhead_encrypt_only` vs `convert_overhead_encrypt_convert`)
   quantifies the pure `from_v2` cost: identical encrypt workloads, no

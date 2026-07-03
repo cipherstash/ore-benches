@@ -467,6 +467,17 @@ class BenchmarkReporter:
                     "WHERE value < $1::eql_v3.integer_ord_ore "
                     "ORDER BY eql_v3.ord_term(value) LIMIT 10",
                     "5000"
+                ),
+                "ope_range_gt_10": (
+                    "SELECT id, value::jsonb FROM {TABLE} "
+                    "WHERE value > $1::eql_v3.integer_ord_ope LIMIT 10",
+                    "5000"
+                ),
+                "ope_range_lt_ordered_10": (
+                    "SELECT id, value::jsonb FROM {TABLE} "
+                    "WHERE value < $1::eql_v3.integer_ord_ope "
+                    "ORDER BY eql_v3.ord_ope_term(value) LIMIT 10",
+                    "5000"
                 )
             },
             "GROUP_BY_V3": {
@@ -869,6 +880,25 @@ class BenchmarkReporter:
                     "Index: `btree (eql_v3.ord_term(value))`. `ORDER BY eql_v3.ord_term(value)` "
                     "matches the index expression, so rows stream out already sorted — no "
                     "Sort node. Same sort-key rule as v2."
+                ),
+                "ope_range_gt_10": (
+                    "EQL v3 OPE range query (greater than) returning 10 results",
+                    "Table: `integer_ope_encrypted_v3_{rows}` (column "
+                    "`eql_v3.integer_ord_ope` — the OPE-CLLW `op` term, emitted by "
+                    "cipherstash-client >= 0.38.1). Index: "
+                    "`btree (eql_v3.ord_ope_term(value))`. ord_ope_term returns a bytea "
+                    "domain, so ordering uses bytea's native comparison — no per-row "
+                    "plpgsql compare. Same threshold as `range_gt_10` for a direct "
+                    "ORE-vs-OPE comparison."
+                ),
+                "ope_range_lt_ordered_10": (
+                    "EQL v3 OPE ordered range query (extractor ORDER BY)",
+                    "Table: `integer_ope_encrypted_v3_{rows}` (column "
+                    "`eql_v3.integer_ord_ope`). Index: "
+                    "`btree (eql_v3.ord_ope_term(value))`. "
+                    "`ORDER BY eql_v3.ord_ope_term(value)` matches the index expression, "
+                    "so rows stream out already sorted. OPE twin of "
+                    "`range_lt_ordered_10`."
                 )
             },
             "GROUP_BY_V3": {
@@ -1094,6 +1124,11 @@ class BenchmarkReporter:
                 "int_v3": "EQL v3 twin of `int`: same encrypt workload plus a from_v2 "
                           "v2→v3 conversion per payload, inserting into "
                           "`integer_encrypted_v3` (eql_v3.integer_ord_ore).",
+                "int_ope_v3": "OPE sibling of `int_v3`: same integer workload encrypted "
+                              "with an `ope` index (scalar OPE-CLLW `op` term, "
+                              "cipherstash-client >= 0.38.1) plus the from_v2 conversion, "
+                              "inserting into `integer_ope_encrypted_v3` "
+                              "(eql_v3.integer_ord_ope).",
                 "string_v3": "EQL v3 twin of `string`, inserting into `string_encrypted_v3` "
                              "(eql_v3.text_search). NOTE: not directly comparable to "
                              "`string` — text_search requires the `ob` term, so this "

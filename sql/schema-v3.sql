@@ -18,6 +18,11 @@
 --   integer_encrypted   → eql_v3.integer_ord_ore  (ob)
 --       The v2 int scenarios encrypt `i32` via ColumnType::Int (int4, not
 --       int8) with an ORE index only.
+--   integer_ope_encrypted (v3-only) → eql_v3.integer_ord_ope (op)
+--       No v2 counterpart — OPE-CLLW ordering is new in v3. Same `i32`
+--       ColumnType::Int workload as integer_encrypted, but with an `ope`
+--       index so cipherstash-client emits the scalar `op` term
+--       (requires cipherstash-client >= 0.38.1).
 --   category_encrypted  → eql_v3.text_eq       (hm)
 --       Equality/GROUP BY only.
 --   combo_encrypted     → name eql_v3.text_match / age eql_v3.integer_ord_ore /
@@ -31,14 +36,15 @@
 -- are version-independent and shared with the v2 schema — not duplicated
 -- here.
 --
--- TODO(CIP-3280): `_ord_ope` scenario scaffold. eql_v3 ships `_ord_ope`
--- domains (wire key `op`, extractor `eql_v3.ord_ope_term`, OPE-CLLW ordering
--- via native bytea comparison — the Supabase-friendly ordered path), but
--- cipherstash-client 0.38.0 does NOT emit the `op` term (CIP-3280 is
--- unreleased). Once a client release emits `op`:
---   1. add `integer_ope_encrypted_v3*` tables typed eql_v3.int4_ord_ope,
---   2. add btree indexes on eql_v3.ord_ope_term(value) under sql/indexes/v3/,
---   3. enable the ope scenario stub in benches/ore_v3.rs.
+-- `_ord_ope` scenario (CIP-3348; was the CIP-3280 stub): the eql_v3
+-- `_ord_ope` domains order by the OPE-CLLW ciphertext (wire key `op`,
+-- extractor `eql_v3.ord_ope_term`, native bytea comparison — the
+-- Supabase-friendly ordered path). cipherstash-client 0.38.1 emits the
+-- scalar `op` term (CIP-3280), so the scenario is live: the
+-- `integer_ope_encrypted_v3*` tables below are populated by the
+-- encrypt_int_ope_v3 bin and queried by the ope_* scenarios in
+-- benches/ore_v3.rs over the btree (eql_v3.ord_ope_term(value)) indexes
+-- under sql/indexes/v3/.
 
 -- Base (un-tiered) tables used by the ingest throughput benches.
 
@@ -50,6 +56,11 @@ CREATE TABLE IF NOT EXISTS string_encrypted_v3 (
 CREATE TABLE IF NOT EXISTS integer_encrypted_v3 (
     id SERIAL PRIMARY KEY,
     value eql_v3.integer_ord_ore NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS integer_ope_encrypted_v3 (
+    id SERIAL PRIMARY KEY,
+    value eql_v3.integer_ord_ope NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS json_ste_vec_small_encrypted_v3 (
@@ -98,6 +109,26 @@ CREATE TABLE IF NOT EXISTS integer_encrypted_v3_1000000 (
 CREATE TABLE IF NOT EXISTS integer_encrypted_v3_10000000 (
     id SERIAL PRIMARY KEY,
     value eql_v3.integer_ord_ore NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS integer_ope_encrypted_v3_10000 (
+    id SERIAL PRIMARY KEY,
+    value eql_v3.integer_ord_ope NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS integer_ope_encrypted_v3_100000 (
+    id SERIAL PRIMARY KEY,
+    value eql_v3.integer_ord_ope NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS integer_ope_encrypted_v3_1000000 (
+    id SERIAL PRIMARY KEY,
+    value eql_v3.integer_ord_ope NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS integer_ope_encrypted_v3_10000000 (
+    id SERIAL PRIMARY KEY,
+    value eql_v3.integer_ord_ope NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS category_encrypted_v3_10000 (

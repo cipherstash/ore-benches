@@ -92,6 +92,10 @@ name = "encrypt_int_v3"
 path = "src/bin/encrypt_int_v3.rs"
 
 [[bin]]
+name = "encrypt_int_ope_v3"
+path = "src/bin/encrypt_int_ope_v3.rs"
+
+[[bin]]
 name = "encrypt_category_v3"
 path = "src/bin/encrypt_category_v3.rs"
 

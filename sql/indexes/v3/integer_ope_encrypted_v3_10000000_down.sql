@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS integer_ope_encrypted_v3_10000000_ord_ope_term_index;
