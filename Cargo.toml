@@ -17,13 +17,13 @@ rand = "0.8.5"
 # cipherstash-client + stack-profile ship from the same cipherstash-suite
 # workspace and must stay version-locked — cipherstash-client implements
 # `KeyProvider` for stack-profile's `ProfileStore`, so a source/version
-# mismatch produces two incompatible `ProfileStore` types. 0.38.0 keeps the
+# mismatch produces two incompatible `ProfileStore` types. 0.38.1 keeps the
 # EQL v2 wire payloads (`k`/`c`/`v`/`i`) byte-identical to the
 # 0.34.1-alpha.9 pre-release that EQL 2.3.0 targets — the eql wire formats
 # module is unchanged between the two — so the EQL release pin in
 # mise.toml's setup-db task stays at eql-2.3.0. Bump both together.
-cipherstash-client = { version = "=0.38.0", features = ["tokio"] }
-stack-profile = "=0.38.0"
+cipherstash-client = { version = "=0.38.1", features = ["tokio"] }
+stack-profile = "=0.38.1"
 # EQL v2.3 → v3 wire conversion (`from_v2`) + canonical v3 payload types.
 # Consumed as a path dependency off the EQL repo's `feat/eql-bindings-from-v2`
 # branch while the crate is unreleased.
