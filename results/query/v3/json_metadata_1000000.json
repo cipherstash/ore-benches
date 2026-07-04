@@ -71,12 +71,12 @@
                 "Node Type": "Index Scan",
                 "Parallel Aware": false,
                 "Parent Relationship": "Outer",
-                "Plan Rows": 997963,
+                "Plan Rows": 998723,
                 "Plan Width": 4,
                 "Relation Name": "json_ste_vec_small_encrypted_v3_1000000",
                 "Scan Direction": "Forward",
                 "Startup Cost": 0.68,
-                "Total Cost": 222789.03
+                "Total Cost": 222802.33
               }
             ],
             "Startup Cost": 0.68,
@@ -111,11 +111,11 @@
                 "Node Type": "Seq Scan",
                 "Parallel Aware": false,
                 "Parent Relationship": "Outer",
-                "Plan Rows": 997863,
+                "Plan Rows": 998623,
                 "Plan Width": 4,
                 "Relation Name": "json_ste_vec_small_encrypted_v3_1000000",
                 "Startup Cost": 0.0,
-                "Total Cost": 466297.2
+                "Total Cost": 466498.6
               }
             ],
             "Startup Cost": 0.0,
@@ -149,12 +149,12 @@
                 "Node Type": "Index Scan",
                 "Parallel Aware": false,
                 "Parent Relationship": "Outer",
-                "Plan Rows": 997963,
+                "Plan Rows": 998723,
                 "Plan Width": 4,
                 "Relation Name": "json_ste_vec_small_encrypted_v3_1000000",
                 "Scan Direction": "Forward",
                 "Startup Cost": 0.68,
-                "Total Cost": 222789.03
+                "Total Cost": 222802.33
               }
             ],
             "Startup Cost": 0.68,
@@ -189,16 +189,16 @@
                 "Node Type": "Index Scan",
                 "Parallel Aware": false,
                 "Parent Relationship": "Outer",
-                "Plan Rows": 997963,
+                "Plan Rows": 998723,
                 "Plan Width": 36,
                 "Relation Name": "json_ste_vec_small_encrypted_v3_1000000",
                 "Scan Direction": "Forward",
                 "Startup Cost": 0.55,
-                "Total Cost": 1377070.84
+                "Total Cost": 1377543.19
               }
             ],
             "Startup Cost": 0.55,
-            "Total Cost": 14.35
+            "Total Cost": 14.34
           }
         }
       ],

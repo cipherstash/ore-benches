@@ -175,3 +175,26 @@ CREATE TABLE IF NOT EXISTS scalar_smoke_v3 (
     double_val eql_v3.double_ord NOT NULL,
     boolean_val eql_v3.boolean NOT NULL
 );
+
+-- 10M tier (added for CIP-3361's 10k -> 10M flat-latency chart; the
+-- other families stay capped at 1M).
+CREATE TABLE IF NOT EXISTS string_encrypted_v3_10000000 (
+    id SERIAL PRIMARY KEY,
+    value eql_v3.text_search NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS integer_encrypted_v3_10000000 (
+    id SERIAL PRIMARY KEY,
+    value eql_v3.integer_ord NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS integer_encrypted_ope_v3_10000000 (
+    id SERIAL PRIMARY KEY,
+    value eql_v3.integer_ord_ope NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS json_ste_vec_small_encrypted_v3_10000000 (
+    id SERIAL PRIMARY KEY,
+    value eql_v3.json NOT NULL
+);
+

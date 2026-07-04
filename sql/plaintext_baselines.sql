@@ -37,3 +37,20 @@ CREATE TABLE IF NOT EXISTS json_small_plaintext_1000000 (
     id SERIAL PRIMARY KEY,
     value JSONB NOT NULL
 );
+
+-- 10M tier plaintext baselines (CIP-3361 chart band).
+CREATE TABLE IF NOT EXISTS string_plaintext_10000000 (
+    id SERIAL PRIMARY KEY,
+    value TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS integer_plaintext_10000000 (
+    id SERIAL PRIMARY KEY,
+    value INT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS json_small_plaintext_10000000 (
+    id SERIAL PRIMARY KEY,
+    value JSONB NOT NULL
+);
+

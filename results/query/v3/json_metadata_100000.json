@@ -194,7 +194,7 @@
                 "Relation Name": "json_ste_vec_small_encrypted_v3_100000",
                 "Scan Direction": "Forward",
                 "Startup Cost": 0.42,
-                "Total Cost": 137810.92
+                "Total Cost": 137793.58
               }
             ],
             "Startup Cost": 0.42,

@@ -217,6 +217,12 @@ def build_regression_rows(v2: dict, v3: dict, threshold: float):
         flag = ""
         if note:
             flag = "semantics changed"
+        elif "_decrypt/" in cid:
+            # Decrypt variants are dominated by ZeroKMS round-trips (~25 ms)
+            # — cross-run network variance alone exceeds any sane threshold,
+            # and the v2 baseline was measured under a different client
+            # version. Informational only; never flagged.
+            flag = ""
         elif d > threshold:
             flag = "REGRESSION"
         elif d < -threshold:
