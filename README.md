@@ -44,6 +44,10 @@ mise run report:v3-compare
 
 # Full comparison artifacts: report/V3_COMPARISON.md + report/v3/ charts
 mise run report:build:v3-compare
+
+# Full v3 benchmark report (per-family pages, SQL, plans, index configs —
+# the v3 sibling of report:build) into report/v3/full/
+mise run report:build:v3
 ```
 
 v3 payloads are produced by converting the pinned cipherstash-client's v2.3

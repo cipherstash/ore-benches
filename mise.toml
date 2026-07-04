@@ -1073,6 +1073,14 @@ run = """
 python3 report_v3_compare.py --cli --threshold "${1:-10}"
 """
 
+[tasks."report:build:v3"]
+description = "Build the full EQL v3 benchmark report (Markdown + charts) into report/v3/full/"
+run = """
+#!/usr/bin/env bash
+set -e
+python3 report_benchmarks.py --v3
+"""
+
 [tasks."report:build:v3-compare"]
 description = "Generate the EQL v3 vs v2 comparison report + charts (report/V3_COMPARISON.md, report/v3/*)"
 run = """

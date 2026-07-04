@@ -70,10 +70,17 @@ class ScenarioMetadata:
 
 
 class BenchmarkReporter:
-    def __init__(self, results_dir: Path, output_file: Path, sql_dir: Optional[Path] = None):
+    def __init__(self, results_dir: Path, output_file: Path, sql_dir: Optional[Path] = None,
+                 v3: bool = False):
         self.results_dir = results_dir
         self.output_file = output_file
         self.sql_dir = sql_dir or Path("sql")
+        # EQL v3 mode: results live in the v3/ subdirectories (the committed
+        # v2 baseline files stay untouched in the parent dirs), and the v3
+        # ingest suite has its own bench inventory / filename suffix.
+        self.v3 = v3
+        self.query_dir = results_dir / "query" / "v3" if v3 else results_dir / "query"
+        self.ingest_dir = results_dir / "ingest" / "v3" if v3 else results_dir / "ingest"
         self.ingest_results: List[IngestResult] = []
         self.query_results: List[QueryResult] = []
         # Keyed by (query_type, query_name, row_count) so a scenario can
@@ -83,10 +90,16 @@ class BenchmarkReporter:
 
     def load_ingest_results(self):
         """Load ingest benchmark results"""
-        ingest_dir = self.results_dir / "ingest"
-        
-        for bench_type in ["int", "json_small", "json_large", "string", "ste_vec_small", "ste_vec_large"]:
-            file_path = ingest_dir / f"encrypt_{bench_type}_combined.json"
+        ingest_dir = self.ingest_dir
+        if self.v3:
+            bench_types = ["int", "int_ope", "string", "category", "ste_vec_small"]
+            suffix = "_v3"
+        else:
+            bench_types = ["int", "json_small", "json_large", "string", "ste_vec_small", "ste_vec_large"]
+            suffix = ""
+
+        for bench_type in bench_types:
+            file_path = ingest_dir / f"encrypt_{bench_type}{suffix}_combined.json"
             
             if not file_path.exists():
                 print(f"Warning: {file_path} not found, skipping", file=sys.stderr)
@@ -106,7 +119,7 @@ class BenchmarkReporter:
 
     def load_query_results(self):
         """Load query benchmark results from criterion JSON output"""
-        query_dir = self.results_dir / "query"
+        query_dir = self.query_dir
         
         for json_file in query_dir.glob("*.json"):
             # Parse filename: {query_type}_rows_{count}.json
@@ -166,7 +179,7 @@ class BenchmarkReporter:
 
     def load_query_metadata(self):
         """Load `*_metadata_*.json` sidecars written by each bench at startup."""
-        query_dir = self.results_dir / "query"
+        query_dir = self.query_dir
         meta_pattern = re.compile(r'^(.+)_metadata_(\d+)$')
         for json_file in query_dir.glob("*_metadata_*.json"):
             m = meta_pattern.match(json_file.stem)
@@ -761,7 +774,7 @@ class BenchmarkReporter:
             self._write_footer(f)
 
     def _write_header(self, f, scenario_pages: Dict[str, str]):
-        f.write("# Benchmark Report\n\n")
+        f.write(f"# Benchmark Report{' (EQL v3)' if self.v3 else ''}\n\n")
         f.write("This report summarises the performance benchmarks for encrypted database operations. "
                 "Per-query-type detail lives on its own page — click through from the "
                 "Query Performance section below.\n\n")
@@ -1259,10 +1272,17 @@ def main():
                        help="Directory containing benchmark results (default: results)")
     parser.add_argument("--sql-dir", type=Path, default=Path("sql"),
                        help="Directory containing SQL schema and index files (default: sql)")
-    parser.add_argument("--output", "-o", type=Path, default=Path("report/BENCHMARK_REPORT.md"),
-                       help="Output file path (default: report/BENCHMARK_REPORT.md)")
-    
+    parser.add_argument("--output", "-o", type=Path, default=None,
+                       help="Output file path (default: report/BENCHMARK_REPORT.md, "
+                            "or report/v3/full/BENCHMARK_REPORT.md with --v3)")
+    parser.add_argument("--v3", action="store_true",
+                       help="build from the EQL v3 results (results/{query,ingest}/v3/) "
+                            "into a separate output dir; v2 baseline files are untouched")
+
     args = parser.parse_args()
+    if args.output is None:
+        args.output = Path("report/v3/full/BENCHMARK_REPORT.md") if args.v3 \
+            else Path("report/BENCHMARK_REPORT.md")
     
     if not args.results_dir.exists():
         print(f"Error: Results directory '{args.results_dir}' does not exist", file=sys.stderr)
@@ -1271,7 +1291,7 @@ def main():
     # Create output directory if it doesn't exist
     args.output.parent.mkdir(parents=True, exist_ok=True)
     
-    reporter = BenchmarkReporter(args.results_dir, args.output, args.sql_dir)
+    reporter = BenchmarkReporter(args.results_dir, args.output, args.sql_dir, v3=args.v3)
     
     print("Loading ingest results...")
     reporter.load_ingest_results()
