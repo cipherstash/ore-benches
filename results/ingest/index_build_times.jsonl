@@ -26,3 +26,5 @@
 {"table": "integer_encrypted_v3_10000000", "build_seconds": 474, "recorded_at": "2026-07-04T07:55:44Z"}
 {"table": "string_encrypted_v3_10000000", "build_seconds": 896, "recorded_at": "2026-07-04T10:17:38Z"}
 {"table": "category_encrypted_v3_10000000", "build_seconds": 9, "recorded_at": "2026-07-04T12:11:35Z"}
+{"table": "category_encrypted_10000000", "build_seconds": 148, "recorded_at": "2026-07-04T12:34:08Z"}
+{"table": "string_encrypted_10000000", "build_seconds": 342, "recorded_at": "2026-07-04T12:54:54Z"}
