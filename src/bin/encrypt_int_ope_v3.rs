@@ -15,7 +15,7 @@ use cipherstash_client::{
     eql::Identifier,
     schema::{column::Index, ColumnConfig, ColumnType},
 };
-use dbbenches::IngestOptionsBuilder;
+use dbbenches::{v3::TargetDomain, IngestOptionsBuilder};
 use fake::Faker;
 use std::env;
 
@@ -40,8 +40,9 @@ async fn main() -> Result<()> {
                 .casts_as(ColumnType::Int)
                 .add_index(Index::new_ope()),
         )
+        .convert_to_v3(TargetDomain::parse("integer_ord_ope").expect("integer_ord_ope is a v3 domain"))
         .build()?
-        .ingest_v3::<i32, _>(Faker, "integer_ord_ope")
+        .ingest::<i32, _>(Faker)
         .await?;
 
     Ok(())

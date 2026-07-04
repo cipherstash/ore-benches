@@ -18,7 +18,7 @@ use cipherstash_client::{
         ColumnConfig, ColumnType,
     },
 };
-use dbbenches::{FakeJsonSmall, IngestOptionsBuilder, WrappedJson};
+use dbbenches::{v3::TargetDomain, FakeJsonSmall, IngestOptionsBuilder, WrappedJson};
 use std::env;
 
 #[tokio::main]
@@ -52,8 +52,9 @@ async fn main() -> Result<()> {
                     mode: SteVecMode::Standard,
                 })),
         )
+        .convert_to_v3(TargetDomain::parse("json").expect("json is a v3 domain"))
         .build()?
-        .ingest_v3::<WrappedJson, _>(FakeJsonSmall, "json")
+        .ingest::<WrappedJson, _>(FakeJsonSmall)
         .await?;
 
     Ok(())

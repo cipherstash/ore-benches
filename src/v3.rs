@@ -1,6 +1,6 @@
 //! EQL v3 harness plumbing.
 //!
-//! The pinned cipherstash-client (0.34.1-alpha.9) emits EQL **v2.3** wire
+//! The pinned cipherstash-client (0.38.1) emits EQL **v2.3** wire
 //! payloads. EQL v3 replaced the single `eql_v2_encrypted` composite with
 //! per-capability jsonb DOMAIN types (`eql_v3.text_search`,
 //! `eql_v3.integer_ord`, …), and ships a supported conversion path in the
@@ -24,20 +24,22 @@
 //!     envelope so the pinned client's `decrypt_eql` can decrypt v3 rows
 //!     (needle sampling, `_decrypt` scenarios).
 
-use crate::{extract_indexes_used, EqlV2Encrypted, IngestOptions};
+use crate::{extract_indexes_used, EqlV2Encrypted};
 use anyhow::{Context, Result};
 use cipherstash_client::{
     encryption::{Plaintext, ScopedCipher},
     eql::{decrypt_eql, encrypt_eql, EqlCiphertext, EqlOperation, EqlOutput, PreparedPlaintext},
     AutoStrategy,
 };
-use eql_bindings::from_v2::{from_v2, from_v2_query, TargetDomain};
-use fake::{Dummy, Fake};
+use eql_bindings::from_v2::{from_v2, from_v2_query};
+// Re-exported so ingest binaries can name their conversion target as a
+// typed TargetDomain at the builder call site (IngestOptionsBuilder::
+// convert_to_v3) without depending on eql-bindings directly.
+pub use eql_bindings::from_v2::TargetDomain;
 use serde_json::{json, Value};
 use sqlx::postgres::{PgTypeInfo, PgTypeKind, PgValueRef};
-use sqlx::{postgres::PgPoolOptions, types::Json, QueryBuilder};
+use sqlx::types::Json;
 use std::borrow::Cow;
-use std::env;
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -54,10 +56,16 @@ fn parse_target(target: &str) -> Result<TargetDomain> {
 /// through the target domain's binding struct, so the corresponding domain
 /// CHECK is guaranteed to accept it at INSERT/cast time.
 pub fn to_v3_stored(v2: &EqlCiphertext, target: &str) -> Result<Value> {
+    to_v3_stored_target(v2, parse_target(target)?)
+}
+
+/// [`to_v3_stored`] with an already-resolved [`TargetDomain`] — the hot-loop
+/// form used by the ingest pipeline (`IngestOptionsBuilder::convert_to_v3`),
+/// where the target is parsed once at the builder call site.
+pub fn to_v3_stored_target(v2: &EqlCiphertext, target: TargetDomain) -> Result<Value> {
     let v2_value = serde_json::to_value(v2).context("serialize v2 ciphertext")?;
-    let parsed = parse_target(target)?;
-    from_v2(&v2_value, parsed)
-        .with_context(|| format!("from_v2 conversion to `{}` failed", target))
+    from_v2(&v2_value, target)
+        .with_context(|| format!("from_v2 conversion to `{:?}` failed", target))
 }
 
 /// Convert a v2 SteVec QUERY payload (containment needle) into the v3
@@ -270,99 +278,6 @@ impl V3EncryptedQuery {
     }
 }
 
-impl IngestOptions {
-    /// The v3 sibling of [`IngestOptions::ingest`]: identical batch loop,
-    /// with each stored v2 ciphertext converted to the `target` v3 domain
-    /// payload before binding. The conversion is deliberately inside the
-    /// measured path — v3 ingest cost for the intended consumer IS
-    /// "encrypt + convert + insert"; the report decomposes the client-side
-    /// share via `V3_CONVERT_ONLY`.
-    ///
-    /// `V3_CONVERT_ONLY=1` skips the INSERT (encrypt + convert only) so the
-    /// conversion overhead is attributable when comparing against the v2
-    /// ingest numbers.
-    pub async fn ingest_v3<T, F>(self, f: F, target: &str) -> Result<()>
-    where
-        T: Into<Plaintext> + Dummy<F> + Send + Debug,
-    {
-        let database_url =
-            env::var("DATABASE_URL").context("DATABASE_URL environment variable must be set")?;
-
-        let num_records: i32 = env::var("NUM_RECORDS")
-            .unwrap_or_else(|_| "10000".to_string())
-            .parse()
-            .expect("NUM_RECORDS must be a valid integer");
-
-        let hf_iteration: i32 = env::var("HYPERFINE_ITERATION")
-            .unwrap_or_else(|_| "0".to_string())
-            .parse()
-            .expect("HYPERFINE_ITERATION must be a valid integer");
-
-        let convert_only = env::var("V3_CONVERT_ONLY").is_ok_and(|v| v == "1");
-
-        let pool = PgPoolOptions::new()
-            .max_connections(5)
-            .connect(&database_url)
-            .await?;
-
-        let scoped_cipher = crate::init_scoped_cipher().await?;
-        let column_config = Cow::Borrowed(&self.column_config);
-
-        for batch_start in (0..self.num_records).step_by(self.batch_size) {
-            let batch_end = (batch_start + self.batch_size as i32).min(self.num_records);
-            let batch_count = batch_end - batch_start;
-
-            let prepared = (0..batch_count)
-                .map(|_| {
-                    let x: T = f.fake();
-
-                    PreparedPlaintext::new(
-                        column_config.clone(),
-                        self.identifier.clone(),
-                        Plaintext::new(x),
-                        EqlOperation::Store,
-                    )
-                })
-                .collect::<Vec<_>>();
-
-            let out = encrypt_eql(scoped_cipher.clone(), prepared, &Default::default()).await?;
-
-            let converted = out
-                .into_iter()
-                .map(|v| {
-                    let EqlOutput::Store(ciphertext) = v else {
-                        unreachable!("storage batch must yield EqlOutput::Store");
-                    };
-                    to_v3_stored(&ciphertext, target)
-                })
-                .collect::<Result<Vec<_>>>()?;
-
-            if convert_only {
-                continue;
-            }
-
-            QueryBuilder::new(format!("INSERT INTO {} (value) ", self.identifier.table()))
-                .push_values(converted.into_iter(), |mut b, v| {
-                    b.push_bind(Json(v));
-                })
-                .build()
-                .execute(&pool)
-                .await?;
-        }
-
-        let result = json!({
-            "inserted": num_records,
-            "convert_only": convert_only,
-        });
-        let filename = format!(
-            "target/{}-{num_records}_{hf_iteration}.json",
-            self.bench_name
-        );
-        std::fs::write(&filename, serde_json::to_string(&result)?)?;
-
-        Ok(())
-    }
-}
 
 /// Convert a stored v2 row (as decoded by [`EqlV2Encrypted`]) to the v3
 /// payload — used by cross-version correctness checks that read a v2 table

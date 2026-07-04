@@ -157,6 +157,10 @@ pub struct IngestOptions {
     pub batch_size: usize,
     pub identifier: Identifier,
     pub column_config: ColumnConfig,
+    /// When set, every storage payload is converted v2→v3 for this target
+    /// domain (via `eql_bindings::from_v2`) before the INSERT — the v3
+    /// ingest path. `None` binds the client's v2 ciphertext as-is.
+    pub eql_target: Option<v3::TargetDomain>,
 }
 
 pub struct IngestOptionsBuilder {
@@ -165,6 +169,7 @@ pub struct IngestOptionsBuilder {
     batch_size: Option<usize>,
     identifier: Option<Identifier>,
     column_config: Option<ColumnConfig>,
+    eql_target: Option<v3::TargetDomain>,
 }
 
 impl IngestOptionsBuilder {
@@ -178,7 +183,17 @@ impl IngestOptionsBuilder {
             batch_size: None,
             identifier: None,
             column_config: None,
+            eql_target: None,
         }
+    }
+
+    /// Convert every storage payload v2→v3 for `target` before the INSERT
+    /// (the v3 ingest path). See [`IngestOptions::eql_target`].
+    /// API shape adopted from PR #21 (versioning as configuration on the
+    /// single ingest pipeline, typed target resolved at the call site).
+    pub fn convert_to_v3(mut self, target: v3::TargetDomain) -> Self {
+        self.eql_target = Some(target);
+        self
     }
 
     pub fn num_records(mut self, num_records: i32) -> Self {
@@ -208,6 +223,7 @@ impl IngestOptionsBuilder {
             batch_size: self.batch_size.unwrap_or(Self::DEFAULT_BATCH_SIZE),
             identifier: self.identifier.context("identifier is required")?,
             column_config: self.column_config.context("column_config is required")?,
+            eql_target: self.eql_target,
         })
     }
 }
@@ -267,20 +283,60 @@ impl IngestOptions {
 
             let out = encrypt_eql(scoped_cipher.clone(), prepared, &Default::default()).await?;
 
-            QueryBuilder::new(format!("INSERT INTO {} (value) ", self.identifier.table()))
-                .push_values(out.into_iter(), |mut b, v| {
-                    // Every PreparedPlaintext above used EqlOperation::Store, so
-                    // encrypt_eql yields only EqlOutput::Store. alpha.9 split the
-                    // storage and query payload shapes — unwrap the storage
-                    // ciphertext for binding.
-                    let EqlOutput::Store(ciphertext) = v else {
-                        unreachable!("storage batch must yield EqlOutput::Store");
-                    };
-                    b.push_bind(Json(ciphertext));
-                })
-                .build()
-                .execute(&pool)
-                .await?;
+            match self.eql_target {
+                // v2 path: bind the client's storage ciphertext as-is.
+                // Every PreparedPlaintext above used EqlOperation::Store, so
+                // encrypt_eql yields only EqlOutput::Store. alpha.9 split the
+                // storage and query payload shapes — unwrap the storage
+                // ciphertext for binding.
+                None => {
+                    QueryBuilder::new(format!(
+                        "INSERT INTO {} (value) ",
+                        self.identifier.table()
+                    ))
+                    .push_values(out.into_iter(), |mut b, v| {
+                        let EqlOutput::Store(ciphertext) = v else {
+                            unreachable!("storage batch must yield EqlOutput::Store");
+                        };
+                        b.push_bind(Json(ciphertext));
+                    })
+                    .build()
+                    .execute(&pool)
+                    .await?;
+                }
+                // v3 path: convert each storage payload to the target domain
+                // before binding. The conversion is deliberately inside the
+                // measured path — v3 ingest cost for the intended consumer IS
+                // "encrypt + convert + insert". `V3_CONVERT_ONLY=1` skips the
+                // INSERT so the conversion overhead is attributable when
+                // comparing against the v2 ingest numbers.
+                Some(target) => {
+                    let converted = out
+                        .into_iter()
+                        .map(|v| {
+                            let EqlOutput::Store(ciphertext) = v else {
+                                unreachable!("storage batch must yield EqlOutput::Store");
+                            };
+                            v3::to_v3_stored_target(&ciphertext, target)
+                        })
+                        .collect::<Result<Vec<_>>>()?;
+
+                    if env::var("V3_CONVERT_ONLY").is_ok_and(|v| v == "1") {
+                        continue;
+                    }
+
+                    QueryBuilder::new(format!(
+                        "INSERT INTO {} (value) ",
+                        self.identifier.table()
+                    ))
+                    .push_values(converted.into_iter(), |mut b, v| {
+                        b.push_bind(Json(v));
+                    })
+                    .build()
+                    .execute(&pool)
+                    .await?;
+                }
+            }
         }
 
         let result = json!({

@@ -10,7 +10,7 @@ use cipherstash_client::{
     eql::Identifier,
     schema::{column::Index, ColumnConfig, ColumnType},
 };
-use dbbenches::{FakeCategory, IngestOptionsBuilder};
+use dbbenches::{v3::TargetDomain, FakeCategory, IngestOptionsBuilder};
 use std::env;
 
 #[tokio::main]
@@ -34,8 +34,9 @@ async fn main() -> Result<()> {
                 .casts_as(ColumnType::Text)
                 .add_index(Index::new_unique()),
         )
+        .convert_to_v3(TargetDomain::parse("text_eq").expect("text_eq is a v3 domain"))
         .build()?
-        .ingest_v3::<String, FakeCategory>(FakeCategory, "text_eq")
+        .ingest::<String, FakeCategory>(FakeCategory)
         .await?;
 
     Ok(())

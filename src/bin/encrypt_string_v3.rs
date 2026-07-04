@@ -16,7 +16,7 @@ use cipherstash_client::{
     eql::Identifier,
     schema::{column::Index, ColumnConfig, ColumnType},
 };
-use dbbenches::IngestOptionsBuilder;
+use dbbenches::{v3::TargetDomain, IngestOptionsBuilder};
 use fake::{faker::name::raw::Name, locales::EN};
 use std::env;
 
@@ -43,8 +43,9 @@ async fn main() -> Result<()> {
                 .add_index(Index::new_match())
                 .add_index(Index::new_ore()),
         )
+        .convert_to_v3(TargetDomain::parse("text_search").expect("text_search is a v3 domain"))
         .build()?
-        .ingest_v3::<String, Name<EN>>(Name(EN), "text_search")
+        .ingest::<String, Name<EN>>(Name(EN))
         .await?;
 
     Ok(())
