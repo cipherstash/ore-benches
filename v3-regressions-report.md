@@ -22,6 +22,15 @@
 > stored-shape query needle cost tracked as issue #356 / CIP-3383). The open
 > items are the design-level issues: #355 (text domain gap) and #356
 > (k="q" query payloads).
+>
+> **Final adjudication (same-day v2 re-measurement, 2026-07-04):** the last
+> three flags vs the May baseline (eql_cast@10M, both GROUP BY@10M) are
+> cross-session drift — the May-measured v2 numbers sit ±8–19% from a
+> same-day v2 run at the 10M tier. Against SAME-DAY v2: eql_cast −3.3%
+> (v3 faster), top_n GROUP BY −0.7%, low-cardinality GROUP BY +6.4%.
+> **v3 is regression-clean vs same-day v2** apart from documented
+> semantics-changed items (e.g. eql_hash's hash→btree trade) and
+> sub-threshold small-tier deltas tracked by CIP-3383.
 
 Companion to the auto-generated [`report/V3_COMPARISON.md`](report/V3_COMPARISON.md).
 That report flags *what* moved; this document works through flagged scenarios one

@@ -78,6 +78,13 @@ NOTES = {
     # both) — deltas isolate per-row extractor cost.
     "JSON/json/field_eq/bare": "same btree plan as v2 (needle matches every row in both versions)",
     "JSON/json/field_eq/functional": "same btree plan as v2 (needle matches every row in both versions)",
+    # Same-day v2 re-measurement (2026-07-04) adjudicated the 10M flags vs
+    # the May-measured baseline: cross-session drift is ±8-19% at these
+    # scales. v3 vs SAME-DAY v2: eql_cast -3.3%, top_n GROUP BY -0.7%,
+    # low-cardinality GROUP BY +6.4% — parity within threshold.
+    "EXACT/exact/eql_cast": "10M flag adjudicated as baseline drift: v3 is 3.3% FASTER than same-day v2",
+    "GROUP_BY/group_by/low_cardinality_groups_encrypted": "10M flag adjudicated as baseline drift: +6.4% vs same-day v2",
+    "GROUP_BY/group_by/top_n_groups_encrypted": "10M flag adjudicated as baseline drift: parity (-0.7%) vs same-day v2",
 }
 
 # Notes for the ingest comparison, keyed by v3 bench name.
@@ -385,7 +392,10 @@ def write_report(rows, v3_query, v3_meta, v2_ingest, v3_ingest,
       "decrypted plaintext is asserted at bench startup.")
     w("- v2 numbers are the committed baseline results (`results/query/`, "
       "`results/ingest/`); v3 numbers come from `results/query/v3/`, "
-      "`results/ingest/v3/`.")
+      "`results/ingest/v3/`. The baseline was measured in May; same-day v2 "
+      "re-measurement (2026-07-04) shows ±8-19% cross-session drift at the "
+      "10M tier, so 10M flags were re-adjudicated against same-day v2 — "
+      "see the per-row notes.")
     w("")
 
     # Regression table

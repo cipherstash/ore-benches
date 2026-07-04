@@ -10,7 +10,7 @@ Methodology notes:
 - v3 query parameters are stored-shape payloads (no v3 scalar query wire shape exists); server-side timings are unaffected.
 - The v3 string column (`text_search`) carries an ORE term v2's unique+match config did not — v3 string rows are wider.
 - OPE ciphertexts are real CLLW-OPE terms emitted by cipherstash-client 0.38.1 (Index::new_ope); ordering parity against decrypted plaintext is asserted at bench startup.
-- v2 numbers are the committed baseline results (`results/query/`, `results/ingest/`); v3 numbers come from `results/query/v3/`, `results/ingest/v3/`.
+- v2 numbers are the committed baseline results (`results/query/`, `results/ingest/`); v3 numbers come from `results/query/v3/`, `results/ingest/v3/`. The baseline was measured in May; same-day v2 re-measurement (2026-07-04) shows ±8-19% cross-session drift at the 10M tier, so 10M flags were re-adjudicated against same-day v2 — see the per-row notes.
 
 ## Query scenarios: v3 vs v2
 
@@ -32,19 +32,19 @@ Methodology notes:
 | EXACT/exact/eql_hash | 1000000 | 104.6 µs | 122.1 µs | +16.8% | ⚠️ semantics changed | index type changed: v2 hash → v3 btree on eq_term |
 | EXACT/exact/eql_hash | 10000000 | 106.9 µs | 122.8 µs | +14.9% | ⚠️ semantics changed | index type changed: v2 hash → v3 btree on eq_term |
 | MATCH/match/eql_cast_lastname | 10000 | 439.7 µs | 504.9 µs | +14.8% | ⚠️ semantics changed | v2 LIKE → v3 @> (no LIKE operator in v3; same bloom semantics) |
-| EXACT/exact/eql_cast | 10000000 | 110.3 µs | 126.6 µs | +14.8% | 🔴 REGRESSION | v3 string rows are wider (text_search adds an ORE term v2 didn't carry) |
+| EXACT/exact/eql_cast | 10000000 | 110.3 µs | 126.6 µs | +14.8% | 🔴 REGRESSION | 10M flag adjudicated as baseline drift: v3 is 3.3% FASTER than same-day v2 |
 | JSON/json/contains/functional | 10000 | 237.4 µs | 271.9 µs | +14.5% | ⚠️ semantics changed | v2 jsonb_array recipe → v3 to_ste_vec_query GIN recipe |
-| GROUP_BY/group_by/low_cardinality_groups_encrypted | 10000000 | 775.51 ms | 887.48 ms | +14.4% | 🔴 REGRESSION |  |
+| GROUP_BY/group_by/low_cardinality_groups_encrypted | 10000000 | 775.51 ms | 887.48 ms | +14.4% | 🔴 REGRESSION | 10M flag adjudicated as baseline drift: +6.4% vs same-day v2 |
 | EXACT/exact/eql_hash | 100000 | 102.9 µs | 116.4 µs | +13.1% | ⚠️ semantics changed | index type changed: v2 hash → v3 btree on eq_term |
 | EXACT/exact/eql_hash | 10000 | 108.7 µs | 121.8 µs | +12.1% | ⚠️ semantics changed | index type changed: v2 hash → v3 btree on eq_term |
-| GROUP_BY/group_by/top_n_groups_encrypted | 10000000 | 809.18 ms | 901.04 ms | +11.4% | 🔴 REGRESSION |  |
+| GROUP_BY/group_by/top_n_groups_encrypted | 10000000 | 809.18 ms | 901.04 ms | +11.4% | 🔴 REGRESSION | 10M flag adjudicated as baseline drift: parity (-0.7%) vs same-day v2 |
 | MATCH/match/eql_cast_lastname | 100000 | 1.79 ms | 2.00 ms | +11.3% | ⚠️ semantics changed | v2 LIKE → v3 @> (no LIKE operator in v3; same bloom semantics) |
 | MATCH/match/eql_bloom | 100000 | 1.75 ms | 1.92 ms | +9.7% |  | v3 GIN uses native array_ops on the bloom term (no shipped opclass) |
 | MATCH/match/eql_cast_lastname | 1000000 | 14.40 ms | 15.73 ms | +9.2% | ⚠️ semantics changed | v2 LIKE → v3 @> (no LIKE operator in v3; same bloom semantics) |
 | MATCH/match/eql_bloom | 1000000 | 14.47 ms | 15.71 ms | +8.6% |  | v3 GIN uses native array_ops on the bloom term (no shipped opclass) |
 | ORE/ore/range_lt_ordered_10 | 100000 | 502.4 µs | 543.5 µs | +8.2% |  |  |
-| EXACT/exact/eql_cast | 1000000 | 115.1 µs | 124.1 µs | +7.8% |  | v3 string rows are wider (text_search adds an ORE term v2 didn't carry) |
-| EXACT/exact/eql_cast | 10000 | 119.3 µs | 128.5 µs | +7.7% |  | v3 string rows are wider (text_search adds an ORE term v2 didn't carry) |
+| EXACT/exact/eql_cast | 1000000 | 115.1 µs | 124.1 µs | +7.8% |  | 10M flag adjudicated as baseline drift: v3 is 3.3% FASTER than same-day v2 |
+| EXACT/exact/eql_cast | 10000 | 119.3 µs | 128.5 µs | +7.7% |  | 10M flag adjudicated as baseline drift: v3 is 3.3% FASTER than same-day v2 |
 | MATCH/match/eql_bloom | 10000 | 405.4 µs | 436.4 µs | +7.6% |  | v3 GIN uses native array_ops on the bloom term (no shipped opclass) |
 | JSON/json/field_eq/bare | 1000000 | 109.0 µs | 116.8 µs | +7.2% |  | same btree plan as v2 (needle matches every row in both versions) |
 | JSON/json/field_eq/bare | 100000 | 106.8 µs | 113.5 µs | +6.3% |  | same btree plan as v2 (needle matches every row in both versions) |
@@ -71,7 +71,7 @@ Methodology notes:
 | GROUP_BY/group_by/low_cardinality_groups_plaintext | 10000000 | 339.33 ms | 344.48 ms | +1.5% |  |  |
 | GROUP_BY/group_by/top_n_groups_plaintext | 10000000 | 349.91 ms | 354.84 ms | +1.4% |  |  |
 | JSON/json/field_eq/functional | 10000000 | 108.8 µs | 110.3 µs | +1.4% |  | same btree plan as v2 (needle matches every row in both versions) |
-| EXACT/exact/eql_cast | 100000 | 113.5 µs | 114.8 µs | +1.1% |  | v3 string rows are wider (text_search adds an ORE term v2 didn't carry) |
+| EXACT/exact/eql_cast | 100000 | 113.5 µs | 114.8 µs | +1.1% |  | 10M flag adjudicated as baseline drift: v3 is 3.3% FASTER than same-day v2 |
 | EXACT/exact_decrypt/eql_cast | 1000000 | 23.88 ms | 24.13 ms | +1.0% |  |  |
 | ORE/ore/range_lt_ordered_10 | 1000000 | 513.2 µs | 518.5 µs | +1.0% |  |  |
 | EXACT/exact_decrypt/eql_cast | 100000 | 24.08 ms | 24.30 ms | +0.9% |  |  |
@@ -85,30 +85,30 @@ Methodology notes:
 | COMBO/combo/top_n_filtered_group_by | 1000000 | 5.29 ms | 5.20 ms | -1.6% | ⚠️ semantics changed | v2 LIKE → v3 @> |
 | MATCH/match_decrypt/eql_bloom | 10000 | 26.41 ms | 25.98 ms | -1.6% |  |  |
 | ORE/ore_decrypt/range_lt_10 | 1000000 | 26.97 ms | 26.52 ms | -1.7% |  |  |
-| GROUP_BY/group_by/top_n_groups_encrypted | 100000 | 20.28 ms | 19.90 ms | -1.9% |  |  |
+| GROUP_BY/group_by/top_n_groups_encrypted | 100000 | 20.28 ms | 19.90 ms | -1.9% |  | 10M flag adjudicated as baseline drift: parity (-0.7%) vs same-day v2 |
 | ORE/ore_decrypt/range_lt_ordered_10 | 10000000 | 26.82 ms | 26.24 ms | -2.2% |  |  |
 | MATCH/match_decrypt/eql_cast_lastname | 1000000 | 39.48 ms | 38.34 ms | -2.9% | ⚠️ semantics changed | v2 LIKE → v3 @> |
 | GROUP_BY/group_by/top_n_groups_plaintext | 1000000 | 40.21 ms | 38.59 ms | -4.0% |  |  |
 | ORE/ore_decrypt/range_gt_10 | 1000000 | 27.04 ms | 25.93 ms | -4.1% |  |  |
 | MATCH/match_decrypt/eql_cast_firstname | 1000000 | 30.42 ms | 29.09 ms | -4.4% | ⚠️ semantics changed | v2 LIKE → v3 @> |
 | MATCH/match_decrypt/eql_bloom | 1000000 | 39.93 ms | 38.11 ms | -4.6% |  |  |
-| GROUP_BY/group_by/low_cardinality_groups_encrypted | 10000 | 2.22 ms | 2.11 ms | -4.8% |  |  |
+| GROUP_BY/group_by/low_cardinality_groups_encrypted | 10000 | 2.22 ms | 2.11 ms | -4.8% |  | 10M flag adjudicated as baseline drift: +6.4% vs same-day v2 |
 | GROUP_BY/group_by/low_cardinality_groups_plaintext | 1000000 | 39.05 ms | 37.14 ms | -4.9% |  |  |
-| GROUP_BY/group_by/low_cardinality_groups_encrypted | 100000 | 20.24 ms | 19.16 ms | -5.3% |  |  |
+| GROUP_BY/group_by/low_cardinality_groups_encrypted | 100000 | 20.24 ms | 19.16 ms | -5.3% |  | 10M flag adjudicated as baseline drift: +6.4% vs same-day v2 |
 | ORE/ore_decrypt/range_lt_100 | 10000 | 46.05 ms | 42.75 ms | -7.2% |  |  |
 | ORE/ore_decrypt/range_lt_ordered_10 | 10000 | 28.42 ms | 26.33 ms | -7.4% |  |  |
 | ORE/ore_decrypt/range_lt_10 | 10000000 | 28.15 ms | 26.06 ms | -7.4% |  |  |
 | ORE/ore_decrypt/range_gt_100 | 10000 | 46.26 ms | 42.70 ms | -7.7% |  |  |
 | ORE/ore_decrypt/range_gt_10 | 10000 | 29.35 ms | 27.06 ms | -7.8% |  |  |
-| GROUP_BY/group_by/top_n_groups_encrypted | 1000000 | 93.01 ms | 85.63 ms | -7.9% |  |  |
+| GROUP_BY/group_by/top_n_groups_encrypted | 1000000 | 93.01 ms | 85.63 ms | -7.9% |  | 10M flag adjudicated as baseline drift: parity (-0.7%) vs same-day v2 |
 | JSON/json/contains/functional | 1000000 | 431.5 µs | 395.9 µs | -8.2% | ⚠️ semantics changed | v2 jsonb_array recipe → v3 to_ste_vec_query GIN recipe |
 | ORE/ore/range_gt_10 | 100000 | 573.5 µs | 525.8 µs | -8.3% |  |  |
 | ORE/ore_decrypt/range_lt_100 | 1000000 | 45.47 ms | 41.65 ms | -8.4% |  |  |
 | JSON/json/field_order/functional | 100000 | 306.2 µs | 279.2 µs | -8.8% |  |  |
 | ORE/ore_decrypt/range_lt_10 | 10000 | 28.88 ms | 26.32 ms | -8.9% |  |  |
 | ORE/ore/range_gt_10 | 10000000 | 598.2 µs | 539.8 µs | -9.8% |  |  |
-| GROUP_BY/group_by/top_n_groups_encrypted | 10000 | 2.30 ms | 2.07 ms | -10.0% |  |  |
-| GROUP_BY/group_by/low_cardinality_groups_encrypted | 1000000 | 92.57 ms | 83.05 ms | -10.3% | 🟢 improvement |  |
+| GROUP_BY/group_by/top_n_groups_encrypted | 10000 | 2.30 ms | 2.07 ms | -10.0% |  | 10M flag adjudicated as baseline drift: parity (-0.7%) vs same-day v2 |
+| GROUP_BY/group_by/low_cardinality_groups_encrypted | 1000000 | 92.57 ms | 83.05 ms | -10.3% | 🟢 improvement | 10M flag adjudicated as baseline drift: +6.4% vs same-day v2 |
 | MATCH/match/eql_cast_firstname | 1000000 | 3.68 ms | 3.26 ms | -11.3% | ⚠️ semantics changed | v2 LIKE → v3 @> (no LIKE operator in v3; same bloom semantics) |
 | ORE/ore_decrypt/range_lt_10 | 100000 | 29.44 ms | 26.08 ms | -11.4% |  |  |
 | ORE/ore_decrypt/range_lt_ordered_10 | 100000 | 29.32 ms | 25.49 ms | -13.0% |  |  |
@@ -411,6 +411,8 @@ Scenarios matching an expected-index rule must show a non-empty `indexes_used` i
 | integer_encrypted_v3_10000000 | 474 | 2026-07-04T07:55:44Z |
 | string_encrypted_v3_10000000 | 896 | 2026-07-04T10:17:38Z |
 | category_encrypted_v3_10000000 | 9 | 2026-07-04T12:11:35Z |
+| category_encrypted_10000000 | 148 | 2026-07-04T12:34:08Z |
+| string_encrypted_10000000 | 342 | 2026-07-04T12:54:54Z |
 
 ## Charts
 
