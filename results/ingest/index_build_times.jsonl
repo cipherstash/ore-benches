@@ -21,3 +21,7 @@
 {"table": "integer_encrypted_ope_v3_10000", "build_seconds": 0, "recorded_at": "2026-07-04T01:49:59Z"}
 {"table": "integer_encrypted_ope_v3_100000", "build_seconds": 0, "recorded_at": "2026-07-04T01:51:54Z"}
 {"table": "integer_encrypted_ope_v3_1000000", "build_seconds": 1, "recorded_at": "2026-07-04T01:54:49Z"}
+{"table": "integer_encrypted_ope_v3_10000000", "build_seconds": 8, "recorded_at": "2026-07-04T05:52:51Z"}
+{"table": "json_ste_vec_small_encrypted_v3_10000000", "build_seconds": 270, "recorded_at": "2026-07-04T06:31:25Z"}
+{"table": "integer_encrypted_v3_10000000", "build_seconds": 474, "recorded_at": "2026-07-04T07:55:44Z"}
+{"table": "string_encrypted_v3_10000000", "build_seconds": 896, "recorded_at": "2026-07-04T10:17:38Z"}

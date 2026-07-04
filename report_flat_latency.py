@@ -189,10 +189,11 @@ def render(theme_name, tiers, series_points, band, out_path):
         bot_pts = " ".join(f'{xs[t]:.1f},{Y(band[t][0]):.1f}' for t in reversed(tiers))
         parts.append(f'<polygon points="{top_pts} {bot_pts}" fill="{c["band"]}" '
                      f'opacity="0.9"/>')
-        # Label the band at its left edge — the right edge is where the
-        # series' direct labels stack.
+        # Label the band at its left edge, BELOW the band — above it sits the
+        # equality line, and the right edge is where the series' direct
+        # labels stack.
         t_first = tiers[0]
-        parts.append(f'<text x="{xs[t_first] + 6:.1f}" y="{Y(band[t_first][1]) - 7:.1f}" '
+        parts.append(f'<text x="{xs[t_first] + 6:.1f}" y="{Y(band[t_first][0]) + 16:.1f}" '
                      f'font-size="12" fill="{c["muted"]}">plaintext Postgres</text>')
 
     # series lines + markers + direct labels

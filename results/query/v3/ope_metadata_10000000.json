@@ -1,0 +1,234 @@
+{
+  "scenarios": [
+    {
+      "explain": [
+        {
+          "Plan": {
+            "Async Capable": false,
+            "Node Type": "Limit",
+            "Parallel Aware": false,
+            "Plan Rows": 10,
+            "Plan Width": 310,
+            "Plans": [
+              {
+                "Alias": "integer_encrypted_ope_v3_10000000",
+                "Async Capable": false,
+                "Filter": "(decode(((value)::jsonb ->> 'op'::text), 'hex'::text) > decode(((('{\"c\": \"mBbJ*D^%CH^pK*8eNzy+PiQd27MH8AXOFm^1`Y~3T6iZaN9zPUOl+XUAdm(#CHXW6rcMcPu2+gn3!Pn*r1z?aTD3E|d|Ja6rKNUZY;|SC5al#Uy4?0l?zPD$ZD>~0Vg\", \"i\": {\"c\": \"value\", \"t\": \"integer_encrypted_ope_v3_10000000\"}, \"v\": 3, \"op\": \"00b6e0adc426b1981b4d97c99b6e1fb1299fdf7dd20768335b46da223ac660dd93\"}'::jsonb)::eql_v3.integer_ord_ope)::jsonb ->> 'op'::text), 'hex'::text))",
+                "Node Type": "Seq Scan",
+                "Parallel Aware": false,
+                "Parent Relationship": "Outer",
+                "Plan Rows": 4900004,
+                "Plan Width": 310,
+                "Relation Name": "integer_encrypted_ope_v3_10000000",
+                "Startup Cost": 0.0,
+                "Total Cost": 666667.2
+              }
+            ],
+            "Startup Cost": 0.0,
+            "Total Cost": 1.36
+          }
+        }
+      ],
+      "id": "OPE/ope/range_gt_10/10000000",
+      "indexes_used": [],
+      "parameters": [
+        {
+          "c": "mBbJ*D^%CH^pK*8eNzy+PiQd27MH8AXOFm^1`Y~3T6iZaN9zPUOl+XUAdm(#CHXW6rcMcPu2+gn3!Pn*r1z?aTD3E|d|Ja6rKNUZY;|SC5al#Uy4?0l?zPD$ZD>~0Vg",
+          "i": {
+            "c": "value",
+            "t": "integer_encrypted_ope_v3_10000000"
+          },
+          "op": "00b6e0adc426b1981b4d97c99b6e1fb1299fdf7dd20768335b46da223ac660dd93",
+          "v": 3
+        }
+      ],
+      "query": "SELECT id, value FROM integer_encrypted_ope_v3_10000000 WHERE value > $1 LIMIT 10",
+      "rows_returned": 10
+    },
+    {
+      "explain": [
+        {
+          "Plan": {
+            "Async Capable": false,
+            "Node Type": "Limit",
+            "Parallel Aware": false,
+            "Plan Rows": 100,
+            "Plan Width": 310,
+            "Plans": [
+              {
+                "Alias": "integer_encrypted_ope_v3_10000000",
+                "Async Capable": false,
+                "Filter": "(decode(((value)::jsonb ->> 'op'::text), 'hex'::text) > decode(((('{\"c\": \"mBbLe4)1Uyz>(pXT)IoJmmYk?7GN?It1|j3GB}iQ(^@JTi*pzCuQEf#Adnq%>{7!fs*)%11%*B#nrpq4T!4k^0_9J})dwFJ5T$luY;|SC5al#Uy4?0l?zPD$ZD>~0Vg\", \"i\": {\"c\": \"value\", \"t\": \"integer_encrypted_ope_v3_10000000\"}, \"v\": 3, \"op\": \"00b6e0adc426b1981b4d97c99b6e1fb1299fdf7dd20768335b46da223ac660dd93\"}'::jsonb)::eql_v3.integer_ord_ope)::jsonb ->> 'op'::text), 'hex'::text))",
+                "Node Type": "Seq Scan",
+                "Parallel Aware": false,
+                "Parent Relationship": "Outer",
+                "Plan Rows": 4900004,
+                "Plan Width": 310,
+                "Relation Name": "integer_encrypted_ope_v3_10000000",
+                "Startup Cost": 0.0,
+                "Total Cost": 666667.2
+              }
+            ],
+            "Startup Cost": 0.0,
+            "Total Cost": 13.61
+          }
+        }
+      ],
+      "id": "OPE/ope/range_gt_100/10000000",
+      "indexes_used": [],
+      "parameters": [
+        {
+          "c": "mBbLe4)1Uyz>(pXT)IoJmmYk?7GN?It1|j3GB}iQ(^@JTi*pzCuQEf#Adnq%>{7!fs*)%11%*B#nrpq4T!4k^0_9J})dwFJ5T$luY;|SC5al#Uy4?0l?zPD$ZD>~0Vg",
+          "i": {
+            "c": "value",
+            "t": "integer_encrypted_ope_v3_10000000"
+          },
+          "op": "00b6e0adc426b1981b4d97c99b6e1fb1299fdf7dd20768335b46da223ac660dd93",
+          "v": 3
+        }
+      ],
+      "query": "SELECT id, value FROM integer_encrypted_ope_v3_10000000 WHERE value > $1 LIMIT 100",
+      "rows_returned": 100
+    },
+    {
+      "explain": [
+        {
+          "Plan": {
+            "Async Capable": false,
+            "Node Type": "Limit",
+            "Parallel Aware": false,
+            "Plan Rows": 10,
+            "Plan Width": 310,
+            "Plans": [
+              {
+                "Alias": "integer_encrypted_ope_v3_10000000",
+                "Async Capable": false,
+                "Filter": "(decode(((value)::jsonb ->> 'op'::text), 'hex'::text) < decode(((('{\"c\": \"mBbJ}KN@m0Vt!q?H|+?q@!Gb;7OHRNfZTiRlhr}j(ldytUg~02ZMfCMAR}Q8>jjQ^*dZ^EXLiGP5&Q3<c;&v|4cZQZeVMLnhoyF5Y;|SC5al#Uy4?0l?zPD$ZD>~0Vg\", \"i\": {\"c\": \"value\", \"t\": \"integer_encrypted_ope_v3_10000000\"}, \"v\": 3, \"op\": \"00b6e0adc426b1981b4d97c99b6e1fb1299fdf7dd20768335b46da223ac660dd93\"}'::jsonb)::eql_v3.integer_ord_ope)::jsonb ->> 'op'::text), 'hex'::text))",
+                "Node Type": "Seq Scan",
+                "Parallel Aware": false,
+                "Parent Relationship": "Outer",
+                "Plan Rows": 5100003,
+                "Plan Width": 310,
+                "Relation Name": "integer_encrypted_ope_v3_10000000",
+                "Startup Cost": 0.0,
+                "Total Cost": 666667.2
+              }
+            ],
+            "Startup Cost": 0.0,
+            "Total Cost": 1.31
+          }
+        }
+      ],
+      "id": "OPE/ope/range_lt_10/10000000",
+      "indexes_used": [],
+      "parameters": [
+        {
+          "c": "mBbJ}KN@m0Vt!q?H|+?q@!Gb;7OHRNfZTiRlhr}j(ldytUg~02ZMfCMAR}Q8>jjQ^*dZ^EXLiGP5&Q3<c;&v|4cZQZeVMLnhoyF5Y;|SC5al#Uy4?0l?zPD$ZD>~0Vg",
+          "i": {
+            "c": "value",
+            "t": "integer_encrypted_ope_v3_10000000"
+          },
+          "op": "00b6e0adc426b1981b4d97c99b6e1fb1299fdf7dd20768335b46da223ac660dd93",
+          "v": 3
+        }
+      ],
+      "query": "SELECT id, value FROM integer_encrypted_ope_v3_10000000 WHERE value < $1 LIMIT 10",
+      "rows_returned": 10
+    },
+    {
+      "explain": [
+        {
+          "Plan": {
+            "Async Capable": false,
+            "Node Type": "Limit",
+            "Parallel Aware": false,
+            "Plan Rows": 100,
+            "Plan Width": 310,
+            "Plans": [
+              {
+                "Alias": "integer_encrypted_ope_v3_10000000",
+                "Async Capable": false,
+                "Filter": "(decode(((value)::jsonb ->> 'op'::text), 'hex'::text) < decode(((('{\"c\": \"mBbLdM+5GJke|qCGORG`xKKvK7F?Mgu)3q~=x~dENpA(a;icNDTXy8cAYTp~cDv-iprp`767t1j2lop6k1&OJU(wGg2@nCGZKZZ$Y;|SC5al#Uy4?0l?zPD$ZD>~0Vg\", \"i\": {\"c\": \"value\", \"t\": \"integer_encrypted_ope_v3_10000000\"}, \"v\": 3, \"op\": \"00b6e0adc426b1981b4d97c99b6e1fb1299fdf7dd20768335b46da223ac660dd93\"}'::jsonb)::eql_v3.integer_ord_ope)::jsonb ->> 'op'::text), 'hex'::text))",
+                "Node Type": "Seq Scan",
+                "Parallel Aware": false,
+                "Parent Relationship": "Outer",
+                "Plan Rows": 5100003,
+                "Plan Width": 310,
+                "Relation Name": "integer_encrypted_ope_v3_10000000",
+                "Startup Cost": 0.0,
+                "Total Cost": 666667.2
+              }
+            ],
+            "Startup Cost": 0.0,
+            "Total Cost": 13.07
+          }
+        }
+      ],
+      "id": "OPE/ope/range_lt_100/10000000",
+      "indexes_used": [],
+      "parameters": [
+        {
+          "c": "mBbLdM+5GJke|qCGORG`xKKvK7F?Mgu)3q~=x~dENpA(a;icNDTXy8cAYTp~cDv-iprp`767t1j2lop6k1&OJU(wGg2@nCGZKZZ$Y;|SC5al#Uy4?0l?zPD$ZD>~0Vg",
+          "i": {
+            "c": "value",
+            "t": "integer_encrypted_ope_v3_10000000"
+          },
+          "op": "00b6e0adc426b1981b4d97c99b6e1fb1299fdf7dd20768335b46da223ac660dd93",
+          "v": 3
+        }
+      ],
+      "query": "SELECT id, value FROM integer_encrypted_ope_v3_10000000 WHERE value < $1 LIMIT 100",
+      "rows_returned": 100
+    },
+    {
+      "explain": [
+        {
+          "Plan": {
+            "Async Capable": false,
+            "Node Type": "Limit",
+            "Parallel Aware": false,
+            "Plan Rows": 10,
+            "Plan Width": 342,
+            "Plans": [
+              {
+                "Alias": "integer_encrypted_ope_v3_10000000",
+                "Async Capable": false,
+                "Index Cond": "(decode(((value)::jsonb ->> 'op'::text), 'hex'::text) < decode(((('{\"c\": \"mBbL@j+;gjy@US)2m|md_5%dO7DrC@GK|Q=mXk-9KR0{>9EY9Fq>9MIAP;L)BNx=z^r}7cpPwMkOC9ix!@;H$cp(jY4`+CpVx@LrY;|SC5al#Uy4?0l?zPD$ZD>~0Vg\", \"i\": {\"c\": \"value\", \"t\": \"integer_encrypted_ope_v3_10000000\"}, \"v\": 3, \"op\": \"00b6e0adc426b1981b4d97c99b6e1fb1299fdf7dd20768335b46da223ac660dd93\"}'::jsonb)::eql_v3.integer_ord_ope)::jsonb ->> 'op'::text), 'hex'::text))",
+                "Index Name": "integer_encrypted_ope_v3_10000000_ope_index",
+                "Node Type": "Index Scan",
+                "Parallel Aware": false,
+                "Parent Relationship": "Outer",
+                "Plan Rows": 5100003,
+                "Plan Width": 342,
+                "Relation Name": "integer_encrypted_ope_v3_10000000",
+                "Scan Direction": "Forward",
+                "Startup Cost": 0.57,
+                "Total Cost": 1928102.41
+              }
+            ],
+            "Startup Cost": 0.57,
+            "Total Cost": 4.35
+          }
+        }
+      ],
+      "id": "OPE/ope/range_lt_ordered_10/10000000",
+      "indexes_used": [
+        "integer_encrypted_ope_v3_10000000_ope_index"
+      ],
+      "parameters": [
+        {
+          "c": "mBbL@j+;gjy@US)2m|md_5%dO7DrC@GK|Q=mXk-9KR0{>9EY9Fq>9MIAP;L)BNx=z^r}7cpPwMkOC9ix!@;H$cp(jY4`+CpVx@LrY;|SC5al#Uy4?0l?zPD$ZD>~0Vg",
+          "i": {
+            "c": "value",
+            "t": "integer_encrypted_ope_v3_10000000"
+          },
+          "op": "00b6e0adc426b1981b4d97c99b6e1fb1299fdf7dd20768335b46da223ac660dd93",
+          "v": 3
+        }
+      ],
+      "query": "SELECT id, value FROM integer_encrypted_ope_v3_10000000 WHERE value < $1 ORDER BY eql_v3.ord_ope_term(value) LIMIT 10",
+      "rows_returned": 10
+    }
+  ],
+  "target_rows": "10000000"
+}
