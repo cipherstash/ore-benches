@@ -117,9 +117,9 @@ async fn main() -> Result<()> {
         let out = encrypt_eql(scoped_cipher.clone(), prepared, &Default::default()).await?;
 
         // Every PreparedPlaintext above used EqlOperation::Store, so encrypt_eql
-        // yields only EqlOutput::Store. alpha.9 split the storage / query payload
-        // shapes — unwrap to the storage ciphertext (which, unlike EqlOutput, is
-        // Clone) before reassembling rows.
+        // yields only EqlOutput::Store. cipherstash-client splits the storage /
+        // query payload shapes (since 0.34.1-alpha.9) — unwrap to the storage
+        // ciphertext (which, unlike EqlOutput, is Clone) before reassembling rows.
         let ciphertexts: Vec<EqlCiphertext> = out
             .into_iter()
             .map(|o| match o {
@@ -137,18 +137,15 @@ async fn main() -> Result<()> {
             .map(|c| (c[0].clone(), c[1].clone(), c[2].clone()))
             .collect();
 
-        QueryBuilder::new(format!(
-            "INSERT INTO {} (name, age, category) ",
-            table_name
-        ))
-        .push_values(rows, |mut b, (name, age, category)| {
-            b.push_bind(Json(name));
-            b.push_bind(Json(age));
-            b.push_bind(Json(category));
-        })
-        .build()
-        .execute(&pool)
-        .await?;
+        QueryBuilder::new(format!("INSERT INTO {} (name, age, category) ", table_name))
+            .push_values(rows, |mut b, (name, age, category)| {
+                b.push_bind(Json(name));
+                b.push_bind(Json(age));
+                b.push_bind(Json(category));
+            })
+            .build()
+            .execute(&pool)
+            .await?;
     }
 
     Ok(())

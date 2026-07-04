@@ -202,8 +202,7 @@ async fn sample_needles(pool: &sqlx::PgPool, table: &str) -> Needles {
                 .fetch_one(pool)
                 .await
                 .expect("query for hm sample field value failed");
-                let sample_field_value: Json<JsonValue> =
-                    field_row.get("sample_field_value");
+                let sample_field_value: Json<JsonValue> = field_row.get("sample_field_value");
                 hm_pick = Some(HmPick {
                     selector: sel.clone(),
                     sample_field_value: sample_field_value.0,
@@ -224,8 +223,7 @@ async fn sample_needles(pool: &sqlx::PgPool, table: &str) -> Needles {
                 .fetch_one(pool)
                 .await
                 .expect("query for ore sample field value failed");
-                let sample_field_value: Json<JsonValue> =
-                    field_row.get("sample_field_value");
+                let sample_field_value: Json<JsonValue> = field_row.get("sample_field_value");
                 ore_pick = Some(OrePick {
                     selector: sel.clone(),
                     sample_field_value: sample_field_value.0,
@@ -588,10 +586,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         let needle = sample_value_json.clone();
         group.bench_function(format!("json/contains/functional/{}", target_rows), |b| {
             b.to_async(&rt).iter(|| async {
-                let rows = bench_assert(
-                    sqlx::query(&q).bind(&needle).fetch_all(&pool).await,
-                    &id,
-                );
+                let rows = bench_assert(sqlx::query(&q).bind(&needle).fetch_all(&pool).await, &id);
                 black_box(rows.len())
             })
         });
@@ -613,10 +608,8 @@ fn criterion_benchmark(c: &mut Criterion) {
             let needle = hm_field.clone();
             group.bench_function(format!("json/field_eq/bare/{}", target_rows), |b| {
                 b.to_async(&rt).iter(|| async {
-                    let rows = bench_assert(
-                        sqlx::query(&q).bind(&needle).fetch_all(&pool).await,
-                        &id,
-                    );
+                    let rows =
+                        bench_assert(sqlx::query(&q).bind(&needle).fetch_all(&pool).await, &id);
                     black_box(rows.len())
                 })
             });
@@ -627,10 +620,8 @@ fn criterion_benchmark(c: &mut Criterion) {
             let needle = hmac_term.clone();
             group.bench_function(format!("json/field_eq/extractor/{}", target_rows), |b| {
                 b.to_async(&rt).iter(|| async {
-                    let rows = bench_assert(
-                        sqlx::query(&q).bind(&needle).fetch_all(&pool).await,
-                        &id,
-                    );
+                    let rows =
+                        bench_assert(sqlx::query(&q).bind(&needle).fetch_all(&pool).await, &id);
                     black_box(rows.len())
                 })
             });
@@ -641,10 +632,8 @@ fn criterion_benchmark(c: &mut Criterion) {
             let needle = hm_field.clone();
             group.bench_function(format!("json/field_eq/functional/{}", target_rows), |b| {
                 b.to_async(&rt).iter(|| async {
-                    let rows = bench_assert(
-                        sqlx::query(&q).bind(&needle).fetch_all(&pool).await,
-                        &id,
-                    );
+                    let rows =
+                        bench_assert(sqlx::query(&q).bind(&needle).fetch_all(&pool).await, &id);
                     black_box(rows.len())
                 })
             });
@@ -652,17 +641,13 @@ fn criterion_benchmark(c: &mut Criterion) {
     }
 
     if has_ore {
-
         if let Some(q) = q_field_order_functional.clone() {
             let id = format!("JSON/json/field_order/functional/{}", target_rows);
             group.bench_function(
                 format!("json/field_order/functional/{}", target_rows),
                 |b| {
                     b.to_async(&rt).iter(|| async {
-                        let rows = bench_assert(
-                            sqlx::query(&q).fetch_all(&pool).await,
-                            &id,
-                        );
+                        let rows = bench_assert(sqlx::query(&q).fetch_all(&pool).await, &id);
                         black_box(rows.len())
                     })
                 },

@@ -89,11 +89,7 @@ pub async fn sample_plaintext_string(
         .ok_or_else(|| anyhow::anyhow!("decrypt_eql returned empty Vec for {}", table_name))?;
     match &pt {
         Plaintext::Text(Some(s)) => Ok(s.clone()),
-        other => anyhow::bail!(
-            "expected Text sample from {}, got {:?}",
-            table_name,
-            other
-        ),
+        other => anyhow::bail!("expected Text sample from {}, got {:?}", table_name, other),
     }
 }
 
@@ -266,11 +262,11 @@ impl IngestOptions {
             let out = encrypt_eql(scoped_cipher.clone(), prepared, &Default::default()).await?;
 
             QueryBuilder::new(format!("INSERT INTO {} (value) ", self.identifier.table()))
-                .push_values(out.into_iter(), |mut b, v| {
+                .push_values(out, |mut b, v| {
                     // Every PreparedPlaintext above used EqlOperation::Store, so
-                    // encrypt_eql yields only EqlOutput::Store. alpha.9 split the
-                    // storage and query payload shapes — unwrap the storage
-                    // ciphertext for binding.
+                    // encrypt_eql yields only EqlOutput::Store. cipherstash-client
+                    // splits the storage and query payload shapes (since
+                    // 0.34.1-alpha.9) — unwrap the storage ciphertext for binding.
                     let EqlOutput::Store(ciphertext) = v else {
                         unreachable!("storage batch must yield EqlOutput::Store");
                     };
@@ -337,13 +333,13 @@ impl Dummy<FakeJsonLarge> for WrappedJson {
         ]
         .iter()
         .take((1..6).fake())
-        .last()
+        .next_back()
         .unwrap()
         .to_string();
         let type_ = ["Home", "Work", "Billing", "Shipping"]
             .iter()
             .take((1..4).fake())
-            .last()
+            .next_back()
             .unwrap()
             .to_string();
         let status = [
@@ -356,13 +352,13 @@ impl Dummy<FakeJsonLarge> for WrappedJson {
         ]
         .iter()
         .take((1..6).fake())
-        .last()
+        .next_back()
         .unwrap()
         .to_string();
         let relationship = ["Spouse", "Parent", "Sibling", "Friend", "Other"]
             .iter()
             .take((1..5).fake())
-            .last()
+            .next_back()
             .unwrap()
             .to_string();
 
@@ -471,8 +467,9 @@ impl EncryptedQueryBuilder {
         let mut out = encrypt_eql(Arc::clone(&cipher), vec![prepared], &Default::default()).await?;
 
         // build_query uses EqlOperation::Query, so the single output is always
-        // EqlOutput::Query. alpha.9 split storage / query payloads: a query
-        // carries an EqlQueryPayload (partial payload, no `c` ciphertext).
+        // EqlOutput::Query. cipherstash-client splits storage / query payloads
+        // (since 0.34.1-alpha.9): a query carries an EqlQueryPayload (partial
+        // payload, no `c` ciphertext).
         let EqlOutput::Query(eql) = out.remove(0) else {
             unreachable!("build_query encrypts with EqlOperation::Query");
         };
@@ -510,7 +507,9 @@ impl EncryptedQuery {
 
         let decrypted = decrypt_eql(
             Arc::clone(&self.scoped_cipher),
-            results.into_iter().map(|(_, value)| value.into_ciphertext()),
+            results
+                .into_iter()
+                .map(|(_, value)| value.into_ciphertext()),
             &Default::default(),
         )
         .await?
