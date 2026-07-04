@@ -499,10 +499,51 @@ def write_report(rows, v3_query, v3_meta, v2_ingest, v3_ingest,
     return failures
 
 
+def print_cli_table(rows, v3_query, threshold: float):
+    """Side-by-side v2/v3 terminal view — `mise run report:v3-compare`.
+
+    The Markdown/chart artifacts are `report:build:v3-compare`'s job; this
+    prints the same join to stdout for quick triage after a bench run.
+    """
+    flag_names = {"REGRESSION": "REGRESSION", "improvement": "improvement",
+                  "semantics changed": "semantics≠"}
+    id_w = max((len(scenario_prefix(r["id"])) for r in rows), default=20)
+    print(f"{'scenario':<{id_w}}  {'tier':>8}  {'v2 median':>11}  "
+          f"{'v3 median':>11}  {'Δ':>8}  flag")
+    print(f"{'-' * id_w}  {'-' * 8}  {'-' * 11}  {'-' * 11}  {'-' * 8}  {'-' * 11}")
+    for r in sorted(rows, key=lambda r: (scenario_prefix(r["id"]), int(tier_of(r["id"])))):
+        print(f"{scenario_prefix(r['id']):<{id_w}}  {tier_of(r['id']):>8}  "
+              f"{fmt_ns(r['v2_ns']):>11}  {fmt_ns(r['v3_ns']):>11}  "
+              f"{r['delta_pct']:+7.1f}%  {flag_names.get(r['flag'], '')}")
+
+    n_reg = sum(1 for r in rows if r["flag"] == "REGRESSION")
+    n_imp = sum(1 for r in rows if r["flag"] == "improvement")
+    n_sem = sum(1 for r in rows if r["flag"] == "semantics changed")
+    print()
+    print(f"{len(rows)} comparable pairs: {n_reg} regressions, {n_imp} "
+          f"improvements (beyond ±{threshold:.0f}%), {n_sem} semantics-changed.")
+
+    v3_only = sorted(
+        cid for cid in v3_query
+        if scenario_prefix(cid) not in {scenario_prefix(r["id"]) for r in rows}
+        and "_decrypt" not in cid
+    )
+    if v3_only:
+        print()
+        print("v3-only scenarios (no v2 counterpart):")
+        for cid in v3_only:
+            print(f"  {cid:<{id_w + 10}}  {fmt_ns(v3_query[cid]):>11}")
+    print()
+    print("Full report + charts: mise run report:build:v3-compare")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--threshold", type=float, default=10.0,
                     help="regression flag threshold in percent (default 10)")
+    ap.add_argument("--cli", action="store_true",
+                    help="print the v2/v3 side-by-side table to stdout and exit "
+                         "(no Markdown report, no charts)")
     args = ap.parse_args()
 
     v2_query = load_criterion_dir(V2_QUERY_DIR)
@@ -517,6 +558,11 @@ def main():
         sys.exit(1)
 
     rows = build_regression_rows(v2_query, v3_query, args.threshold)
+
+    if args.cli:
+        print_cli_table(rows, v3_query, args.threshold)
+        return
+
     tiers = sorted({tier_of(cid) for cid in v3_query}, key=int)
 
     try:

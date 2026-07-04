@@ -54,16 +54,20 @@ def format_age(mtime: float, now: float) -> str:
     return f"{delta // (86400 * 7)}w ago"
 
 
-def collect_ingest(results_dir, prefix):
+def collect_ingest(results_dir, prefix, v3=False):
     """Walk `results_dir/ingest/*_combined.json` and flatten the inner results.
+
+    With `v3=True`, scans `results_dir/ingest/v3/` instead — the EQL v3
+    ingest results live in a subdirectory so the committed v2 baseline files
+    stay untouched (see report_v3_compare.py).
 
     Returns a list of `(throughput, records, total_time, mtime, bench)`
     tuples — unsorted. Bench name (the filename minus `_combined`) is
     filtered by `prefix` (str.startswith) when given.
     """
-    ingest_dir = results_dir / "ingest"
+    ingest_dir = results_dir / "ingest" / "v3" if v3 else results_dir / "ingest"
     if not ingest_dir.is_dir():
-        sys.exit(f"no `ingest/` subdirectory under {results_dir}")
+        sys.exit(f"no `{ingest_dir}` directory")
 
     rows = []
 
@@ -99,23 +103,26 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--results-dir", type=Path, default=Path("results"),
                         help="benchmark results root (default ./results)")
+    parser.add_argument("--v3", action="store_true",
+                        help="scan the EQL v3 results (results/ingest/v3/) instead of the v2 baseline")
     parser.add_argument("prefix", nargs="?", default=None,
                         help="if given, only include benches whose name starts with this prefix "
                              "(e.g. 'encrypt_int', 'encrypt_json')")
     args = parser.parse_args()
 
-    rows = collect_ingest(args.results_dir, args.prefix)
+    rows = collect_ingest(args.results_dir, args.prefix, v3=args.v3)
     # Highest throughput first.
     rows.sort(key=lambda r: r[0], reverse=True)
 
     prefix_note = f" matching prefix '{args.prefix}'" if args.prefix else ""
+    scanned = f"{args.results_dir}/ingest/v3" if args.v3 else f"{args.results_dir}/ingest"
 
     if not rows:
-        print(f"No ingest results found under {args.results_dir}/ingest{prefix_note}.")
+        print(f"No ingest results found under {scanned}{prefix_note}.")
         return
 
     print(f"All {len(rows)} ingest scenarios{prefix_note} "
-          f"(scanned {args.results_dir}/ingest), highest throughput first:")
+          f"(scanned {scanned}), highest throughput first:")
     print()
 
     now = time.time()

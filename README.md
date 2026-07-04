@@ -33,8 +33,17 @@ mise run bench:v3:query:all 10000     # arg = max tier (10000 | 100000 | 1000000
 # Ingest benches (hyperfine, same tiers as v2)
 mise run bench:v3:ingest
 
-# v3-vs-v2 + encrypted-vs-plaintext report and charts
+# Terminal overviews (v3 siblings of report / report:slow / report:ingest,
+# which scan only the v2 baseline results)
+mise run report:v3
+mise run report:v3:slow [ms]
+mise run report:v3:ingest
+
+# v2-vs-v3 side-by-side on the CLI (medians + delta per scenario/tier)
 mise run report:v3-compare
+
+# Full comparison artifacts: report/V3_COMPARISON.md + report/v3/ charts
+mise run report:build:v3-compare
 ```
 
 v3 payloads are produced by converting the pinned cipherstash-client's v2.3

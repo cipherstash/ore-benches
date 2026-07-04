@@ -1045,7 +1045,35 @@ done
 mise run bench:v3:query:smoke
 """
 
+[tasks."report:v3"]
+description = "Overview of EQL v3 query results — median per scenario, slowest first (v3 sibling of `report`). Optional first arg is a bench-id prefix filter."
+run = """
+#!/usr/bin/env bash
+python3 find_slow_queries.py --all --v3 "$@"
+"""
+
+[tasks."report:v3:slow"]
+description = "EQL v3 queries slower than N ms (default 100; v3 sibling of `report:slow`)"
+run = """
+#!/usr/bin/env bash
+python3 find_slow_queries.py --v3 --ms "${1:-100}"
+"""
+
+[tasks."report:v3:ingest"]
+description = "Overview of EQL v3 ingest throughput (v3 sibling of `report:ingest`)"
+run = """
+#!/usr/bin/env bash
+python3 report_ingest.py --v3
+"""
+
 [tasks."report:v3-compare"]
+description = "Side-by-side v2/v3 comparison on the CLI (medians + delta per scenario/tier). Optional arg = regression threshold percent."
+run = """
+#!/usr/bin/env bash
+python3 report_v3_compare.py --cli --threshold "${1:-10}"
+"""
+
+[tasks."report:build:v3-compare"]
 description = "Generate the EQL v3 vs v2 comparison report + charts (report/V3_COMPARISON.md, report/v3/*)"
 run = """
 #!/usr/bin/env bash
