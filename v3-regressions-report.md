@@ -1,5 +1,28 @@
 # EQL v3 Regression Analysis — Scenario Deep-Dives
 
+> **STATUS (2026-07-04): both fixes merged upstream and verified end-to-end.**
+> EQL PRs [#357](https://github.com/cipherstash/encrypt-query-language/pull/357)
+> (plpgsql opclass helpers, issue #353) and
+> [#358](https://github.com/cipherstash/encrypt-query-language/pull/358)
+> (inline `jsonb_entry` CHECK + plpgsql `jsonb_query` validator, issue #354)
+> are merged to `eql_v3`. The bench DB was patched to the release-tip SQL
+> surface (verified object-identical to a fresh tip install) and the affected
+> families re-run at all tiers. 1M results:
+>
+> | Scenario | v2 | v3 pre-fix | v3 now |
+> |---|---|---|---|
+> | ORE/range_lt_ordered_10 | 0.513 ms | 0.736 ms (+43%) | **0.548 ms (+6.8%)** |
+> | COMBO/bloom_ore_order_limit | 16.64 ms | 22.70 ms (+36%) | **14.21 ms (−14.6%)** |
+> | JSON/field_eq/functional | 0.106 ms | 0.130 ms (+19%) | **0.109 ms (+3.4%)** |
+> | JSON/field_order/functional | 0.357 ms | 0.520 ms (+45%) | **0.272 ms (−23.7%)** |
+>
+> Flagged regressions across all 96 scenario/tier pairs: 14 → **3** (bloom
+> GIN at two tiers — array_ops vs v2's dedicated opclass, small absolute
+> deltas — and the ordered scan's residual at 10k only, consistent with the
+> stored-envelope needle cost tracked as issue #356 / CIP-3383). The open
+> items are the design-level issues: #355 (text domain gap) and #356
+> (k="q" query payloads).
+
 Companion to the auto-generated [`report/V3_COMPARISON.md`](report/V3_COMPARISON.md).
 That report flags *what* moved; this document works through flagged scenarios one
 at a time — the exact queries both versions ran, what actually differs between

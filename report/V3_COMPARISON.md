@@ -14,106 +14,106 @@ Methodology notes:
 
 ## Query scenarios: v3 vs v2
 
-96 comparable scenario/tier pairs — **14 regressions**, 21 improvements beyond ±10%.
+96 comparable scenario/tier pairs — **3 regressions**, 29 improvements beyond ±10%.
 
 | Scenario | Tier | v2 median | v3 median | Δ | Flag | Note |
 |---|---|---|---|---|---|---|
-| JSON/json/field_eq/extractor | 1000000 | 463.3 µs | 82.27 ms | +17658.4% | ⚠️ semantics changed | generic-plan GIN + every-row needle artifact (see report notes) |
-| JSON/json/field_eq/extractor | 100000 | 466.7 µs | 5.77 ms | +1137.3% | ⚠️ semantics changed | generic-plan GIN + every-row needle artifact (see report notes) |
-| JSON/json/field_eq/extractor | 10000 | 496.8 µs | 1.42 ms | +185.9% | ⚠️ semantics changed | generic-plan GIN + every-row needle artifact (see report notes) |
-| JSON/json/contains/functional | 10000 | 237.4 µs | 465.1 µs | +95.9% | ⚠️ semantics changed | v2 jsonb_array recipe → v3 to_ste_vec_query GIN recipe |
-| COMBO/combo/bloom_ore_order_limit | 10000 | 286.9 µs | 524.6 µs | +82.8% | ⚠️ semantics changed | v2 LIKE → v3 @> |
-| JSON/json/field_order/functional | 100000 | 306.2 µs | 525.6 µs | +71.6% | 🔴 REGRESSION |  |
-| JSON/json/contains/functional | 100000 | 279.9 µs | 477.0 µs | +70.4% | ⚠️ semantics changed | v2 jsonb_array recipe → v3 to_ste_vec_query GIN recipe |
-| JSON/json/field_order/functional | 10000 | 317.9 µs | 515.3 µs | +62.1% | 🔴 REGRESSION |  |
-| ORE/ore/range_lt_ordered_10 | 10000 | 480.9 µs | 759.6 µs | +57.9% | 🔴 REGRESSION |  |
-| ORE/ore/range_lt_ordered_10 | 100000 | 502.4 µs | 735.3 µs | +46.3% | 🔴 REGRESSION |  |
-| JSON/json/field_order/functional | 1000000 | 356.7 µs | 515.2 µs | +44.4% | 🔴 REGRESSION |  |
-| ORE/ore/range_lt_ordered_10 | 1000000 | 513.2 µs | 735.5 µs | +43.3% | 🔴 REGRESSION |  |
-| COMBO/combo/bloom_ore_order_limit | 1000000 | 16.64 ms | 22.70 ms | +36.4% | ⚠️ semantics changed | v2 LIKE → v3 @> |
-| COMBO/combo/bloom_ore_order_limit | 100000 | 2.08 ms | 2.78 ms | +33.5% | ⚠️ semantics changed | v2 LIKE → v3 @> |
-| COMBO/combo/top_n_filtered_group_by | 10000 | 178.4 µs | 230.9 µs | +29.4% | ⚠️ semantics changed | v2 LIKE → v3 @> |
-| COMBO/combo/filtered_group_by | 10000 | 178.5 µs | 230.5 µs | +29.1% | ⚠️ semantics changed | v2 LIKE → v3 @> |
+| JSON/json/field_eq/extractor | 1000000 | 463.3 µs | 56.38 ms | +12069.9% | ⚠️ semantics changed | generic-plan GIN + every-row needle artifact (see report notes) |
+| JSON/json/field_eq/extractor | 100000 | 466.7 µs | 4.17 ms | +793.8% | ⚠️ semantics changed | generic-plan GIN + every-row needle artifact (see report notes) |
+| JSON/json/field_eq/extractor | 10000 | 496.8 µs | 1.22 ms | +145.6% | ⚠️ semantics changed | generic-plan GIN + every-row needle artifact (see report notes) |
+| COMBO/combo/bloom_ore_order_limit | 10000 | 286.9 µs | 445.0 µs | +55.1% | ⚠️ semantics changed | v2 LIKE → v3 @> |
+| JSON/json/contains/functional | 10000 | 237.4 µs | 324.1 µs | +36.5% | ⚠️ semantics changed | v2 jsonb_array recipe → v3 to_ste_vec_query GIN recipe |
+| COMBO/combo/top_n_filtered_group_by | 10000 | 178.4 µs | 235.4 µs | +31.9% | ⚠️ semantics changed | v2 LIKE → v3 @> |
 | MATCH/match/eql_cast_firstname | 10000 | 152.3 µs | 194.2 µs | +27.5% | ⚠️ semantics changed | v2 LIKE → v3 @> (no LIKE operator in v3; same bloom semantics) |
-| JSON/json/field_eq/functional | 10000 | 104.8 µs | 126.4 µs | +20.6% | 🔴 REGRESSION | same btree plan as v2 (needle matches every row in both versions) |
+| COMBO/combo/filtered_group_by | 10000 | 178.5 µs | 226.9 µs | +27.1% | ⚠️ semantics changed | v2 LIKE → v3 @> |
 | EXACT/exact/eql_hash | 100000 | 102.9 µs | 123.6 µs | +20.1% | ⚠️ semantics changed | index type changed: v2 hash → v3 btree on eq_term |
-| JSON/json/field_eq/functional | 1000000 | 105.8 µs | 126.4 µs | +19.5% | 🔴 REGRESSION | same btree plan as v2 (needle matches every row in both versions) |
 | MATCH/match/eql_bloom | 10000 | 405.4 µs | 483.4 µs | +19.2% | 🔴 REGRESSION | v3 GIN uses native array_ops on the bloom term (no shipped opclass) |
-| JSON/json/field_eq/functional | 100000 | 107.4 µs | 127.6 µs | +18.9% | 🔴 REGRESSION | same btree plan as v2 (needle matches every row in both versions) |
-| JSON/json/field_eq/bare | 100000 | 106.8 µs | 125.5 µs | +17.5% | 🔴 REGRESSION | same btree plan as v2 (needle matches every row in both versions) |
-| JSON/json/field_eq/bare | 10000 | 109.3 µs | 125.7 µs | +15.0% | 🔴 REGRESSION | same btree plan as v2 (needle matches every row in both versions) |
+| ORE/ore/range_lt_ordered_10 | 10000 | 480.9 µs | 550.2 µs | +14.4% | 🔴 REGRESSION |  |
 | EXACT/exact/eql_hash | 10000 | 108.7 µs | 124.2 µs | +14.2% | ⚠️ semantics changed | index type changed: v2 hash → v3 btree on eq_term |
-| JSON/json/field_eq/bare | 1000000 | 109.0 µs | 124.2 µs | +14.0% | 🔴 REGRESSION | same btree plan as v2 (needle matches every row in both versions) |
-| COMBO/combo/filtered_group_by | 100000 | 665.2 µs | 749.5 µs | +12.7% | ⚠️ semantics changed | v2 LIKE → v3 @> |
-| JSON/json/contains/functional | 1000000 | 431.5 µs | 485.3 µs | +12.5% | ⚠️ semantics changed | v2 jsonb_array recipe → v3 to_ste_vec_query GIN recipe |
+| COMBO/combo/filtered_group_by | 100000 | 665.2 µs | 739.0 µs | +11.1% | ⚠️ semantics changed | v2 LIKE → v3 @> |
 | MATCH/match/eql_cast_lastname | 10000 | 439.7 µs | 488.4 µs | +11.1% | ⚠️ semantics changed | v2 LIKE → v3 @> (no LIKE operator in v3; same bloom semantics) |
 | EXACT/exact/eql_hash | 1000000 | 104.6 µs | 116.1 µs | +11.0% | ⚠️ semantics changed | index type changed: v2 hash → v3 btree on eq_term |
 | MATCH/match_decrypt/eql_bloom | 100000 | 25.70 ms | 28.38 ms | +10.4% | 🔴 REGRESSION |  |
+| JSON/json/field_eq/bare | 10000 | 109.3 µs | 117.8 µs | +7.8% |  | same btree plan as v2 (needle matches every row in both versions) |
 | MATCH/match/eql_bloom | 100000 | 1.75 ms | 1.89 ms | +7.7% |  | v3 GIN uses native array_ops on the bloom term (no shipped opclass) |
 | MATCH/match/eql_cast_lastname | 1000000 | 14.40 ms | 15.42 ms | +7.0% | ⚠️ semantics changed | v2 LIKE → v3 @> (no LIKE operator in v3; same bloom semantics) |
+| ORE/ore/range_lt_ordered_10 | 1000000 | 513.2 µs | 548.2 µs | +6.8% |  |  |
 | EXACT/exact/eql_cast | 100000 | 113.5 µs | 121.0 µs | +6.6% |  | v3 string rows are wider (text_search adds an ORE term v2 didn't carry) |
 | MATCH/match/eql_bloom | 1000000 | 14.47 ms | 15.41 ms | +6.5% |  | v3 GIN uses native array_ops on the bloom term (no shipped opclass) |
+| ORE/ore/range_lt_ordered_10 | 100000 | 502.4 µs | 532.9 µs | +6.1% |  |  |
+| JSON/json/field_eq/functional | 10000 | 104.8 µs | 110.7 µs | +5.6% |  | same btree plan as v2 (needle matches every row in both versions) |
 | EXACT/exact_decrypt/eql_hash | 100000 | 23.94 ms | 25.19 ms | +5.2% | ⚠️ semantics changed | index type changed: v2 hash → v3 btree on eq_term |
 | GROUP_BY/group_by/low_cardinality_groups_plaintext | 100000 | 9.03 ms | 9.47 ms | +4.9% |  |  |
 | GROUP_BY/group_by/top_n_groups_plaintext | 100000 | 9.43 ms | 9.89 ms | +4.9% |  |  |
+| JSON/json/field_eq/bare | 100000 | 106.8 µs | 112.0 µs | +4.9% |  | same btree plan as v2 (needle matches every row in both versions) |
 | EXACT/exact_decrypt/eql_hash | 1000000 | 23.64 ms | 24.78 ms | +4.8% | ⚠️ semantics changed | index type changed: v2 hash → v3 btree on eq_term |
 | EXACT/exact_decrypt/eql_cast | 1000000 | 23.88 ms | 24.82 ms | +3.9% |  |  |
+| JSON/json/field_eq/functional | 1000000 | 105.8 µs | 109.4 µs | +3.4% |  | same btree plan as v2 (needle matches every row in both versions) |
 | EXACT/exact/eql_cast | 10000 | 119.3 µs | 123.4 µs | +3.4% |  | v3 string rows are wider (text_search adds an ORE term v2 didn't carry) |
 | MATCH/match/eql_cast_lastname | 100000 | 1.79 ms | 1.85 ms | +3.3% | ⚠️ semantics changed | v2 LIKE → v3 @> (no LIKE operator in v3; same bloom semantics) |
+| JSON/json/contains/functional | 100000 | 279.9 µs | 289.1 µs | +3.3% | ⚠️ semantics changed | v2 jsonb_array recipe → v3 to_ste_vec_query GIN recipe |
+| JSON/json/field_eq/functional | 100000 | 107.4 µs | 110.8 µs | +3.2% |  | same btree plan as v2 (needle matches every row in both versions) |
 | EXACT/exact_decrypt/eql_cast | 100000 | 24.08 ms | 24.72 ms | +2.6% |  |  |
+| COMBO/combo/top_n_filtered_group_by | 1000000 | 5.29 ms | 5.42 ms | +2.6% | ⚠️ semantics changed | v2 LIKE → v3 @> |
 | MATCH/match_decrypt/eql_cast_firstname | 10000 | 24.26 ms | 24.87 ms | +2.5% | ⚠️ semantics changed | v2 LIKE → v3 @> |
 | MATCH/match_decrypt/eql_cast_firstname | 1000000 | 30.42 ms | 31.08 ms | +2.2% | ⚠️ semantics changed | v2 LIKE → v3 @> |
 | EXACT/exact_decrypt/eql_hash | 10000 | 23.96 ms | 24.32 ms | +1.5% | ⚠️ semantics changed | index type changed: v2 hash → v3 btree on eq_term |
 | EXACT/exact_decrypt/eql_cast | 10000 | 24.06 ms | 24.32 ms | +1.1% |  |  |
 | MATCH/match_decrypt/eql_cast_lastname | 100000 | 27.84 ms | 28.14 ms | +1.1% | ⚠️ semantics changed | v2 LIKE → v3 @> |
-| COMBO/combo/top_n_filtered_group_by | 1000000 | 5.29 ms | 5.34 ms | +1.0% | ⚠️ semantics changed | v2 LIKE → v3 @> |
-| ORE/ore_decrypt/range_gt_10 | 100000 | 25.72 ms | 25.90 ms | +0.7% |  |  |
 | GROUP_BY/group_by/top_n_groups_plaintext | 10000 | 1.20 ms | 1.20 ms | +0.5% |  |  |
+| JSON/json/field_eq/bare | 1000000 | 109.0 µs | 109.4 µs | +0.4% |  | same btree plan as v2 (needle matches every row in both versions) |
 | MATCH/match_decrypt/eql_cast_lastname | 10000 | 26.13 ms | 26.22 ms | +0.4% | ⚠️ semantics changed | v2 LIKE → v3 @> |
 | EXACT/exact/eql_cast | 1000000 | 115.1 µs | 115.2 µs | +0.1% |  | v3 string rows are wider (text_search adds an ORE term v2 didn't carry) |
 | GROUP_BY/group_by/top_n_groups_encrypted | 1000000 | 93.01 ms | 92.54 ms | -0.5% |  |  |
 | GROUP_BY/group_by/low_cardinality_groups_plaintext | 10000 | 1.16 ms | 1.14 ms | -1.9% |  |  |
 | MATCH/match_decrypt/eql_bloom | 10000 | 26.41 ms | 25.89 ms | -1.9% |  |  |
 | MATCH/match_decrypt/eql_cast_firstname | 100000 | 26.41 ms | 25.86 ms | -2.1% | ⚠️ semantics changed | v2 LIKE → v3 @> |
+| COMBO/combo/bloom_ore_order_limit | 100000 | 2.08 ms | 2.03 ms | -2.5% | ⚠️ semantics changed | v2 LIKE → v3 @> |
+| ORE/ore_decrypt/range_gt_10 | 100000 | 25.72 ms | 25.02 ms | -2.7% |  |  |
 | MATCH/match_decrypt/eql_cast_lastname | 1000000 | 39.48 ms | 38.34 ms | -2.9% | ⚠️ semantics changed | v2 LIKE → v3 @> |
 | MATCH/match_decrypt/eql_bloom | 1000000 | 39.93 ms | 38.76 ms | -2.9% |  |  |
-| ORE/ore_decrypt/range_lt_ordered_10 | 1000000 | 26.86 ms | 25.88 ms | -3.7% |  |  |
-| ORE/ore/range_gt_10 | 100000 | 573.5 µs | 550.2 µs | -4.1% |  |  |
 | GROUP_BY/group_by/low_cardinality_groups_encrypted | 1000000 | 92.57 ms | 88.45 ms | -4.5% |  |  |
 | GROUP_BY/group_by/top_n_groups_plaintext | 1000000 | 40.21 ms | 38.37 ms | -4.6% |  |  |
-| ORE/ore_decrypt/range_gt_10 | 1000000 | 27.04 ms | 25.69 ms | -5.0% |  |  |
+| ORE/ore_decrypt/range_lt_10 | 1000000 | 26.97 ms | 25.66 ms | -4.9% |  |  |
+| ORE/ore_decrypt/range_gt_10 | 1000000 | 27.04 ms | 25.70 ms | -4.9% |  |  |
 | GROUP_BY/group_by/low_cardinality_groups_plaintext | 1000000 | 39.05 ms | 37.06 ms | -5.1% |  |  |
-| ORE/ore_decrypt/range_lt_10 | 1000000 | 26.97 ms | 25.56 ms | -5.2% |  |  |
 | MATCH/match/eql_cast_firstname | 100000 | 633.3 µs | 596.5 µs | -5.8% | ⚠️ semantics changed | v2 LIKE → v3 @> (no LIKE operator in v3; same bloom semantics) |
-| ORE/ore_decrypt/range_lt_ordered_10 | 10000 | 28.42 ms | 26.21 ms | -7.8% |  |  |
-| ORE/ore/range_lt_10 | 10000 | 595.5 µs | 546.0 µs | -8.3% |  |  |
-| ORE/ore_decrypt/range_lt_10 | 10000 | 28.88 ms | 26.34 ms | -8.8% |  |  |
-| ORE/ore/range_lt_10 | 1000000 | 577.0 µs | 521.6 µs | -9.6% |  |  |
-| ORE/ore_decrypt/range_gt_10 | 10000 | 29.35 ms | 26.42 ms | -10.0% |  |  |
+| ORE/ore_decrypt/range_lt_ordered_10 | 1000000 | 26.86 ms | 25.24 ms | -6.0% |  |  |
+| JSON/json/contains/functional | 1000000 | 431.5 µs | 405.3 µs | -6.1% | ⚠️ semantics changed | v2 jsonb_array recipe → v3 to_ste_vec_query GIN recipe |
+| ORE/ore_decrypt/range_lt_ordered_10 | 10000 | 28.42 ms | 25.99 ms | -8.6% |  |  |
 | MATCH/match/eql_cast_firstname | 1000000 | 3.68 ms | 3.29 ms | -10.6% | ⚠️ semantics changed | v2 LIKE → v3 @> (no LIKE operator in v3; same bloom semantics) |
 | GROUP_BY/group_by/top_n_groups_encrypted | 100000 | 20.28 ms | 18.07 ms | -10.9% | 🟢 improvement |  |
 | GROUP_BY/group_by/low_cardinality_groups_encrypted | 100000 | 20.24 ms | 18.01 ms | -11.0% | 🟢 improvement |  |
-| ORE/ore_decrypt/range_lt_ordered_10 | 100000 | 29.32 ms | 25.93 ms | -11.6% | 🟢 improvement |  |
-| ORE/ore_decrypt/range_lt_10 | 100000 | 29.44 ms | 25.98 ms | -11.8% | 🟢 improvement |  |
+| ORE/ore_decrypt/range_lt_10 | 10000 | 28.88 ms | 25.66 ms | -11.1% | 🟢 improvement |  |
+| ORE/ore_decrypt/range_gt_10 | 10000 | 29.35 ms | 25.81 ms | -12.1% | 🟢 improvement |  |
 | GROUP_BY/group_by/low_cardinality_groups_encrypted | 10000 | 2.22 ms | 1.95 ms | -12.4% | 🟢 improvement |  |
-| ORE/ore_decrypt/range_gt_100 | 100000 | 42.13 ms | 36.67 ms | -12.9% | 🟢 improvement |  |
+| ORE/ore_decrypt/range_gt_100 | 100000 | 42.13 ms | 36.58 ms | -13.2% | 🟢 improvement |  |
+| ORE/ore_decrypt/range_lt_ordered_10 | 100000 | 29.32 ms | 25.41 ms | -13.3% | 🟢 improvement |  |
 | GROUP_BY/group_by/top_n_groups_encrypted | 10000 | 2.30 ms | 1.99 ms | -13.4% | 🟢 improvement |  |
-| ORE/ore/range_gt_10 | 10000 | 624.6 µs | 538.8 µs | -13.7% | 🟢 improvement |  |
-| ORE/ore/range_gt_10 | 1000000 | 694.1 µs | 578.6 µs | -16.6% | 🟢 improvement |  |
-| COMBO/combo/filtered_group_by | 1000000 | 6.40 ms | 5.30 ms | -17.1% | ⚠️ semantics changed | v2 LIKE → v3 @> |
-| ORE/ore/range_lt_10 | 100000 | 655.1 µs | 536.8 µs | -18.1% | 🟢 improvement |  |
-| ORE/ore_decrypt/range_lt_100 | 1000000 | 45.47 ms | 37.13 ms | -18.4% | 🟢 improvement |  |
-| ORE/ore_decrypt/range_lt_100 | 100000 | 46.19 ms | 37.02 ms | -19.9% | 🟢 improvement |  |
-| ORE/ore_decrypt/range_lt_100 | 10000 | 46.05 ms | 36.26 ms | -21.2% | 🟢 improvement |  |
-| ORE/ore_decrypt/range_gt_100 | 10000 | 46.26 ms | 35.99 ms | -22.2% | 🟢 improvement |  |
-| ORE/ore_decrypt/range_gt_100 | 1000000 | 47.06 ms | 35.00 ms | -25.6% | 🟢 improvement |  |
-| COMBO/combo/top_n_filtered_group_by | 100000 | 1.03 ms | 718.8 µs | -30.5% | ⚠️ semantics changed | v2 LIKE → v3 @> |
-| ORE/ore/range_lt_100 | 10000 | 3.93 ms | 988.9 µs | -74.8% | 🟢 improvement |  |
-| ORE/ore/range_lt_100 | 100000 | 3.87 ms | 970.2 µs | -74.9% | 🟢 improvement |  |
-| ORE/ore/range_gt_100 | 1000000 | 4.10 ms | 1.01 ms | -75.4% | 🟢 improvement |  |
-| ORE/ore/range_lt_100 | 1000000 | 4.06 ms | 990.4 µs | -75.6% | 🟢 improvement |  |
-| ORE/ore/range_gt_100 | 100000 | 4.16 ms | 1.01 ms | -75.8% | 🟢 improvement |  |
-| ORE/ore/range_gt_100 | 10000 | 4.04 ms | 962.2 µs | -76.2% | 🟢 improvement |  |
+| ORE/ore/range_gt_10 | 100000 | 573.5 µs | 492.5 µs | -14.1% | 🟢 improvement |  |
+| JSON/json/field_order/functional | 100000 | 306.2 µs | 261.5 µs | -14.6% | 🟢 improvement |  |
+| COMBO/combo/bloom_ore_order_limit | 1000000 | 16.64 ms | 14.21 ms | -14.6% | ⚠️ semantics changed | v2 LIKE → v3 @> |
+| ORE/ore_decrypt/range_lt_10 | 100000 | 29.44 ms | 25.11 ms | -14.7% | 🟢 improvement |  |
+| COMBO/combo/filtered_group_by | 1000000 | 6.40 ms | 5.27 ms | -17.6% | ⚠️ semantics changed | v2 LIKE → v3 @> |
+| ORE/ore_decrypt/range_lt_100 | 10000 | 46.05 ms | 37.86 ms | -17.8% | 🟢 improvement |  |
+| ORE/ore/range_lt_10 | 1000000 | 577.0 µs | 473.8 µs | -17.9% | 🟢 improvement |  |
+| ORE/ore_decrypt/range_gt_100 | 10000 | 46.26 ms | 37.15 ms | -19.7% | 🟢 improvement |  |
+| ORE/ore/range_gt_10 | 10000 | 624.6 µs | 500.5 µs | -19.9% | 🟢 improvement |  |
+| ORE/ore_decrypt/range_lt_100 | 100000 | 46.19 ms | 36.95 ms | -20.0% | 🟢 improvement |  |
+| ORE/ore/range_lt_10 | 10000 | 595.5 µs | 472.7 µs | -20.6% | 🟢 improvement |  |
+| ORE/ore/range_gt_10 | 1000000 | 694.1 µs | 547.6 µs | -21.1% | 🟢 improvement |  |
+| JSON/json/field_order/functional | 10000 | 317.9 µs | 249.6 µs | -21.5% | 🟢 improvement |  |
+| ORE/ore_decrypt/range_lt_100 | 1000000 | 45.47 ms | 35.68 ms | -21.5% | 🟢 improvement |  |
+| ORE/ore_decrypt/range_gt_100 | 1000000 | 47.06 ms | 36.59 ms | -22.2% | 🟢 improvement |  |
+| JSON/json/field_order/functional | 1000000 | 356.7 µs | 272.3 µs | -23.7% | 🟢 improvement |  |
+| ORE/ore/range_lt_10 | 100000 | 655.1 µs | 492.4 µs | -24.8% | 🟢 improvement |  |
+| COMBO/combo/top_n_filtered_group_by | 100000 | 1.03 ms | 728.8 µs | -29.5% | ⚠️ semantics changed | v2 LIKE → v3 @> |
+| ORE/ore/range_lt_100 | 10000 | 3.93 ms | 942.1 µs | -76.0% | 🟢 improvement |  |
+| ORE/ore/range_lt_100 | 100000 | 3.87 ms | 898.2 µs | -76.8% | 🟢 improvement |  |
+| ORE/ore/range_lt_100 | 1000000 | 4.06 ms | 907.1 µs | -77.6% | 🟢 improvement |  |
+| ORE/ore/range_gt_100 | 100000 | 4.16 ms | 922.0 µs | -77.8% | 🟢 improvement |  |
+| ORE/ore/range_gt_100 | 10000 | 4.04 ms | 887.3 µs | -78.0% | 🟢 improvement |  |
+| ORE/ore/range_gt_100 | 1000000 | 4.10 ms | 893.4 µs | -78.2% | 🟢 improvement |  |
 
 ## v3-only scenarios (no v2 counterpart)
 

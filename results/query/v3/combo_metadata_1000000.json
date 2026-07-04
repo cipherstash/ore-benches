@@ -29,7 +29,7 @@
                     "Plans": [
                       {
                         "Async Capable": false,
-                        "Index Cond": "((eql_v3_internal.bloom_filter((name)::jsonb))::smallint[] @> (eql_v3_internal.bloom_filter((('{\"c\": \"mBbK1)Re5zy~Y^kE*5ZQ-++w774z@U3P87elK~Z-%;mKeY@mc06Qsl-T|3X_p)*WZoF?O@ExHism*dgW9xvXpgOaEPC_LNZq;6qtWyBEWG)cPL_Dk-y$tP`SR?}h\", \"i\": {\"c\": \"name\", \"t\": \"combo_encrypted_v3_1000000\"}, \"v\": 3, \"bf\": [1673, 1471, 1346, 943, 567, 1076], \"hm\": \"d22ac625c9c1daba9b8150da007d2b5439805886ec39577fd9ef95ffe4f86795\", \"ob\": [\"f8bc8c8c8c8c8c8c148eaac3a25aee669623505bb82c16eb29a7175a9ef4e2a737a2773bf9618cb2cd9052275e9f85cd524150b3812138804ed85eb01498ba3069836158f28bed37ea70b957eba0dedb7716b5ff06e87dd519cb5b26536c0999ca90b109bda9b2e96f77317232133257105cdbf358dc8b95db957a0530f37ae1bc4014d6d80f09c3629f302167d17deac14c0252e5205aa0cfd1b72cdca085b90a747a4ab61e29c699c1af7ce6552676105d199e182ddae94b9baf3f15f37504548ad02176d338d8d6049f6e141d12abe3ab7c0aca141c67ef45a01fb296d799e8a6c6d58655feeddc30142a0a00d30bb001ec818ec44c276f1ac0a1d8190618dcde5397247882a728aa45ca1a77c58370ec5a5f2b2b49e6176e7dbb02d8f519a335ea5b86f9855541bc1bff9f00e4384f16990e73051551cf88e08e38ea7778d25d046bba3e0ffb0a33edacc2e093f14f41ccabb265aee9318afb392c782247e3b51350822f2349419e7d8c633fc65e819fa650cab0c3c043246ffcafea25d530f90d2b224068a17f636d76222f40caff7abb1c298c9cc2\"]}'::jsonb)::eql_v3.text_search)::jsonb))::smallint[])",
+                        "Index Cond": "((eql_v3_internal.bloom_filter((name)::jsonb))::smallint[] @> (eql_v3_internal.bloom_filter((('{\"c\": \"mBbLm$5jZMmX_O$a5Z)?!oelP6&)5U1r7-ztynNTJRmAmHKPk?beO~-KuhdL6{sI^5+BEac8W4eN1VFSb2&H?X&}+qu{@!vq;6qtWyBEWG)cPL_Dk-y$tP`SR?}h\", \"i\": {\"c\": \"name\", \"t\": \"combo_encrypted_v3_1000000\"}, \"v\": 3, \"bf\": [567, 1076, 1673, 1346, 943, 1471], \"hm\": \"d22ac625c9c1daba9b8150da007d2b5439805886ec39577fd9ef95ffe4f86795\", \"ob\": [\"f8bc8c8c8c8c8c8c148eaac3a25aee669623505bb82c16eb29a7175a9ef4e2a737a2773bf9618cb2cd9052275e9f85cd524150b3812138804ed85eb01498ba3069836158f28bed37ea70b957eba0dedb7716b5ff06e87dd519cb5b26536c0999ca90b109bda9b2e96f77317232133257105cdbf358dc8b95db957a0530f37ae1bc4014d6d80f09c31eb9304c0058daa1ef476ee920613b6dbcd46c4c6f7c136f915be0e57deedf0b4b8ac658e4039abef47727e86c3dfefe592ba6d9da253afaf2673719762864d767c52bf24e3669a255df8c55c8db05e05b35640b202889960361382ffd6e5d77ba6806c89de1b99cd61f4ee2ac2ae2aa3e91a270e50f28b2f73fa784cdca2f072c7f7b48e1e13ed01bfe15f945973d524b420459b78c7a2b6ad74f15140c75d1d1ad575632d7ebdf46c51146f2c524fdfa2b356fbb44a7cb963f97f368a7aa0ea8acd853330c162525693a19e7e90d1ea6df7cf5dcfa8557ed45d5bc1e0b534f794d35c46d00ac508022da376061f8553068962c5e17c6fbd95bfa6a1a60a5da1772cb8dc456076d707885116422f66f\"]}'::jsonb)::eql_v3.text_search)::jsonb))::smallint[])",
                         "Index Name": "combo_encrypted_v3_1000000_name_match_gin_index",
                         "Node Type": "Bitmap Index Scan",
                         "Parallel Aware": false,
@@ -40,7 +40,7 @@
                         "Total Cost": 290.85
                       }
                     ],
-                    "Recheck Cond": "((eql_v3_internal.bloom_filter((name)::jsonb))::smallint[] @> (eql_v3_internal.bloom_filter((('{\"c\": \"mBbK1)Re5zy~Y^kE*5ZQ-++w774z@U3P87elK~Z-%;mKeY@mc06Qsl-T|3X_p)*WZoF?O@ExHism*dgW9xvXpgOaEPC_LNZq;6qtWyBEWG)cPL_Dk-y$tP`SR?}h\", \"i\": {\"c\": \"name\", \"t\": \"combo_encrypted_v3_1000000\"}, \"v\": 3, \"bf\": [1673, 1471, 1346, 943, 567, 1076], \"hm\": \"d22ac625c9c1daba9b8150da007d2b5439805886ec39577fd9ef95ffe4f86795\", \"ob\": [\"f8bc8c8c8c8c8c8c148eaac3a25aee669623505bb82c16eb29a7175a9ef4e2a737a2773bf9618cb2cd9052275e9f85cd524150b3812138804ed85eb01498ba3069836158f28bed37ea70b957eba0dedb7716b5ff06e87dd519cb5b26536c0999ca90b109bda9b2e96f77317232133257105cdbf358dc8b95db957a0530f37ae1bc4014d6d80f09c3629f302167d17deac14c0252e5205aa0cfd1b72cdca085b90a747a4ab61e29c699c1af7ce6552676105d199e182ddae94b9baf3f15f37504548ad02176d338d8d6049f6e141d12abe3ab7c0aca141c67ef45a01fb296d799e8a6c6d58655feeddc30142a0a00d30bb001ec818ec44c276f1ac0a1d8190618dcde5397247882a728aa45ca1a77c58370ec5a5f2b2b49e6176e7dbb02d8f519a335ea5b86f9855541bc1bff9f00e4384f16990e73051551cf88e08e38ea7778d25d046bba3e0ffb0a33edacc2e093f14f41ccabb265aee9318afb392c782247e3b51350822f2349419e7d8c633fc65e819fa650cab0c3c043246ffcafea25d530f90d2b224068a17f636d76222f40caff7abb1c298c9cc2\"]}'::jsonb)::eql_v3.text_search)::jsonb))::smallint[])",
+                    "Recheck Cond": "((eql_v3_internal.bloom_filter((name)::jsonb))::smallint[] @> (eql_v3_internal.bloom_filter((('{\"c\": \"mBbLm$5jZMmX_O$a5Z)?!oelP6&)5U1r7-ztynNTJRmAmHKPk?beO~-KuhdL6{sI^5+BEac8W4eN1VFSb2&H?X&}+qu{@!vq;6qtWyBEWG)cPL_Dk-y$tP`SR?}h\", \"i\": {\"c\": \"name\", \"t\": \"combo_encrypted_v3_1000000\"}, \"v\": 3, \"bf\": [567, 1076, 1673, 1346, 943, 1471], \"hm\": \"d22ac625c9c1daba9b8150da007d2b5439805886ec39577fd9ef95ffe4f86795\", \"ob\": [\"f8bc8c8c8c8c8c8c148eaac3a25aee669623505bb82c16eb29a7175a9ef4e2a737a2773bf9618cb2cd9052275e9f85cd524150b3812138804ed85eb01498ba3069836158f28bed37ea70b957eba0dedb7716b5ff06e87dd519cb5b26536c0999ca90b109bda9b2e96f77317232133257105cdbf358dc8b95db957a0530f37ae1bc4014d6d80f09c31eb9304c0058daa1ef476ee920613b6dbcd46c4c6f7c136f915be0e57deedf0b4b8ac658e4039abef47727e86c3dfefe592ba6d9da253afaf2673719762864d767c52bf24e3669a255df8c55c8db05e05b35640b202889960361382ffd6e5d77ba6806c89de1b99cd61f4ee2ac2ae2aa3e91a270e50f28b2f73fa784cdca2f072c7f7b48e1e13ed01bfe15f945973d524b420459b78c7a2b6ad74f15140c75d1d1ad575632d7ebdf46c51146f2c524fdfa2b356fbb44a7cb963f97f368a7aa0ea8acd853330c162525693a19e7e90d1ea6df7cf5dcfa8557ed45d5bc1e0b534f794d35c46d00ac508022da376061f8553068962c5e17c6fbd95bfa6a1a60a5da1772cb8dc456076d707885116422f66f\"]}'::jsonb)::eql_v3.text_search)::jsonb))::smallint[])",
                     "Relation Name": "combo_encrypted_v3_1000000",
                     "Startup Cost": 290.85,
                     "Total Cost": 295.61
@@ -65,21 +65,21 @@
       "parameters": [
         {
           "bf": [
+            567,
+            1076,
             1673,
-            1471,
             1346,
             943,
-            567,
-            1076
+            1471
           ],
-          "c": "mBbK1)Re5zy~Y^kE*5ZQ-++w774z@U3P87elK~Z-%;mKeY@mc06Qsl-T|3X_p)*WZoF?O@ExHism*dgW9xvXpgOaEPC_LNZq;6qtWyBEWG)cPL_Dk-y$tP`SR?}h",
+          "c": "mBbLm$5jZMmX_O$a5Z)?!oelP6&)5U1r7-ztynNTJRmAmHKPk?beO~-KuhdL6{sI^5+BEac8W4eN1VFSb2&H?X&}+qu{@!vq;6qtWyBEWG)cPL_Dk-y$tP`SR?}h",
           "hm": "d22ac625c9c1daba9b8150da007d2b5439805886ec39577fd9ef95ffe4f86795",
           "i": {
             "c": "name",
             "t": "combo_encrypted_v3_1000000"
           },
           "ob": [
-            "f8bc8c8c8c8c8c8c148eaac3a25aee669623505bb82c16eb29a7175a9ef4e2a737a2773bf9618cb2cd9052275e9f85cd524150b3812138804ed85eb01498ba3069836158f28bed37ea70b957eba0dedb7716b5ff06e87dd519cb5b26536c0999ca90b109bda9b2e96f77317232133257105cdbf358dc8b95db957a0530f37ae1bc4014d6d80f09c3629f302167d17deac14c0252e5205aa0cfd1b72cdca085b90a747a4ab61e29c699c1af7ce6552676105d199e182ddae94b9baf3f15f37504548ad02176d338d8d6049f6e141d12abe3ab7c0aca141c67ef45a01fb296d799e8a6c6d58655feeddc30142a0a00d30bb001ec818ec44c276f1ac0a1d8190618dcde5397247882a728aa45ca1a77c58370ec5a5f2b2b49e6176e7dbb02d8f519a335ea5b86f9855541bc1bff9f00e4384f16990e73051551cf88e08e38ea7778d25d046bba3e0ffb0a33edacc2e093f14f41ccabb265aee9318afb392c782247e3b51350822f2349419e7d8c633fc65e819fa650cab0c3c043246ffcafea25d530f90d2b224068a17f636d76222f40caff7abb1c298c9cc2"
+            "f8bc8c8c8c8c8c8c148eaac3a25aee669623505bb82c16eb29a7175a9ef4e2a737a2773bf9618cb2cd9052275e9f85cd524150b3812138804ed85eb01498ba3069836158f28bed37ea70b957eba0dedb7716b5ff06e87dd519cb5b26536c0999ca90b109bda9b2e96f77317232133257105cdbf358dc8b95db957a0530f37ae1bc4014d6d80f09c31eb9304c0058daa1ef476ee920613b6dbcd46c4c6f7c136f915be0e57deedf0b4b8ac658e4039abef47727e86c3dfefe592ba6d9da253afaf2673719762864d767c52bf24e3669a255df8c55c8db05e05b35640b202889960361382ffd6e5d77ba6806c89de1b99cd61f4ee2ac2ae2aa3e91a270e50f28b2f73fa784cdca2f072c7f7b48e1e13ed01bfe15f945973d524b420459b78c7a2b6ad74f15140c75d1d1ad575632d7ebdf46c51146f2c524fdfa2b356fbb44a7cb963f97f368a7aa0ea8acd853330c162525693a19e7e90d1ea6df7cf5dcfa8557ed45d5bc1e0b534f794d35c46d00ac508022da376061f8553068962c5e17c6fbd95bfa6a1a60a5da1772cb8dc456076d707885116422f66f"
           ],
           "v": 3
         }
@@ -120,7 +120,7 @@
                     "Plans": [
                       {
                         "Async Capable": false,
-                        "Index Cond": "((eql_v3_internal.bloom_filter((name)::jsonb))::smallint[] @> (eql_v3_internal.bloom_filter((('{\"c\": \"mBbJ(4##GpKrJAGIfAX6<rN6T73sS^{{;-{0E~_ri`@o1Bo{0<i6O)wYl>V51~uf}0}0VlX?S-YEe&WaU{YM$dUkiT@&OzMq;6qtWyBEWG)cPL_Dk-y$tP`SR?}h\", \"i\": {\"c\": \"name\", \"t\": \"combo_encrypted_v3_1000000\"}, \"v\": 3, \"bf\": [943, 1673, 567, 1471, 1076, 1346], \"hm\": \"d22ac625c9c1daba9b8150da007d2b5439805886ec39577fd9ef95ffe4f86795\", \"ob\": [\"f8bc8c8c8c8c8c8c148eaac3a25aee669623505bb82c16eb29a7175a9ef4e2a737a2773bf9618cb2cd9052275e9f85cd524150b3812138804ed85eb01498ba3069836158f28bed37ea70b957eba0dedb7716b5ff06e87dd519cb5b26536c0999ca90b109bda9b2e96f77317232133257105cdbf358dc8b95db957a0530f37ae1bc4014d6d80f09c30406e5a17cbd723ad32f697ab2a7326a1cdc56fe284b5d2c393d8a1deb82915daf01c0142a7b91e705b142f1e5bee5d2513d20331cc4b642fd90eba758f9fac3485e1d8a5eb46e4772bc0b6f1c40c2dfc6936eed1494cd4d591c94b5ebd164727cd767c86a5ae5364d222349552f0030ff76f7ae5ea0060b8c4b7e582d73429843a43078f2f888423bf56ce7aed6be46b3f3086bf213c3ba11fb212fd64b4586303e1b61f9465815f0b8b5c473c75bc5fed16289fa40b5f79d5e186f258396fc0da659b3a856f1bdc700475a969199c96db53995af3dcc82f59e341236150fed18f4cc2eed1ce8108349967f85b5f31ae4115c57ef12fa0b44ea5a1a95dee937e8a7f3e501ad30a2cd161ecb318a97f6\"]}'::jsonb)::eql_v3.text_search)::jsonb))::smallint[])",
+                        "Index Cond": "((eql_v3_internal.bloom_filter((name)::jsonb))::smallint[] @> (eql_v3_internal.bloom_filter((('{\"c\": \"mBbJQwbp3B%zYlG=v;T`s1X&!71os_M1IkG9(lOtt_E@h0KV0H=&i&cDtHc{tD&Mn|D8>>+f@C9^Cb&4N9!;jP12kfuYz`qq;6qtWyBEWG)cPL_Dk-y$tP`SR?}h\", \"i\": {\"c\": \"name\", \"t\": \"combo_encrypted_v3_1000000\"}, \"v\": 3, \"bf\": [567, 1076, 1673, 1471, 943, 1346], \"hm\": \"d22ac625c9c1daba9b8150da007d2b5439805886ec39577fd9ef95ffe4f86795\", \"ob\": [\"f8bc8c8c8c8c8c8c148eaac3a25aee669623505bb82c16eb29a7175a9ef4e2a737a2773bf9618cb2cd9052275e9f85cd524150b3812138804ed85eb01498ba3069836158f28bed37ea70b957eba0dedb7716b5ff06e87dd519cb5b26536c0999ca90b109bda9b2e96f77317232133257105cdbf358dc8b95db957a0530f37ae1bc4014d6d80f09c31520833f63e889efbf1100ebba908da53e1ea802c64fada0d17c72ce2e23e5562d287eed83bf7b9b52718fca27f3881625ad3f35fae4f3652d0903c693422fc1daefc94a6715d1ccd307801bec90a8b054ddf9824f16d0e10bfc83bb9fae1aca9fb4d1151f3dc246e62f0a65663d24682d0e2a210dd4156c891b22c11579007695d32bdb1c73147ff31d539319ae487a69be1dccd3df67f8f956a86923065a04136c1212ae333cdc4b3808120f6dbbe6c93bd6481f2b5083940908f755f58b6746612a0b0cbab1be5ef5eb151f72051ce7767ac342612ada5b59185288a8af6dbf1dc7c69c7078a5d83d87c7a5a1fa446d26a0d07cc0fb0e74c91aa111055fb7f2f69c1dd61f0b464a847bb9a85078f0\"]}'::jsonb)::eql_v3.text_search)::jsonb))::smallint[])",
                         "Index Name": "combo_encrypted_v3_1000000_name_match_gin_index",
                         "Node Type": "Bitmap Index Scan",
                         "Parallel Aware": false,
@@ -131,7 +131,7 @@
                         "Total Cost": 290.85
                       }
                     ],
-                    "Recheck Cond": "((eql_v3_internal.bloom_filter((name)::jsonb))::smallint[] @> (eql_v3_internal.bloom_filter((('{\"c\": \"mBbJ(4##GpKrJAGIfAX6<rN6T73sS^{{;-{0E~_ri`@o1Bo{0<i6O)wYl>V51~uf}0}0VlX?S-YEe&WaU{YM$dUkiT@&OzMq;6qtWyBEWG)cPL_Dk-y$tP`SR?}h\", \"i\": {\"c\": \"name\", \"t\": \"combo_encrypted_v3_1000000\"}, \"v\": 3, \"bf\": [943, 1673, 567, 1471, 1076, 1346], \"hm\": \"d22ac625c9c1daba9b8150da007d2b5439805886ec39577fd9ef95ffe4f86795\", \"ob\": [\"f8bc8c8c8c8c8c8c148eaac3a25aee669623505bb82c16eb29a7175a9ef4e2a737a2773bf9618cb2cd9052275e9f85cd524150b3812138804ed85eb01498ba3069836158f28bed37ea70b957eba0dedb7716b5ff06e87dd519cb5b26536c0999ca90b109bda9b2e96f77317232133257105cdbf358dc8b95db957a0530f37ae1bc4014d6d80f09c30406e5a17cbd723ad32f697ab2a7326a1cdc56fe284b5d2c393d8a1deb82915daf01c0142a7b91e705b142f1e5bee5d2513d20331cc4b642fd90eba758f9fac3485e1d8a5eb46e4772bc0b6f1c40c2dfc6936eed1494cd4d591c94b5ebd164727cd767c86a5ae5364d222349552f0030ff76f7ae5ea0060b8c4b7e582d73429843a43078f2f888423bf56ce7aed6be46b3f3086bf213c3ba11fb212fd64b4586303e1b61f9465815f0b8b5c473c75bc5fed16289fa40b5f79d5e186f258396fc0da659b3a856f1bdc700475a969199c96db53995af3dcc82f59e341236150fed18f4cc2eed1ce8108349967f85b5f31ae4115c57ef12fa0b44ea5a1a95dee937e8a7f3e501ad30a2cd161ecb318a97f6\"]}'::jsonb)::eql_v3.text_search)::jsonb))::smallint[])",
+                    "Recheck Cond": "((eql_v3_internal.bloom_filter((name)::jsonb))::smallint[] @> (eql_v3_internal.bloom_filter((('{\"c\": \"mBbJQwbp3B%zYlG=v;T`s1X&!71os_M1IkG9(lOtt_E@h0KV0H=&i&cDtHc{tD&Mn|D8>>+f@C9^Cb&4N9!;jP12kfuYz`qq;6qtWyBEWG)cPL_Dk-y$tP`SR?}h\", \"i\": {\"c\": \"name\", \"t\": \"combo_encrypted_v3_1000000\"}, \"v\": 3, \"bf\": [567, 1076, 1673, 1471, 943, 1346], \"hm\": \"d22ac625c9c1daba9b8150da007d2b5439805886ec39577fd9ef95ffe4f86795\", \"ob\": [\"f8bc8c8c8c8c8c8c148eaac3a25aee669623505bb82c16eb29a7175a9ef4e2a737a2773bf9618cb2cd9052275e9f85cd524150b3812138804ed85eb01498ba3069836158f28bed37ea70b957eba0dedb7716b5ff06e87dd519cb5b26536c0999ca90b109bda9b2e96f77317232133257105cdbf358dc8b95db957a0530f37ae1bc4014d6d80f09c31520833f63e889efbf1100ebba908da53e1ea802c64fada0d17c72ce2e23e5562d287eed83bf7b9b52718fca27f3881625ad3f35fae4f3652d0903c693422fc1daefc94a6715d1ccd307801bec90a8b054ddf9824f16d0e10bfc83bb9fae1aca9fb4d1151f3dc246e62f0a65663d24682d0e2a210dd4156c891b22c11579007695d32bdb1c73147ff31d539319ae487a69be1dccd3df67f8f956a86923065a04136c1212ae333cdc4b3808120f6dbbe6c93bd6481f2b5083940908f755f58b6746612a0b0cbab1be5ef5eb151f72051ce7767ac342612ada5b59185288a8af6dbf1dc7c69c7078a5d83d87c7a5a1fa446d26a0d07cc0fb0e74c91aa111055fb7f2f69c1dd61f0b464a847bb9a85078f0\"]}'::jsonb)::eql_v3.text_search)::jsonb))::smallint[])",
                     "Relation Name": "combo_encrypted_v3_1000000",
                     "Startup Cost": 290.85,
                     "Total Cost": 295.37
@@ -157,21 +157,21 @@
       "parameters": [
         {
           "bf": [
-            943,
-            1673,
             567,
-            1471,
             1076,
+            1673,
+            1471,
+            943,
             1346
           ],
-          "c": "mBbJ(4##GpKrJAGIfAX6<rN6T73sS^{{;-{0E~_ri`@o1Bo{0<i6O)wYl>V51~uf}0}0VlX?S-YEe&WaU{YM$dUkiT@&OzMq;6qtWyBEWG)cPL_Dk-y$tP`SR?}h",
+          "c": "mBbJQwbp3B%zYlG=v;T`s1X&!71os_M1IkG9(lOtt_E@h0KV0H=&i&cDtHc{tD&Mn|D8>>+f@C9^Cb&4N9!;jP12kfuYz`qq;6qtWyBEWG)cPL_Dk-y$tP`SR?}h",
           "hm": "d22ac625c9c1daba9b8150da007d2b5439805886ec39577fd9ef95ffe4f86795",
           "i": {
             "c": "name",
             "t": "combo_encrypted_v3_1000000"
           },
           "ob": [
-            "f8bc8c8c8c8c8c8c148eaac3a25aee669623505bb82c16eb29a7175a9ef4e2a737a2773bf9618cb2cd9052275e9f85cd524150b3812138804ed85eb01498ba3069836158f28bed37ea70b957eba0dedb7716b5ff06e87dd519cb5b26536c0999ca90b109bda9b2e96f77317232133257105cdbf358dc8b95db957a0530f37ae1bc4014d6d80f09c30406e5a17cbd723ad32f697ab2a7326a1cdc56fe284b5d2c393d8a1deb82915daf01c0142a7b91e705b142f1e5bee5d2513d20331cc4b642fd90eba758f9fac3485e1d8a5eb46e4772bc0b6f1c40c2dfc6936eed1494cd4d591c94b5ebd164727cd767c86a5ae5364d222349552f0030ff76f7ae5ea0060b8c4b7e582d73429843a43078f2f888423bf56ce7aed6be46b3f3086bf213c3ba11fb212fd64b4586303e1b61f9465815f0b8b5c473c75bc5fed16289fa40b5f79d5e186f258396fc0da659b3a856f1bdc700475a969199c96db53995af3dcc82f59e341236150fed18f4cc2eed1ce8108349967f85b5f31ae4115c57ef12fa0b44ea5a1a95dee937e8a7f3e501ad30a2cd161ecb318a97f6"
+            "f8bc8c8c8c8c8c8c148eaac3a25aee669623505bb82c16eb29a7175a9ef4e2a737a2773bf9618cb2cd9052275e9f85cd524150b3812138804ed85eb01498ba3069836158f28bed37ea70b957eba0dedb7716b5ff06e87dd519cb5b26536c0999ca90b109bda9b2e96f77317232133257105cdbf358dc8b95db957a0530f37ae1bc4014d6d80f09c31520833f63e889efbf1100ebba908da53e1ea802c64fada0d17c72ce2e23e5562d287eed83bf7b9b52718fca27f3881625ad3f35fae4f3652d0903c693422fc1daefc94a6715d1ccd307801bec90a8b054ddf9824f16d0e10bfc83bb9fae1aca9fb4d1151f3dc246e62f0a65663d24682d0e2a210dd4156c891b22c11579007695d32bdb1c73147ff31d539319ae487a69be1dccd3df67f8f956a86923065a04136c1212ae333cdc4b3808120f6dbbe6c93bd6481f2b5083940908f755f58b6746612a0b0cbab1be5ef5eb151f72051ce7767ac342612ada5b59185288a8af6dbf1dc7c69c7078a5d83d87c7a5a1fa446d26a0d07cc0fb0e74c91aa111055fb7f2f69c1dd61f0b464a847bb9a85078f0"
           ],
           "v": 3
         }
@@ -228,7 +228,7 @@
                             "Plans": [
                               {
                                 "Async Capable": false,
-                                "Index Cond": "((eql_v3_internal.bloom_filter((name)::jsonb))::smallint[] @> (eql_v3_internal.bloom_filter((('{\"c\": \"mBbK$BxHtYE=B(L3H^K1D7SCK6^>Ow2JSW4HW;CQ%eepYNu@VgfBeKCtx`yS)>-eg(>0y&9of$@;1nO)&H#W~_A-IN$bR3bq;6qtWyBEWG)cPL_Dk-y$tP`SR?}h\", \"i\": {\"c\": \"name\", \"t\": \"combo_encrypted_v3_1000000\"}, \"v\": 3, \"bf\": [943, 1076, 1471, 1673, 1346, 567], \"hm\": \"d22ac625c9c1daba9b8150da007d2b5439805886ec39577fd9ef95ffe4f86795\", \"ob\": [\"f8bc8c8c8c8c8c8c148eaac3a25aee669623505bb82c16eb29a7175a9ef4e2a737a2773bf9618cb2cd9052275e9f85cd524150b3812138804ed85eb01498ba3069836158f28bed37ea70b957eba0dedb7716b5ff06e87dd519cb5b26536c0999ca90b109bda9b2e96f77317232133257105cdbf358dc8b95db957a0530f37ae1bc4014d6d80f09c307f57283feb9ff20763992a426b095896a1764a525b9931f104a37717283645007c0650bed3c7fcf1e063ce662fbaa9a07aebdd6742e734e4bcbf18b0a858af60081e12d120a68c628e1cea45296043aab1df15cb76b9039b9c836b76ef150c2fe83d7a173e1d06018f32f99bcbd9bdbf41fb428d1dbb835335efb908bcb2bc8e0c111611d3e92514710bbb25193ea02496c0bc57c35cbb34343c3d2d84dc32364f5085f4e7d19dcbf88589aefb4ab017a6cbf52503204704575815fccab5910a6ecc013dcc9b729313667d2c948a03bfeff42e420f97dc04fbcde39cc5f7e88d4cc15a8fb964aa7980e87c8e75aa53c3820bf90d197c856578a3d2447b327f71a7aa90c56a39346921372d7c834ab2c\"]}'::jsonb)::eql_v3.text_search)::jsonb))::smallint[])",
+                                "Index Cond": "((eql_v3_internal.bloom_filter((name)::jsonb))::smallint[] @> (eql_v3_internal.bloom_filter((('{\"c\": \"mBbJ>pJEAZnpj+Al3)6J>})s06<$)i63QbPN!QR+%)$xjKFA0-F!jVB8bWXOlq3Fp55RAP@N7~yH?~>2N{5;{gUk!W{DEVmq;6qtWyBEWG)cPL_Dk-y$tP`SR?}h\", \"i\": {\"c\": \"name\", \"t\": \"combo_encrypted_v3_1000000\"}, \"v\": 3, \"bf\": [943, 567, 1471, 1673, 1346, 1076], \"hm\": \"d22ac625c9c1daba9b8150da007d2b5439805886ec39577fd9ef95ffe4f86795\", \"ob\": [\"f8bc8c8c8c8c8c8c148eaac3a25aee669623505bb82c16eb29a7175a9ef4e2a737a2773bf9618cb2cd9052275e9f85cd524150b3812138804ed85eb01498ba3069836158f28bed37ea70b957eba0dedb7716b5ff06e87dd519cb5b26536c0999ca90b109bda9b2e96f77317232133257105cdbf358dc8b95db957a0530f37ae1bc4014d6d80f09c30c32fcb9e4cb7657be4c933d57a9c3bf2aa0e0a24b18baa699cbe3c90f0a6656ab327b686a328af9821e90200efb234bbff20947a951cf6ed2b367729a962fd1349ad24ddee28c79421467ff90bf1d23f93aa22569200c48effa897507950b6f0fc33db153da9c4daae66bc97fc7b993e922c3e210d77a1db81a1b68f4288c207a770ab9924b73386641591309d87d1a2f494f0c696a6ef002a3c454e81b7653c7c3acb0e4203e1659d80473c77418dcb947cad58d8bfb031a2827e8f796f9ecf07e8510f47eb99e08394e894f9ec342c6ff900202de7da1f40937b1bbff8cd8057f07bb023b4306a25277651271e46ae1fa67866ec3f51f4e2b930cf0d3e72828f130be6bfe21d46654ef034031e20f\"]}'::jsonb)::eql_v3.text_search)::jsonb))::smallint[])",
                                 "Index Name": "combo_encrypted_v3_1000000_name_match_gin_index",
                                 "Node Type": "Bitmap Index Scan",
                                 "Parallel Aware": false,
@@ -239,7 +239,7 @@
                                 "Total Cost": 290.85
                               }
                             ],
-                            "Recheck Cond": "((eql_v3_internal.bloom_filter((name)::jsonb))::smallint[] @> (eql_v3_internal.bloom_filter((('{\"c\": \"mBbK$BxHtYE=B(L3H^K1D7SCK6^>Ow2JSW4HW;CQ%eepYNu@VgfBeKCtx`yS)>-eg(>0y&9of$@;1nO)&H#W~_A-IN$bR3bq;6qtWyBEWG)cPL_Dk-y$tP`SR?}h\", \"i\": {\"c\": \"name\", \"t\": \"combo_encrypted_v3_1000000\"}, \"v\": 3, \"bf\": [943, 1076, 1471, 1673, 1346, 567], \"hm\": \"d22ac625c9c1daba9b8150da007d2b5439805886ec39577fd9ef95ffe4f86795\", \"ob\": [\"f8bc8c8c8c8c8c8c148eaac3a25aee669623505bb82c16eb29a7175a9ef4e2a737a2773bf9618cb2cd9052275e9f85cd524150b3812138804ed85eb01498ba3069836158f28bed37ea70b957eba0dedb7716b5ff06e87dd519cb5b26536c0999ca90b109bda9b2e96f77317232133257105cdbf358dc8b95db957a0530f37ae1bc4014d6d80f09c307f57283feb9ff20763992a426b095896a1764a525b9931f104a37717283645007c0650bed3c7fcf1e063ce662fbaa9a07aebdd6742e734e4bcbf18b0a858af60081e12d120a68c628e1cea45296043aab1df15cb76b9039b9c836b76ef150c2fe83d7a173e1d06018f32f99bcbd9bdbf41fb428d1dbb835335efb908bcb2bc8e0c111611d3e92514710bbb25193ea02496c0bc57c35cbb34343c3d2d84dc32364f5085f4e7d19dcbf88589aefb4ab017a6cbf52503204704575815fccab5910a6ecc013dcc9b729313667d2c948a03bfeff42e420f97dc04fbcde39cc5f7e88d4cc15a8fb964aa7980e87c8e75aa53c3820bf90d197c856578a3d2447b327f71a7aa90c56a39346921372d7c834ab2c\"]}'::jsonb)::eql_v3.text_search)::jsonb))::smallint[])",
+                            "Recheck Cond": "((eql_v3_internal.bloom_filter((name)::jsonb))::smallint[] @> (eql_v3_internal.bloom_filter((('{\"c\": \"mBbJ>pJEAZnpj+Al3)6J>})s06<$)i63QbPN!QR+%)$xjKFA0-F!jVB8bWXOlq3Fp55RAP@N7~yH?~>2N{5;{gUk!W{DEVmq;6qtWyBEWG)cPL_Dk-y$tP`SR?}h\", \"i\": {\"c\": \"name\", \"t\": \"combo_encrypted_v3_1000000\"}, \"v\": 3, \"bf\": [943, 567, 1471, 1673, 1346, 1076], \"hm\": \"d22ac625c9c1daba9b8150da007d2b5439805886ec39577fd9ef95ffe4f86795\", \"ob\": [\"f8bc8c8c8c8c8c8c148eaac3a25aee669623505bb82c16eb29a7175a9ef4e2a737a2773bf9618cb2cd9052275e9f85cd524150b3812138804ed85eb01498ba3069836158f28bed37ea70b957eba0dedb7716b5ff06e87dd519cb5b26536c0999ca90b109bda9b2e96f77317232133257105cdbf358dc8b95db957a0530f37ae1bc4014d6d80f09c30c32fcb9e4cb7657be4c933d57a9c3bf2aa0e0a24b18baa699cbe3c90f0a6656ab327b686a328af9821e90200efb234bbff20947a951cf6ed2b367729a962fd1349ad24ddee28c79421467ff90bf1d23f93aa22569200c48effa897507950b6f0fc33db153da9c4daae66bc97fc7b993e922c3e210d77a1db81a1b68f4288c207a770ab9924b73386641591309d87d1a2f494f0c696a6ef002a3c454e81b7653c7c3acb0e4203e1659d80473c77418dcb947cad58d8bfb031a2827e8f796f9ecf07e8510f47eb99e08394e894f9ec342c6ff900202de7da1f40937b1bbff8cd8057f07bb023b4306a25277651271e46ae1fa67866ec3f51f4e2b930cf0d3e72828f130be6bfe21d46654ef034031e20f\"]}'::jsonb)::eql_v3.text_search)::jsonb))::smallint[])",
                             "Relation Name": "combo_encrypted_v3_1000000",
                             "Startup Cost": 290.85,
                             "Total Cost": 295.37
@@ -277,20 +277,20 @@
         {
           "bf": [
             943,
-            1076,
+            567,
             1471,
             1673,
             1346,
-            567
+            1076
           ],
-          "c": "mBbK$BxHtYE=B(L3H^K1D7SCK6^>Ow2JSW4HW;CQ%eepYNu@VgfBeKCtx`yS)>-eg(>0y&9of$@;1nO)&H#W~_A-IN$bR3bq;6qtWyBEWG)cPL_Dk-y$tP`SR?}h",
+          "c": "mBbJ>pJEAZnpj+Al3)6J>})s06<$)i63QbPN!QR+%)$xjKFA0-F!jVB8bWXOlq3Fp55RAP@N7~yH?~>2N{5;{gUk!W{DEVmq;6qtWyBEWG)cPL_Dk-y$tP`SR?}h",
           "hm": "d22ac625c9c1daba9b8150da007d2b5439805886ec39577fd9ef95ffe4f86795",
           "i": {
             "c": "name",
             "t": "combo_encrypted_v3_1000000"
           },
           "ob": [
-            "f8bc8c8c8c8c8c8c148eaac3a25aee669623505bb82c16eb29a7175a9ef4e2a737a2773bf9618cb2cd9052275e9f85cd524150b3812138804ed85eb01498ba3069836158f28bed37ea70b957eba0dedb7716b5ff06e87dd519cb5b26536c0999ca90b109bda9b2e96f77317232133257105cdbf358dc8b95db957a0530f37ae1bc4014d6d80f09c307f57283feb9ff20763992a426b095896a1764a525b9931f104a37717283645007c0650bed3c7fcf1e063ce662fbaa9a07aebdd6742e734e4bcbf18b0a858af60081e12d120a68c628e1cea45296043aab1df15cb76b9039b9c836b76ef150c2fe83d7a173e1d06018f32f99bcbd9bdbf41fb428d1dbb835335efb908bcb2bc8e0c111611d3e92514710bbb25193ea02496c0bc57c35cbb34343c3d2d84dc32364f5085f4e7d19dcbf88589aefb4ab017a6cbf52503204704575815fccab5910a6ecc013dcc9b729313667d2c948a03bfeff42e420f97dc04fbcde39cc5f7e88d4cc15a8fb964aa7980e87c8e75aa53c3820bf90d197c856578a3d2447b327f71a7aa90c56a39346921372d7c834ab2c"
+            "f8bc8c8c8c8c8c8c148eaac3a25aee669623505bb82c16eb29a7175a9ef4e2a737a2773bf9618cb2cd9052275e9f85cd524150b3812138804ed85eb01498ba3069836158f28bed37ea70b957eba0dedb7716b5ff06e87dd519cb5b26536c0999ca90b109bda9b2e96f77317232133257105cdbf358dc8b95db957a0530f37ae1bc4014d6d80f09c30c32fcb9e4cb7657be4c933d57a9c3bf2aa0e0a24b18baa699cbe3c90f0a6656ab327b686a328af9821e90200efb234bbff20947a951cf6ed2b367729a962fd1349ad24ddee28c79421467ff90bf1d23f93aa22569200c48effa897507950b6f0fc33db153da9c4daae66bc97fc7b993e922c3e210d77a1db81a1b68f4288c207a770ab9924b73386641591309d87d1a2f494f0c696a6ef002a3c454e81b7653c7c3acb0e4203e1659d80473c77418dcb947cad58d8bfb031a2827e8f796f9ecf07e8510f47eb99e08394e894f9ec342c6ff900202de7da1f40937b1bbff8cd8057f07bb023b4306a25277651271e46ae1fa67866ec3f51f4e2b930cf0d3e72828f130be6bfe21d46654ef034031e20f"
           ],
           "v": 3
         }
