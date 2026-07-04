@@ -6,10 +6,9 @@ Performance benchmarks for CipherStash's searchable encryption operations using 
 
 The latest benchmark results are available in the [`report/`](report/) directory:
 
-- **[Benchmark Report](report/BENCHMARK_REPORT.md)** - Comprehensive report with performance tables and charts
-- Includes ingest throughput, query performance, SQL statements, and index configurations
-- Performance indicators (⚠️) highlight queries exceeding 100ms
-- **[EQL v3 vs v2 Comparison](report/V3_COMPARISON.md)** - regression tables, index-engagement audit, and docs/marketing charts (`report/v3/`)
+- **[Benchmark Report](report/BENCHMARK_REPORT.md)** - the main report (EQL v3): ingest throughput, per-family query performance, SQL/plans/index configs, plus comparison sections vs EQL 2.3 and vs plaintext PostgreSQL
+- **[EQL v3 vs v2 Comparison](report/V3_COMPARISON.md)** - full regression tables, index-engagement audit, and docs/marketing charts (`report/v3/`)
+- **[EQL 2.3 report archive](report/v2/BENCHMARK_REPORT.md)** - the frozen v2 baseline report
 
 ## 🆕 EQL v3 benches
 
@@ -45,9 +44,8 @@ mise run report:v3-compare
 # Full comparison artifacts: report/V3_COMPARISON.md + report/v3/ charts
 mise run report:build:v3-compare
 
-# Full v3 benchmark report (per-family pages, SQL, plans, index configs —
-# the v3 sibling of report:build) into report/v3/full/
-mise run report:build:v3
+# Main report (EQL v3 numbers + v2/plaintext comparison sections)
+mise run report:build
 ```
 
 v3 payloads are produced by converting the pinned cipherstash-client's v2.3

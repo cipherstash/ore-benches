@@ -1073,12 +1073,12 @@ run = """
 python3 report_v3_compare.py --cli --threshold "${1:-10}"
 """
 
-[tasks."report:build:v3"]
-description = "Build the full EQL v3 benchmark report (Markdown + charts) into report/v3/full/"
+[tasks."report:build:v2"]
+description = "Rebuild the archived EQL 2.3 report (report/v2/) from the committed v2 baseline results"
 run = """
 #!/usr/bin/env bash
 set -e
-python3 report_benchmarks.py --v3
+python3 report_benchmarks.py --v2
 """
 
 [tasks."report:build:v3-compare"]
@@ -1187,7 +1187,7 @@ python3 find_slow_queries.py --all "$@"
 """
 
 [tasks."report:build"]
-description = "Build the full benchmark report file (Markdown)"
+description = "Build the main benchmark report (EQL v3 numbers + v2/plaintext comparison sections)"
 run = """
 #!/usr/bin/env bash
 set -e
