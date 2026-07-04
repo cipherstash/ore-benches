@@ -8,24 +8,24 @@
             "Node Type": "Limit",
             "Parallel Aware": false,
             "Plan Rows": 10,
-            "Plan Width": 276,
+            "Plan Width": 310,
             "Plans": [
               {
                 "Alias": "integer_encrypted_ope_v3_100000",
                 "Async Capable": false,
-                "Filter": "(decode(((value)::jsonb ->> 'op'::text), 'hex'::text) > decode(((('{\"c\": \"mBbLh7yPY4e(E72Hg5dc7~n9(7A$bY&&zDlTvlSmuBPytwSK}EYh;(iAiGC!3Y4*t&&Oq4gE(X%j`(F@WDa`oxgP?9c-qyGJEeAEY;|SC5al#Uy4?0l?zPD$ZD>~0Vg\", \"i\": {\"c\": \"value\", \"t\": \"integer_encrypted_ope_v3_100000\"}, \"v\": 3, \"op\": \"00000000000000000000000080001388\"}'::jsonb)::eql_v3.integer_ord_ope)::jsonb ->> 'op'::text), 'hex'::text))",
+                "Filter": "(decode(((value)::jsonb ->> 'op'::text), 'hex'::text) > decode(((('{\"c\": \"mBbLUOFLc3)bIR{2Figc`iD!z7OjNm>g^~x<$qp%vg_ChJFEN4#%i6!AfSo;-X(?(yP1(GnJ1gBt0N{2KYx-`=VAd6Z_<Z-Y^8Q#Y;|SC5al#Uy4?0l?zPD$ZD>~0Vg\", \"i\": {\"c\": \"value\", \"t\": \"integer_encrypted_ope_v3_100000\"}, \"v\": 3, \"op\": \"00b6e0adc426b1981b4d97c99b6e1fb1299fdf7dd20768335b46da223ac660dd93\"}'::jsonb)::eql_v3.integer_ord_ope)::jsonb ->> 'op'::text), 'hex'::text))",
                 "Node Type": "Seq Scan",
                 "Parallel Aware": false,
                 "Parent Relationship": "Outer",
-                "Plan Rows": 50136,
-                "Plan Width": 276,
+                "Plan Rows": 49000,
+                "Plan Width": 310,
                 "Relation Name": "integer_encrypted_ope_v3_100000",
                 "Startup Cost": 0.0,
-                "Total Cost": 6347.0
+                "Total Cost": 6667.0
               }
             ],
             "Startup Cost": 0.0,
-            "Total Cost": 1.27
+            "Total Cost": 1.36
           }
         }
       ],
@@ -33,12 +33,12 @@
       "indexes_used": [],
       "parameters": [
         {
-          "c": "mBbLh7yPY4e(E72Hg5dc7~n9(7A$bY&&zDlTvlSmuBPytwSK}EYh;(iAiGC!3Y4*t&&Oq4gE(X%j`(F@WDa`oxgP?9c-qyGJEeAEY;|SC5al#Uy4?0l?zPD$ZD>~0Vg",
+          "c": "mBbLUOFLc3)bIR{2Figc`iD!z7OjNm>g^~x<$qp%vg_ChJFEN4#%i6!AfSo;-X(?(yP1(GnJ1gBt0N{2KYx-`=VAd6Z_<Z-Y^8Q#Y;|SC5al#Uy4?0l?zPD$ZD>~0Vg",
           "i": {
             "c": "value",
             "t": "integer_encrypted_ope_v3_100000"
           },
-          "op": "00000000000000000000000080001388",
+          "op": "00b6e0adc426b1981b4d97c99b6e1fb1299fdf7dd20768335b46da223ac660dd93",
           "v": 3
         }
       ],
@@ -53,24 +53,24 @@
             "Node Type": "Limit",
             "Parallel Aware": false,
             "Plan Rows": 100,
-            "Plan Width": 276,
+            "Plan Width": 310,
             "Plans": [
               {
                 "Alias": "integer_encrypted_ope_v3_100000",
                 "Async Capable": false,
-                "Filter": "(decode(((value)::jsonb ->> 'op'::text), 'hex'::text) > decode(((('{\"c\": \"mBbLKvs>)P$LwX=IP{k+DlxUh7SvnR=Rh9@lENj1H)SU|>0%c~10q($AhDRVvu}nJbBpm?DP$C#=qw}n>YQRC$ibF>x)HaV@}+iRY;|SC5al#Uy4?0l?zPD$ZD>~0Vg\", \"i\": {\"c\": \"value\", \"t\": \"integer_encrypted_ope_v3_100000\"}, \"v\": 3, \"op\": \"00000000000000000000000080001388\"}'::jsonb)::eql_v3.integer_ord_ope)::jsonb ->> 'op'::text), 'hex'::text))",
+                "Filter": "(decode(((value)::jsonb ->> 'op'::text), 'hex'::text) > decode(((('{\"c\": \"mBbJ`bjaUA%ldG=BOr0&Q3O%M7T&SH#x_a{O{{_s{3|D+#%s>!B69S^Aks`R?oTD#keR%JlZOOTYeEV4q$<CId+JcZbpeZTD5Z8`Y;|SC5al#Uy4?0l?zPD$ZD>~0Vg\", \"i\": {\"c\": \"value\", \"t\": \"integer_encrypted_ope_v3_100000\"}, \"v\": 3, \"op\": \"00b6e0adc426b1981b4d97c99b6e1fb1299fdf7dd20768335b46da223ac660dd93\"}'::jsonb)::eql_v3.integer_ord_ope)::jsonb ->> 'op'::text), 'hex'::text))",
                 "Node Type": "Seq Scan",
                 "Parallel Aware": false,
                 "Parent Relationship": "Outer",
-                "Plan Rows": 50136,
-                "Plan Width": 276,
+                "Plan Rows": 49000,
+                "Plan Width": 310,
                 "Relation Name": "integer_encrypted_ope_v3_100000",
                 "Startup Cost": 0.0,
-                "Total Cost": 6347.0
+                "Total Cost": 6667.0
               }
             ],
             "Startup Cost": 0.0,
-            "Total Cost": 12.66
+            "Total Cost": 13.61
           }
         }
       ],
@@ -78,12 +78,12 @@
       "indexes_used": [],
       "parameters": [
         {
-          "c": "mBbLKvs>)P$LwX=IP{k+DlxUh7SvnR=Rh9@lENj1H)SU|>0%c~10q($AhDRVvu}nJbBpm?DP$C#=qw}n>YQRC$ibF>x)HaV@}+iRY;|SC5al#Uy4?0l?zPD$ZD>~0Vg",
+          "c": "mBbJ`bjaUA%ldG=BOr0&Q3O%M7T&SH#x_a{O{{_s{3|D+#%s>!B69S^Aks`R?oTD#keR%JlZOOTYeEV4q$<CId+JcZbpeZTD5Z8`Y;|SC5al#Uy4?0l?zPD$ZD>~0Vg",
           "i": {
             "c": "value",
             "t": "integer_encrypted_ope_v3_100000"
           },
-          "op": "00000000000000000000000080001388",
+          "op": "00b6e0adc426b1981b4d97c99b6e1fb1299fdf7dd20768335b46da223ac660dd93",
           "v": 3
         }
       ],
@@ -98,24 +98,24 @@
             "Node Type": "Limit",
             "Parallel Aware": false,
             "Plan Rows": 10,
-            "Plan Width": 276,
+            "Plan Width": 310,
             "Plans": [
               {
                 "Alias": "integer_encrypted_ope_v3_100000",
                 "Async Capable": false,
-                "Filter": "(decode(((value)::jsonb ->> 'op'::text), 'hex'::text) < decode(((('{\"c\": \"mBbKT$H|Ny@FEtmkwxmBK4v4t76uYL4UjI|@boY;Y(5<Y#?v7sG{n5bAOV>BQU_0kqAmq(I_h`5%u?^jR4ljIBLD2kK~LZQAf<L;Y;|SC5al#Uy4?0l?zPD$ZD>~0Vg\", \"i\": {\"c\": \"value\", \"t\": \"integer_encrypted_ope_v3_100000\"}, \"v\": 3, \"op\": \"00000000000000000000000080001388\"}'::jsonb)::eql_v3.integer_ord_ope)::jsonb ->> 'op'::text), 'hex'::text))",
+                "Filter": "(decode(((value)::jsonb ->> 'op'::text), 'hex'::text) < decode(((('{\"c\": \"mBbK`BR0oVn1~Nm#bB|m^1<%J7C{n#pFA-n6ebCo{2T3iCvyXNTW(0iAWm24j&HHDe11tThbo8q)IKFb(4Zws?%kL94HhSWZKZZ$Y;|SC5al#Uy4?0l?zPD$ZD>~0Vg\", \"i\": {\"c\": \"value\", \"t\": \"integer_encrypted_ope_v3_100000\"}, \"v\": 3, \"op\": \"00b6e0adc426b1981b4d97c99b6e1fb1299fdf7dd20768335b46da223ac660dd93\"}'::jsonb)::eql_v3.integer_ord_ope)::jsonb ->> 'op'::text), 'hex'::text))",
                 "Node Type": "Seq Scan",
                 "Parallel Aware": false,
                 "Parent Relationship": "Outer",
-                "Plan Rows": 49863,
-                "Plan Width": 276,
+                "Plan Rows": 50999,
+                "Plan Width": 310,
                 "Relation Name": "integer_encrypted_ope_v3_100000",
                 "Startup Cost": 0.0,
-                "Total Cost": 6347.0
+                "Total Cost": 6667.0
               }
             ],
             "Startup Cost": 0.0,
-            "Total Cost": 1.27
+            "Total Cost": 1.31
           }
         }
       ],
@@ -123,12 +123,12 @@
       "indexes_used": [],
       "parameters": [
         {
-          "c": "mBbKT$H|Ny@FEtmkwxmBK4v4t76uYL4UjI|@boY;Y(5<Y#?v7sG{n5bAOV>BQU_0kqAmq(I_h`5%u?^jR4ljIBLD2kK~LZQAf<L;Y;|SC5al#Uy4?0l?zPD$ZD>~0Vg",
+          "c": "mBbK`BR0oVn1~Nm#bB|m^1<%J7C{n#pFA-n6ebCo{2T3iCvyXNTW(0iAWm24j&HHDe11tThbo8q)IKFb(4Zws?%kL94HhSWZKZZ$Y;|SC5al#Uy4?0l?zPD$ZD>~0Vg",
           "i": {
             "c": "value",
             "t": "integer_encrypted_ope_v3_100000"
           },
-          "op": "00000000000000000000000080001388",
+          "op": "00b6e0adc426b1981b4d97c99b6e1fb1299fdf7dd20768335b46da223ac660dd93",
           "v": 3
         }
       ],
@@ -143,24 +143,24 @@
             "Node Type": "Limit",
             "Parallel Aware": false,
             "Plan Rows": 100,
-            "Plan Width": 276,
+            "Plan Width": 310,
             "Plans": [
               {
                 "Alias": "integer_encrypted_ope_v3_100000",
                 "Async Capable": false,
-                "Filter": "(decode(((value)::jsonb ->> 'op'::text), 'hex'::text) < decode(((('{\"c\": \"mBbJyVwskBotqL#_XZSu{Z$sk7F*C^^SJ4m6L%A6(1~Hj-R$uQ1Wt^^Aiszg4rGzwX4=`Le?p~ecaiPr5{9n?yAJ(Q@@q{YlcjcHY;|SC5al#Uy4?0l?zPD$ZD>~0Vg\", \"i\": {\"c\": \"value\", \"t\": \"integer_encrypted_ope_v3_100000\"}, \"v\": 3, \"op\": \"00000000000000000000000080001388\"}'::jsonb)::eql_v3.integer_ord_ope)::jsonb ->> 'op'::text), 'hex'::text))",
+                "Filter": "(decode(((value)::jsonb ->> 'op'::text), 'hex'::text) < decode(((('{\"c\": \"mBbK&jCF2o)UD9<<0UbNCTYCH7DKVkn>7BGNdT=6%nEEDF~Rbw0pv`?AeVB7{Us5f{VTtUK=50m5dN4=qRE@2bqdq1Feo_kRHb%dY;|SC5al#Uy4?0l?zPD$ZD>~0Vg\", \"i\": {\"c\": \"value\", \"t\": \"integer_encrypted_ope_v3_100000\"}, \"v\": 3, \"op\": \"00b6e0adc426b1981b4d97c99b6e1fb1299fdf7dd20768335b46da223ac660dd93\"}'::jsonb)::eql_v3.integer_ord_ope)::jsonb ->> 'op'::text), 'hex'::text))",
                 "Node Type": "Seq Scan",
                 "Parallel Aware": false,
                 "Parent Relationship": "Outer",
-                "Plan Rows": 49863,
-                "Plan Width": 276,
+                "Plan Rows": 50999,
+                "Plan Width": 310,
                 "Relation Name": "integer_encrypted_ope_v3_100000",
                 "Startup Cost": 0.0,
-                "Total Cost": 6347.0
+                "Total Cost": 6667.0
               }
             ],
             "Startup Cost": 0.0,
-            "Total Cost": 12.73
+            "Total Cost": 13.07
           }
         }
       ],
@@ -168,12 +168,12 @@
       "indexes_used": [],
       "parameters": [
         {
-          "c": "mBbJyVwskBotqL#_XZSu{Z$sk7F*C^^SJ4m6L%A6(1~Hj-R$uQ1Wt^^Aiszg4rGzwX4=`Le?p~ecaiPr5{9n?yAJ(Q@@q{YlcjcHY;|SC5al#Uy4?0l?zPD$ZD>~0Vg",
+          "c": "mBbK&jCF2o)UD9<<0UbNCTYCH7DKVkn>7BGNdT=6%nEEDF~Rbw0pv`?AeVB7{Us5f{VTtUK=50m5dN4=qRE@2bqdq1Feo_kRHb%dY;|SC5al#Uy4?0l?zPD$ZD>~0Vg",
           "i": {
             "c": "value",
             "t": "integer_encrypted_ope_v3_100000"
           },
-          "op": "00000000000000000000000080001388",
+          "op": "00b6e0adc426b1981b4d97c99b6e1fb1299fdf7dd20768335b46da223ac660dd93",
           "v": 3
         }
       ],
@@ -188,26 +188,26 @@
             "Node Type": "Limit",
             "Parallel Aware": false,
             "Plan Rows": 10,
-            "Plan Width": 308,
+            "Plan Width": 342,
             "Plans": [
               {
                 "Alias": "integer_encrypted_ope_v3_100000",
                 "Async Capable": false,
-                "Index Cond": "(decode(((value)::jsonb ->> 'op'::text), 'hex'::text) < decode(((('{\"c\": \"mBbLbq&Yi%oaE)oW5&u@zO@|07Q>2ytR9&+Z#^)L->0a4Ung+^Muiu|Ad23bn~qr=!>lteroM=CLT2@>5v@T;1&qa1$;)^H0i||fY;|SC5al#Uy4?0l?zPD$ZD>~0Vg\", \"i\": {\"c\": \"value\", \"t\": \"integer_encrypted_ope_v3_100000\"}, \"v\": 3, \"op\": \"00000000000000000000000080001388\"}'::jsonb)::eql_v3.integer_ord_ope)::jsonb ->> 'op'::text), 'hex'::text))",
+                "Index Cond": "(decode(((value)::jsonb ->> 'op'::text), 'hex'::text) < decode(((('{\"c\": \"mBbKD6)NcWU8B4x|1SKkl;_OE7F-9<hv#&W5vd_D0InmK%ug*-+sDPkAf&hi3mGo-@%y<+l?<<bAyk<hsjJ+Ci?bdaA*YM%nx%GOY;|SC5al#Uy4?0l?zPD$ZD>~0Vg\", \"i\": {\"c\": \"value\", \"t\": \"integer_encrypted_ope_v3_100000\"}, \"v\": 3, \"op\": \"00b6e0adc426b1981b4d97c99b6e1fb1299fdf7dd20768335b46da223ac660dd93\"}'::jsonb)::eql_v3.integer_ord_ope)::jsonb ->> 'op'::text), 'hex'::text))",
                 "Index Name": "integer_encrypted_ope_v3_100000_ope_index",
                 "Node Type": "Index Scan",
                 "Parallel Aware": false,
                 "Parent Relationship": "Outer",
-                "Plan Rows": 49863,
-                "Plan Width": 308,
+                "Plan Rows": 50999,
+                "Plan Width": 342,
                 "Relation Name": "integer_encrypted_ope_v3_100000",
                 "Scan Direction": "Forward",
                 "Startup Cost": 0.42,
-                "Total Cost": 17505.82
+                "Total Cost": 19293.98
               }
             ],
             "Startup Cost": 0.42,
-            "Total Cost": 3.94
+            "Total Cost": 4.21
           }
         }
       ],
@@ -217,12 +217,12 @@
       ],
       "parameters": [
         {
-          "c": "mBbLbq&Yi%oaE)oW5&u@zO@|07Q>2ytR9&+Z#^)L->0a4Ung+^Muiu|Ad23bn~qr=!>lteroM=CLT2@>5v@T;1&qa1$;)^H0i||fY;|SC5al#Uy4?0l?zPD$ZD>~0Vg",
+          "c": "mBbKD6)NcWU8B4x|1SKkl;_OE7F-9<hv#&W5vd_D0InmK%ug*-+sDPkAf&hi3mGo-@%y<+l?<<bAyk<hsjJ+Ci?bdaA*YM%nx%GOY;|SC5al#Uy4?0l?zPD$ZD>~0Vg",
           "i": {
             "c": "value",
             "t": "integer_encrypted_ope_v3_100000"
           },
-          "op": "00000000000000000000000080001388",
+          "op": "00b6e0adc426b1981b4d97c99b6e1fb1299fdf7dd20768335b46da223ac660dd93",
           "v": 3
         }
       ],

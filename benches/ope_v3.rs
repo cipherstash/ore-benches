@@ -5,28 +5,26 @@
 //! can chart ORE (custom plpgsql btree opclass) vs OPE (native bytea btree,
 //! fully inlinable) per scenario — the headline v3 fast-ordering story.
 //!
-//! The `op` term is SYNTHETIC (fixed-width big-endian hex of the
-//! sign-flipped plaintext; see `dbbenches::v3::to_v3_stored_with_synth_ope`)
-//! because no pinned client emits it yet. Server-side plan shapes and
-//! comparison costs are faithful; ciphertext size is approximate.
+//! The `op` term is REAL OPE-CLLW ciphertext: cipherstash-client 0.38.1
+//! emits it for `Index::new_ope()` columns (CIP-3280/CIP-3348), so both
+//! ciphertext sizes and client-side term generation are representative.
 //!
 //! Startup includes an order-parity assertion: the ordered scenario's
-//! decrypt pass must return values sorted ascending — proving the synthetic
-//! term's byte order agrees with plaintext order end-to-end.
+//! decrypt pass must return values sorted ascending — verifying against
+//! real crypto that OPE ciphertext byte order agrees with plaintext order
+//! end-to-end.
 
 use cipherstash_client::{
     eql::Identifier,
-    schema::{ColumnConfig, ColumnType},
+    schema::{column::Index, ColumnConfig, ColumnType},
 };
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use dbbenches::{
     bench_assert, init_scoped_cipher, init_tracing,
-    v3::{i32_order_key, to_v3_stored_with_synth_ope, V3EncryptedQuery},
+    v3::{encrypt_stored_v3, V3EncryptedQuery},
     write_metadata_file_in, ScenarioMetadata,
 };
-use cipherstash_client::eql::{encrypt_eql, EqlOperation, EqlOutput, PreparedPlaintext};
 use sqlx::postgres::PgPoolOptions;
-use std::borrow::Cow;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
 
@@ -85,36 +83,34 @@ fn criterion_benchmark(c: &mut Criterion) {
         (pool, cipher)
     });
 
-    // Mirror the ingest config (no v2 index terms; op is synthesized).
-    let column_config = ColumnConfig::build("value").casts_as(ColumnType::Int);
+    // Mirror the ingest config: Index::new_ope() so the client emits the
+    // real `op` term on the Store-shaped needle.
+    let column_config = ColumnConfig::build("value")
+        .casts_as(ColumnType::Int)
+        .add_index(Index::new_ope());
     let identifier = Identifier::new(&table_name, "value");
 
     let queries: Vec<V3EncryptedQuery> = rt.block_on(async {
         let mut queries = Vec::with_capacity(QUERY_TEMPLATES.len());
         for (query_template, x, _) in QUERY_TEMPLATES {
             let query_str = query_template.replace("{TABLE}", &table_name);
-            let prepared = PreparedPlaintext::new(
-                Cow::Owned(column_config.clone()),
-                identifier.clone(),
-                (*x).into(),
-                EqlOperation::Store,
-            );
-            let mut out = encrypt_eql(Arc::clone(&cipher), vec![prepared], &Default::default())
-                .await
-                .expect("failed to encrypt OPE threshold");
-            let EqlOutput::Store(ciphertext) = out.remove(0) else {
-                unreachable!("EqlOperation::Store yields EqlOutput::Store");
-            };
-            let param =
-                to_v3_stored_with_synth_ope(&ciphertext, i32_order_key(*x), "integer_ord_ope")
-                    .expect("failed to convert OPE threshold");
+            let param = encrypt_stored_v3(
+                Arc::clone(&cipher),
+                &column_config,
+                &identifier,
+                *x,
+                "integer_ord_ope",
+            )
+            .await
+            .expect("failed to encrypt+convert OPE threshold");
             queries.push(V3EncryptedQuery::new(param, query_str, Arc::clone(&cipher)));
         }
         queries
     });
 
     // Order-parity gate: the ordered scenario's results, decrypted, must be
-    // ascending — the synthetic op term must order exactly like plaintext.
+    // ascending — verifies against real crypto that OPE ciphertext byte
+    // order agrees with plaintext order.
     rt.block_on(async {
         let ordered = queries
             .iter()
@@ -128,7 +124,7 @@ fn criterion_benchmark(c: &mut Criterion) {
             .expect("order-parity decrypt failed");
         assert!(
             values.windows(2).all(|w| w[0] <= w[1]),
-            "synthetic OPE order does not match plaintext order: {:?}",
+            "OPE ciphertext order does not match plaintext order: {:?}",
             values
         );
         eprintln!(

@@ -14,8 +14,8 @@
 --   * integer_*: eql_v3.integer_ord — the default ordering domain (ORE
 --     block term, custom btree opclass), v2 ORE bench parity.
 --   * integer_*_ope: eql_v3.integer_ord_ope — the new CLLW-OPE fast path
---     (hex term, native bytea btree). Term is synthesized until a client
---     emits `op` (CIP-3348).
+--     (hex term, native bytea btree). Real `op` terms from
+--     cipherstash-client >= 0.38.1 (Index::new_ope, CIP-3280/CIP-3348).
 --   * category_*: eql_v3.text_eq (hm only) — GROUP BY / equality parity.
 --   * combo_*: per-column domains mirroring the v2 combo configs.
 --   * json_*: eql_v3.json — the SteVec document domain.

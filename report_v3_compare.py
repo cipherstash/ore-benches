@@ -90,8 +90,7 @@ INGEST_NOTES = {
         "would restore v2 throughput."
     ),
     "encrypt_int_ope_v3": (
-        "synthetic op term; client-side cost excludes real CLLW-OPE "
-        "generation (no client emits it yet)"
+        "real CLLW-OPE op terms (cipherstash-client 0.38.1, Index::new_ope)"
     ),
 }
 
@@ -375,9 +374,9 @@ def write_report(rows, v3_query, v3_meta, v2_ingest, v3_ingest,
       "wire shape exists); server-side timings are unaffected.")
     w("- The v3 string column (`text_search`) carries an ORE term v2's "
       "unique+match config did not — v3 string rows are wider.")
-    w("- OPE ciphertexts are synthetic (fixed-width order-preserving hex) "
-      "until a client emits real CLLW-OPE terms; plan shapes and comparison "
-      "counts are faithful, ciphertext size is approximate.")
+    w("- OPE ciphertexts are real CLLW-OPE terms emitted by "
+      "cipherstash-client 0.38.1 (Index::new_ope); ordering parity against "
+      "decrypted plaintext is asserted at bench startup.")
     w("- v2 numbers are the committed baseline results (`results/query/`, "
       "`results/ingest/`); v3 numbers come from `results/query/v3/`, "
       "`results/ingest/v3/`.")

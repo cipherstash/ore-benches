@@ -129,7 +129,7 @@ The standalone match scenarios (`MATCH/match/eql_cast_*`) sit at −6% to +7% at
   attributable to the ORE opclass, not the combo shape.
 - **Upstream fix candidates:** a C-level or SQL-inlinable comparator for
   `ore_block_256` in EQL v3, or steering ordered workloads to `_ord_ope`
-  domains once a client emits the `op` term (CIP-3348).
+  domains — cipherstash-client 0.38.1 emits the `op` term via `Index::new_ope()` (CIP-3348, adopted 2026-07-04).
 - Related finding, same root: the ORE index **build** at 1M took 44 s vs 1 s
   for OPE (`results/ingest/index_build_times.jsonl`).
 
@@ -280,7 +280,7 @@ logic-identical language-only swap of the two helpers eliminated the entire
 regression (0.32 → 0.19 ms/query, marginally faster than v2 on the same
 harness; see the A→B→A experiment in the COMBO section). (b) structural — a
 C-level decode+compare for `ore_block_256`, and/or position `_ord_ope` as
-the recommended ordering path once a client emits the `op` term (CIP-3348)
+the recommended ordering path now that cipherstash-client 0.38.1 emits the `op` term (CIP-3348)
 — the OPE benches show 0.118 ms flat at every tier, ~1.2× plaintext.
 
 **Evidence:** `report/v3/ore_vs_ope_*.png`; ordered-scan table in the COMBO
@@ -357,7 +357,7 @@ opclass-path helpers (`jsonb_array_to_bytea_array`,
 `jsonb_array_to_ore_block_256`) to plpgsql — LANGUAGE sql buys nothing where
 inlining can't happen — or cache the decoded representation; (b) for the
 larger ORE-vs-OPE gap, a C-level decode+compare or steering ordered
-workloads to `_ord_ope` (CIP-3348).
+workloads to `_ord_ope` (client 0.38.1 emits `op`; adopted).
 
 #### Validation: language-only swap of the helpers (A→B→A)
 

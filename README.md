@@ -48,8 +48,8 @@ mise run report:build:v3-compare
 
 v3 payloads are produced by converting the pinned cipherstash-client's v2.3
 output through `eql-bindings::from_v2` (the supported migration path — see
-`src/v3.rs` for the details and caveats, including the synthetic CLLW-OPE
-term used by the `ope` benches until a client release emits `op`).
+`src/v3.rs` for the details and caveats). The `ope` benches use real
+CLLW-OPE `op` terms emitted by cipherstash-client 0.38.1 (`Index::new_ope()`).
 
 ### Other benchmarks
 

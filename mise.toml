@@ -286,7 +286,7 @@ description = "Run encrypt_int_v3 ingest benchmark (eql_v3.integer_ord)"
 run = "mise run bench:v3:ingest:_run encrypt_int_v3 integer_encrypted_v3"
 
 [tasks."bench:v3:ingest:encrypt_int_ope"]
-description = "Run encrypt_int_ope_v3 ingest benchmark (eql_v3.integer_ord_ope, synthetic op)"
+description = "Run encrypt_int_ope_v3 ingest benchmark (eql_v3.integer_ord_ope, real op term via client 0.38.1)"
 run = "mise run bench:v3:ingest:_run encrypt_int_ope_v3 integer_encrypted_ope_v3"
 
 [tasks."bench:v3:ingest:encrypt_category"]
@@ -504,7 +504,7 @@ description = "Prepare integer_encrypted_v3 table (eql_v3.integer_ord) with targ
 run = "mise run prepare:_table integer_encrypted_v3 encrypt_int_v3 $1"
 
 [tasks."prepare:integer_encrypted_ope_v3"]
-description = "Prepare integer_encrypted_ope_v3 table (eql_v3.integer_ord_ope, synthetic op term) with target row count"
+description = "Prepare integer_encrypted_ope_v3 table (eql_v3.integer_ord_ope) with target row count"
 run = "mise run prepare:_table integer_encrypted_ope_v3 encrypt_int_ope_v3 $1"
 
 [tasks."prepare:category_encrypted_v3"]
@@ -1002,7 +1002,7 @@ description = "Run MATCH v3 query benchmark (bloom containment; incl. no-index v
 run = "mise run bench:v3:query:_run match_v3 MATCH string_encrypted_v3"
 
 [tasks."bench:v3:query:ope"]
-description = "Run OPE v3 query benchmark (eql_v3.integer_ord_ope, synthetic op term)"
+description = "Run OPE v3 query benchmark (eql_v3.integer_ord_ope)"
 run = "mise run bench:v3:query:_run ope_v3 OPE integer_encrypted_ope_v3"
 
 [tasks."bench:v3:query:combo"]

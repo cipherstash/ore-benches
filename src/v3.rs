@@ -60,48 +60,6 @@ pub fn to_v3_stored(v2: &EqlCiphertext, target: &str) -> Result<Value> {
         .with_context(|| format!("from_v2 conversion to `{}` failed", target))
 }
 
-/// [`to_v3_stored`] with a synthetic CLLW-OPE term injected first.
-///
-/// The pinned cipherstash-client does not emit the `op` term yet (CIP-3280
-/// landed on client main; CIP-3348 tracks the envelope). The EQL v3 repo's
-/// own `_ord_ope` test suites use the same trick: `op` is hex whose
-/// *decoded bytes* are order-preserving, so a fixed-width big-endian
-/// encoding of an order key measures the server-side OPE path (native bytea
-/// btree) faithfully. Fixed width is load-bearing — mixed-width big-endian
-/// integers do NOT compare correctly under bytea's prefix rule.
-///
-/// Width is `SYNTH_OPE_HEX_WIDTH` hex chars (default 32 ≈ 16 ciphertext
-/// bytes); the low 16 chars carry the big-endian `u64` key, the rest are
-/// zero padding on the LEFT (right padding would also break ordering).
-/// Ciphertext-size realism is approximate until a client emits real `op`
-/// terms — flagged in the report.
-pub fn to_v3_stored_with_synth_ope(
-    v2: &EqlCiphertext,
-    order_key: u64,
-    target: &str,
-) -> Result<Value> {
-    let mut v2_value = serde_json::to_value(v2).context("serialize v2 ciphertext")?;
-    let width: usize = env::var("SYNTH_OPE_HEX_WIDTH")
-        .ok()
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(32);
-    let width = width.max(16);
-    let hex = format!("{:0>width$}", format!("{:016x}", order_key), width = width);
-    v2_value
-        .as_object_mut()
-        .context("v2 ciphertext did not serialize to an object")?
-        .insert("op".into(), Value::String(hex));
-    let parsed = parse_target(target)?;
-    from_v2(&v2_value, parsed)
-        .with_context(|| format!("from_v2 conversion (synth ope) to `{}` failed", target))
-}
-
-/// Sign-flip an `i32` into the `u64` order key [`to_v3_stored_with_synth_ope`]
-/// expects: preserves ordering across negative values.
-pub fn i32_order_key(v: i32) -> u64 {
-    (v as i64 - i32::MIN as i64) as u64
-}
-
 /// Convert a v2 SteVec QUERY payload (containment needle) into the v3
 /// `eql_v3.jsonb_query` wire shape.
 pub fn to_v3_query_json(v2_query: &Value) -> Result<Value> {
@@ -327,26 +285,6 @@ impl IngestOptions {
     where
         T: Into<Plaintext> + Dummy<F> + Send + Debug,
     {
-        self.ingest_v3_inner(f, target, None::<fn(&T) -> u64>).await
-    }
-
-    /// [`IngestOptions::ingest_v3`] with a synthetic CLLW-OPE term derived
-    /// from each generated value via `order_key` — for the `*_ord_ope`
-    /// targets no client can populate yet (see
-    /// [`to_v3_stored_with_synth_ope`]).
-    pub async fn ingest_v3_synth_ope<T, F, K>(self, f: F, target: &str, order_key: K) -> Result<()>
-    where
-        T: Into<Plaintext> + Dummy<F> + Send + Debug,
-        K: Fn(&T) -> u64,
-    {
-        self.ingest_v3_inner(f, target, Some(order_key)).await
-    }
-
-    async fn ingest_v3_inner<T, F, K>(self, f: F, target: &str, order_key: Option<K>) -> Result<()>
-    where
-        T: Into<Plaintext> + Dummy<F> + Send + Debug,
-        K: Fn(&T) -> u64,
-    {
         let database_url =
             env::var("DATABASE_URL").context("DATABASE_URL environment variable must be set")?;
 
@@ -374,15 +312,9 @@ impl IngestOptions {
             let batch_end = (batch_start + self.batch_size as i32).min(self.num_records);
             let batch_count = batch_end - batch_start;
 
-            // Generate first, capturing the OPE order key (when requested)
-            // before the value is consumed by PreparedPlaintext.
-            // encrypt_eql preserves input order, so keys pair with outputs
-            // by index.
-            let mut keys: Vec<Option<u64>> = Vec::with_capacity(batch_count as usize);
             let prepared = (0..batch_count)
                 .map(|_| {
                     let x: T = f.fake();
-                    keys.push(order_key.as_ref().map(|k| k(&x)));
 
                     PreparedPlaintext::new(
                         column_config.clone(),
@@ -397,15 +329,11 @@ impl IngestOptions {
 
             let converted = out
                 .into_iter()
-                .zip(keys)
-                .map(|(v, key)| {
+                .map(|v| {
                     let EqlOutput::Store(ciphertext) = v else {
                         unreachable!("storage batch must yield EqlOutput::Store");
                     };
-                    match key {
-                        Some(k) => to_v3_stored_with_synth_ope(&ciphertext, k, target),
-                        None => to_v3_stored(&ciphertext, target),
-                    }
+                    to_v3_stored(&ciphertext, target)
                 })
                 .collect::<Result<Vec<_>>>()?;
 

@@ -9,7 +9,7 @@ Methodology notes:
 - v3 payloads are produced by `eql-bindings::from_v2` over the pinned cipherstash-client's v2.3 output (the supported migration path); conversion cost is inside the measured ingest path.
 - v3 query parameters are stored-shape payloads (no v3 scalar query wire shape exists); server-side timings are unaffected.
 - The v3 string column (`text_search`) carries an ORE term v2's unique+match config did not — v3 string rows are wider.
-- OPE ciphertexts are synthetic (fixed-width order-preserving hex) until a client emits real CLLW-OPE terms; plan shapes and comparison counts are faithful, ciphertext size is approximate.
+- OPE ciphertexts are real CLLW-OPE terms emitted by cipherstash-client 0.38.1 (Index::new_ope); ordering parity against decrypted plaintext is asserted at bench startup.
 - v2 numbers are the committed baseline results (`results/query/`, `results/ingest/`); v3 numbers come from `results/query/v3/`, `results/ingest/v3/`.
 
 ## Query scenarios: v3 vs v2
@@ -122,36 +122,36 @@ Methodology notes:
 | MATCH/match/eql_bloom_noindex/10000 | 55.14 ms |
 | MATCH/match/eql_cast_firstname_noindex/10000 | 186.96 ms |
 | MATCH/match/eql_cast_lastname_noindex/10000 | 55.28 ms |
-| OPE/ope/range_gt_10/10000 | 118.1 µs |
-| OPE/ope/range_gt_10/100000 | 116.9 µs |
-| OPE/ope/range_gt_10/1000000 | 119.3 µs |
-| OPE/ope/range_gt_100/10000 | 351.7 µs |
-| OPE/ope/range_gt_100/100000 | 334.0 µs |
-| OPE/ope/range_gt_100/1000000 | 323.1 µs |
-| OPE/ope/range_lt_10/10000 | 116.8 µs |
-| OPE/ope/range_lt_10/100000 | 116.2 µs |
-| OPE/ope/range_lt_10/1000000 | 115.2 µs |
-| OPE/ope/range_lt_100/10000 | 336.4 µs |
-| OPE/ope/range_lt_100/100000 | 346.0 µs |
-| OPE/ope/range_lt_100/1000000 | 347.6 µs |
-| OPE/ope/range_lt_ordered_10/10000 | 118.2 µs |
-| OPE/ope/range_lt_ordered_10/100000 | 118.9 µs |
-| OPE/ope/range_lt_ordered_10/1000000 | 117.8 µs |
-| OPE/ope_decrypt/range_gt_10/10000 | 26.26 ms |
-| OPE/ope_decrypt/range_gt_10/100000 | 25.84 ms |
-| OPE/ope_decrypt/range_gt_10/1000000 | 25.80 ms |
-| OPE/ope_decrypt/range_gt_100/10000 | 35.05 ms |
-| OPE/ope_decrypt/range_gt_100/100000 | 36.32 ms |
-| OPE/ope_decrypt/range_gt_100/1000000 | 36.39 ms |
-| OPE/ope_decrypt/range_lt_10/10000 | 25.76 ms |
-| OPE/ope_decrypt/range_lt_10/100000 | 25.67 ms |
-| OPE/ope_decrypt/range_lt_10/1000000 | 25.85 ms |
-| OPE/ope_decrypt/range_lt_100/10000 | 35.31 ms |
-| OPE/ope_decrypt/range_lt_100/100000 | 36.80 ms |
-| OPE/ope_decrypt/range_lt_100/1000000 | 36.79 ms |
-| OPE/ope_decrypt/range_lt_ordered_10/10000 | 26.50 ms |
-| OPE/ope_decrypt/range_lt_ordered_10/100000 | 25.70 ms |
-| OPE/ope_decrypt/range_lt_ordered_10/1000000 | 25.69 ms |
+| OPE/ope/range_gt_10/10000 | 122.7 µs |
+| OPE/ope/range_gt_10/100000 | 118.8 µs |
+| OPE/ope/range_gt_10/1000000 | 117.9 µs |
+| OPE/ope/range_gt_100/10000 | 349.3 µs |
+| OPE/ope/range_gt_100/100000 | 350.1 µs |
+| OPE/ope/range_gt_100/1000000 | 340.2 µs |
+| OPE/ope/range_lt_10/10000 | 119.6 µs |
+| OPE/ope/range_lt_10/100000 | 120.8 µs |
+| OPE/ope/range_lt_10/1000000 | 123.8 µs |
+| OPE/ope/range_lt_100/10000 | 363.3 µs |
+| OPE/ope/range_lt_100/100000 | 346.8 µs |
+| OPE/ope/range_lt_100/1000000 | 363.1 µs |
+| OPE/ope/range_lt_ordered_10/10000 | 118.8 µs |
+| OPE/ope/range_lt_ordered_10/100000 | 120.7 µs |
+| OPE/ope/range_lt_ordered_10/1000000 | 119.4 µs |
+| OPE/ope_decrypt/range_gt_10/10000 | 25.60 ms |
+| OPE/ope_decrypt/range_gt_10/100000 | 25.05 ms |
+| OPE/ope_decrypt/range_gt_10/1000000 | 25.17 ms |
+| OPE/ope_decrypt/range_gt_100/10000 | 38.11 ms |
+| OPE/ope_decrypt/range_gt_100/100000 | 38.56 ms |
+| OPE/ope_decrypt/range_gt_100/1000000 | 39.71 ms |
+| OPE/ope_decrypt/range_lt_10/10000 | 25.64 ms |
+| OPE/ope_decrypt/range_lt_10/100000 | 24.88 ms |
+| OPE/ope_decrypt/range_lt_10/1000000 | 25.45 ms |
+| OPE/ope_decrypt/range_lt_100/10000 | 39.26 ms |
+| OPE/ope_decrypt/range_lt_100/100000 | 39.85 ms |
+| OPE/ope_decrypt/range_lt_100/1000000 | 40.01 ms |
+| OPE/ope_decrypt/range_lt_ordered_10/10000 | 25.33 ms |
+| OPE/ope_decrypt/range_lt_ordered_10/100000 | 25.20 ms |
+| OPE/ope_decrypt/range_lt_ordered_10/1000000 | 25.01 ms |
 | PLAINTEXT/plaintext/exact_eq/10000 | 88.3 µs |
 | PLAINTEXT/plaintext/exact_eq/100000 | 90.9 µs |
 | PLAINTEXT/plaintext/exact_eq/1000000 | 91.4 µs |
@@ -299,21 +299,21 @@ Scenarios matching an expected-index rule must show a non-empty `indexes_used` i
 
 | Bench | Records | v2 rec/s | v3 rec/s | Δ | Note |
 |---|---|---|---|---|---|
-| encrypt_category_v3 | 500 | — | 1,155 | |  |
-| encrypt_category_v3 | 1,000 | — | 3,834 | |  |
-| encrypt_category_v3 | 10,000 | — | 12,738 | |  |
-| encrypt_int_ope_v3 | 500 | — | 1,227 | | synthetic op term; client-side cost excludes real CLLW-OPE generation (no client emits it yet) |
-| encrypt_int_ope_v3 | 1,000 | — | 4,000 | |  |
-| encrypt_int_ope_v3 | 10,000 | — | 12,550 | |  |
-| encrypt_int_v3 | 500 | 699 | 708 | +1.3% |  |
-| encrypt_int_v3 | 1,000 | 1,587 | 1,551 | -2.2% |  |
-| encrypt_int_v3 | 10,000 | 2,127 | 2,129 | +0.1% |  |
-| encrypt_ste_vec_small_v3 | 500 | — | 267 | |  |
-| encrypt_ste_vec_small_v3 | 1,000 | — | 2,704 | |  |
-| encrypt_ste_vec_small_v3 | 10,000 | 4,032 | 4,604 | +14.2% |  |
-| encrypt_string_v3 | 500 | 966 | 656 | -32.2% | NOT a conversion regression: v3's only eq+match text domain (text_search) also REQUIRES the ORE term, so the config adds Index::new_ore() that v2's unique+match didn't carry — string ingest is capped at ORE-generation speed. A v3 hm+bf-only domain would restore v2 throughput. |
-| encrypt_string_v3 | 1,000 | 3,989 | 1,033 | -74.1% |  |
-| encrypt_string_v3 | 10,000 | 9,649 | 1,278 | -86.8% |  |
+| encrypt_category_v3 | 500 | — | 665 | |  |
+| encrypt_category_v3 | 1,000 | — | 3,672 | |  |
+| encrypt_category_v3 | 10,000 | — | 10,965 | |  |
+| encrypt_int_ope_v3 | 500 | — | 988 | | real CLLW-OPE op terms (cipherstash-client 0.38.1, Index::new_ope) |
+| encrypt_int_ope_v3 | 1,000 | — | 3,582 | |  |
+| encrypt_int_ope_v3 | 10,000 | — | 10,933 | |  |
+| encrypt_int_v3 | 500 | 699 | 419 | -40.1% |  |
+| encrypt_int_v3 | 1,000 | 1,587 | 1,479 | -6.8% |  |
+| encrypt_int_v3 | 10,000 | 2,127 | 2,076 | -2.4% |  |
+| encrypt_ste_vec_small_v3 | 500 | — | 318 | |  |
+| encrypt_ste_vec_small_v3 | 1,000 | — | 2,384 | |  |
+| encrypt_ste_vec_small_v3 | 10,000 | 4,032 | 4,475 | +11.0% |  |
+| encrypt_string_v3 | 500 | 966 | 318 | -67.1% | NOT a conversion regression: v3's only eq+match text domain (text_search) also REQUIRES the ORE term, so the config adds Index::new_ore() that v2's unique+match didn't carry — string ingest is capped at ORE-generation speed. A v3 hm+bf-only domain would restore v2 throughput. |
+| encrypt_string_v3 | 1,000 | 3,989 | 1,016 | -74.5% |  |
+| encrypt_string_v3 | 10,000 | 9,649 | 1,265 | -86.9% |  |
 
 ## Index build times
 
@@ -337,6 +337,11 @@ Scenarios matching an expected-index rule must show a non-empty `indexes_used` i
 | category_encrypted_v3_1000000 | 1 | 2026-07-03T14:19:32Z |
 | combo_encrypted_v3_1000000 | 67 | 2026-07-03T14:42:01Z |
 | json_ste_vec_small_encrypted_v3_1000000 | 55 | 2026-07-03T14:46:55Z |
+| integer_encrypted_1000000 | 42 | 2026-07-04T00:55:25Z |
+| json_ste_vec_small_encrypted_100000 | 15 | 2026-07-04T01:21:47Z |
+| integer_encrypted_ope_v3_10000 | 0 | 2026-07-04T01:49:59Z |
+| integer_encrypted_ope_v3_100000 | 0 | 2026-07-04T01:51:54Z |
+| integer_encrypted_ope_v3_1000000 | 1 | 2026-07-04T01:54:49Z |
 
 ## Charts
 
