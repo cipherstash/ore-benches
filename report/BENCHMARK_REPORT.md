@@ -5,11 +5,11 @@ This report summarises the performance benchmarks for encrypted database operati
 ## Table of Contents
 
 1. [Ingest Throughput](#ingest-throughput)
-   - [Category](#category)
-   - [Int](#int)
-   - [Int Ope](#int-ope)
-   - [Ste Vec Small](#ste-vec-small)
-   - [String](#string)
+   - [eql_v3.text_eq](#eql_v3text_eq)
+   - [eql_v3.integer_ord](#eql_v3integer_ord)
+   - [eql_v3.integer_ord_ope](#eql_v3integer_ord_ope)
+   - [eql_v3.json](#eql_v3json)
+   - [eql_v3.text_search](#eql_v3text_search)
 2. [Query Performance](#query-performance)
    - [COMBO Queries](combo.md)
    - [EXACT Queries](exact.md)
@@ -39,7 +39,7 @@ Comparing all benchmark types at 10,000 records.
 
 ![Total Time Comparison at 10,000 records (excluding ste_vec_large)](ingest_comparison_time_10000_filtered.png)
 
-### Category
+### eql_v3.text_eq
 
 | Records | Throughput (records/sec) | Total Time | Avg Memory |
 |---------|--------------------------|------------|------------|
@@ -51,7 +51,7 @@ Comparing all benchmark types at 10,000 records.
 
 ![Ingest Total Time - category](ingest_category_time_chart.png)
 
-### Int
+### eql_v3.integer_ord
 
 Tests insertion of encrypted integer values.
 
@@ -65,7 +65,7 @@ Tests insertion of encrypted integer values.
 
 ![Ingest Total Time - int](ingest_int_time_chart.png)
 
-### Int Ope
+### eql_v3.integer_ord_ope
 
 | Records | Throughput (records/sec) | Total Time | Avg Memory |
 |---------|--------------------------|------------|------------|
@@ -77,7 +77,7 @@ Tests insertion of encrypted integer values.
 
 ![Ingest Total Time - int_ope](ingest_int_ope_time_chart.png)
 
-### Ste Vec Small
+### eql_v3.json
 
 Tests insertion of small JSON objects with SteVec (searchable encrypted vector) indexing.
 
@@ -91,7 +91,7 @@ Tests insertion of small JSON objects with SteVec (searchable encrypted vector) 
 
 ![Ingest Total Time - ste_vec_small](ingest_ste_vec_small_time_chart.png)
 
-### String
+### eql_v3.text_search
 
 Tests insertion of encrypted string values.
 
@@ -112,8 +112,8 @@ Per-query-type detail is broken out into separate pages — click into a scenari
 | Query Type | Scenarios | Tiers | Largest-tier median (no decrypt) | Detail |
 |-|-|-|-|-|
 | COMBO | `bloom_ore_order_limit`, `filtered_group_by`, `top_n_filtered_group_by` | 10,000, 100,000, 1,000,000 | 8.20ms | [open](combo.md) |
-| EXACT | `eql_cast`, `eql_hash` | 10,000, 100,000, 1,000,000, 10,000,000 | 135.64μs | [open](exact.md) |
-| GROUP_BY | `low_cardinality_groups_encrypted`, `low_cardinality_groups_plaintext`, `top_n_groups_encrypted`, `top_n_groups_plaintext` | 10,000, 100,000, 1,000,000 | 61.10ms | [open](group_by.md) |
+| EXACT | `eql_cast`, `eql_hash` | 10,000, 100,000, 1,000,000, 10,000,000 | 124.69μs | [open](exact.md) |
+| GROUP_BY | `low_cardinality_groups_encrypted`, `low_cardinality_groups_plaintext`, `top_n_groups_encrypted`, `top_n_groups_plaintext` | 10,000, 100,000, 1,000,000, 10,000,000 | 625.64ms | [open](group_by.md) |
 | JSON | `contains/functional`, `field_eq/bare`, `field_eq/extractor`, `field_eq/functional`, `field_order/functional` | 10,000, 100,000, 1,000,000, 10,000,000 | 886.45μs | [open](json.md) |
 | MATCH | `eql_bloom`, `eql_bloom_noindex`, `eql_cast_firstname`, `eql_cast_firstname_noindex`, `eql_cast_lastname`, `eql_cast_lastname_noindex` | 10,000, 100,000, 1,000,000 | 11.57ms | [open](match.md) |
 | OPE | `range_gt_10`, `range_gt_100`, `range_lt_10`, `range_lt_100`, `range_lt_ordered_10` | 10,000, 100,000, 1,000,000, 10,000,000 | 215.61μs | [open](ope.md) |
@@ -123,20 +123,19 @@ Per-query-type detail is broken out into separate pages — click into a scenari
 
 ## Comparison vs EQL 2.3
 
-115 comparable scenario/tier pairs against the committed EQL 2.3 baseline: **4 regressions**, **18 improvements** (beyond ±10%), 37 pairs whose SQL semantics changed between versions (annotated, not flagged). Full table, methodology, and index-engagement audit: [V3_COMPARISON.md](V3_COMPARISON.md).
+119 comparable scenario/tier pairs against the committed EQL 2.3 baseline: **3 regressions**, **18 improvements** (beyond ±10%), 37 pairs whose SQL semantics changed between versions (annotated, not flagged). Full table, methodology, and index-engagement audit: [V3_COMPARISON.md](V3_COMPARISON.md).
 
 | Scenario | Tier | v2 median | v3 median | Δ | |
 |-|-|-|-|-|-|
-| EXACT/exact/eql_cast | 10000000 | 110.3 µs | 138.7 µs | +25.8% | 🔴 |
-| MATCH/match/eql_bloom | 10000 | 405.4 µs | 477.0 µs | +17.6% | 🔴 |
-| ORE/ore/range_lt_ordered_10 | 10000 | 480.9 µs | 551.4 µs | +14.6% | 🔴 |
-| EXACT/exact/eql_cast | 100000 | 113.5 µs | 127.0 µs | +11.8% | 🔴 |
+| GROUP_BY/group_by/low_cardinality_groups_encrypted | 10000000 | 775.51 ms | 901.77 ms | +16.3% | 🔴 |
+| EXACT/exact/eql_cast | 10000000 | 110.3 µs | 126.6 µs | +14.8% | 🔴 |
+| GROUP_BY/group_by/top_n_groups_encrypted | 10000000 | 809.18 ms | 917.56 ms | +13.4% | 🔴 |
 | GROUP_BY/group_by/low_cardinality_groups_encrypted | 1000000 | 92.57 ms | 83.05 ms | -10.3% | 🟢 |
 | ORE/ore/range_lt_10 | 1000000 | 577.0 µs | 494.6 µs | -14.3% | 🟢 |
 | JSON/json/field_order/functional | 10000 | 317.9 µs | 269.0 µs | -15.4% | 🟢 |
-| ORE/ore/range_gt_10 | 10000 | 624.6 µs | 506.7 µs | -18.9% | 🟢 |
-| ORE/ore/range_lt_10 | 10000 | 595.5 µs | 476.5 µs | -20.0% | 🟢 |
+| ORE/ore/range_gt_10 | 10000 | 624.6 µs | 497.5 µs | -20.3% | 🟢 |
 | ORE/ore/range_gt_10 | 1000000 | 694.1 µs | 542.8 µs | -21.8% | 🟢 |
+| ORE/ore/range_lt_10 | 10000 | 595.5 µs | 455.6 µs | -23.5% | 🟢 |
 | ORE/ore/range_lt_10 | 100000 | 655.1 µs | 496.4 µs | -24.2% | 🟢 |
 | JSON/json/field_order/functional | 1000000 | 356.7 µs | 255.5 µs | -28.4% | 🟢 |
 | JSON/json/field_order/functional | 10000000 | 367.6 µs | 250.2 µs | -31.9% | 🟢 |
@@ -144,9 +143,9 @@ Per-query-type detail is broken out into separate pages — click into a scenari
 | ORE/ore/range_gt_100 | 10000000 | 4.04 ms | 996.5 µs | -75.3% | 🟢 |
 | ORE/ore/range_lt_100 | 100000 | 3.87 ms | 932.2 µs | -75.9% | 🟢 |
 | ORE/ore/range_gt_100 | 100000 | 4.16 ms | 972.5 µs | -76.6% | 🟢 |
-| ORE/ore/range_lt_100 | 10000 | 3.93 ms | 917.5 µs | -76.7% | 🟢 |
+| ORE/ore/range_gt_100 | 10000 | 4.04 ms | 934.7 µs | -76.9% | 🟢 |
+| ORE/ore/range_lt_100 | 10000 | 3.93 ms | 907.0 µs | -76.9% | 🟢 |
 | ORE/ore/range_gt_100 | 1000000 | 4.10 ms | 926.7 µs | -77.4% | 🟢 |
-| ORE/ore/range_gt_100 | 10000 | 4.04 ms | 907.7 µs | -77.5% | 🟢 |
 | ORE/ore/range_lt_100 | 1000000 | 4.06 ms | 889.4 µs | -78.1% | 🟢 |
 | ORE/ore/range_lt_100 | 10000000 | 4.15 ms | 880.5 µs | -78.8% | 🟢 |
 
@@ -164,15 +163,15 @@ The same query shapes against plaintext tables with equivalent indexes (see `ben
 
 | Scenario | 10,000 rows | 100,000 rows | 1,000,000 rows | 10,000,000 rows |
 |-|-|-|-|-|
-| EXACT/exact/eql_cast | 128.5 µs (1.4×) | 127.0 µs (1.4×) | 124.1 µs (1.3×) | 138.7 µs (1.5×) |
-| ORE/ore/range_gt_10 | 506.7 µs (5.3×) | 525.8 µs (6.1×) | 542.8 µs (5.9×) | 539.8 µs (6.1×) |
-| ORE/ore/range_lt_ordered_10 | 551.4 µs (5.5×) | 543.5 µs (5.4×) | 518.5 µs (5.2×) | 532.0 µs (5.5×) |
+| EXACT/exact/eql_cast | 128.5 µs (1.4×) | 114.8 µs (1.2×) | 124.1 µs (1.3×) | 126.6 µs (1.4×) |
+| ORE/ore/range_gt_10 | 497.5 µs (5.2×) | 525.8 µs (6.1×) | 542.8 µs (5.9×) | 539.8 µs (6.1×) |
+| ORE/ore/range_lt_ordered_10 | 510.5 µs (5.1×) | 543.5 µs (5.4×) | 518.5 µs (5.2×) | 532.0 µs (5.5×) |
 | OPE/ope/range_gt_10 | 122.5 µs (1.3×) | 123.5 µs (1.4×) | 117.6 µs (1.3×) | 126.4 µs (1.4×) |
 | OPE/ope/range_lt_ordered_10 | 116.9 µs (1.2×) | 120.3 µs (1.2×) | 118.4 µs (1.2×) | 115.2 µs (1.2×) |
 | JSON/json/contains/functional | 271.9 µs (2.5×) | 352.9 µs (1.5×) | 395.9 µs (1.4×) | 3.36 ms (22.8×) |
 | JSON/json/field_eq/bare | 114.3 µs (0.5×) | 113.5 µs (0.5×) | 116.8 µs (0.4×) | 109.5 µs (0.7×) |
-| GROUP_BY/group_by/low_cardinality_groups_encrypted | 2.11 ms (1.8×) | 19.16 ms (2.0×) | 83.05 ms (2.2×) | — |
-| GROUP_BY/group_by/top_n_groups_encrypted | 2.07 ms (1.7×) | 19.90 ms (2.0×) | 85.63 ms (2.2×) | — |
+| GROUP_BY/group_by/low_cardinality_groups_encrypted | 2.11 ms (1.8×) | 19.16 ms (2.0×) | 83.05 ms (2.2×) | 901.77 ms (2.7×) |
+| GROUP_BY/group_by/top_n_groups_encrypted | 2.07 ms (1.7×) | 19.90 ms (2.0×) | 85.63 ms (2.2×) | 917.56 ms (2.6×) |
 
 ![encrypted vs plaintext at 10,000 rows](v3/overhead_vs_plaintext_10000.png)
 

@@ -88,6 +88,21 @@ class BenchmarkReporter:
         self.metadata: Dict[Tuple[str, str, int], ScenarioMetadata] = {}
         self.index_cache: Dict[str, str] = {}  # Cache for index SQL
 
+    # EQL v3 mode: ingest benches are named by the domain type they write,
+    # which is what "how does each type perform for ingest" actually means.
+    V3_BENCH_DOMAIN = {
+        "int": "integer_ord",
+        "int_ope": "integer_ord_ope",
+        "string": "text_search",
+        "category": "text_eq",
+        "ste_vec_small": "json",
+    }
+
+    def _bench_label(self, bench_type: str) -> str:
+        if self.v3:
+            return f"eql_v3.{self.V3_BENCH_DOMAIN.get(bench_type, bench_type)}"
+        return bench_type.replace('_', ' ').title()
+
     def load_ingest_results(self):
         """Load ingest benchmark results"""
         ingest_dir = self.ingest_dir
@@ -787,8 +802,9 @@ class BenchmarkReporter:
         # Add subsections for each ingest type
         ingest_types = sorted(set(r.bench_type for r in self.ingest_results))
         for it in ingest_types:
-            title = it.replace('_', ' ').title()
-            anchor = it.replace('_', '-')
+            title = self._bench_label(it)
+            # GitHub-style anchor: lowercase, drop dots, spaces -> hyphens.
+            anchor = title.lower().replace('.', '').replace(' ', '-')
             f.write(f"   - [{title}](#{anchor})\n")
 
         f.write("2. [Query Performance](#query-performance)\n")
@@ -819,7 +835,7 @@ class BenchmarkReporter:
             # Sort by num_records
             results.sort(key=lambda x: x.num_records)
             
-            f.write(f"### {bench_type.replace('_', ' ').title()}\n\n")
+            f.write(f"### {self._bench_label(bench_type)}\n\n")
             
             # Add descriptions for each type
             descriptions = {
@@ -866,7 +882,7 @@ class BenchmarkReporter:
         ax.bar(range(len(records)), throughput, color='steelblue')
         ax.set_xlabel('Number of Records')
         ax.set_ylabel('Throughput (records/sec)')
-        ax.set_title(f'Ingest Throughput - {bench_type.replace("_", " ").title()}')
+        ax.set_title(f'Ingest Throughput - {self._bench_label(bench_type)}')
         ax.set_xticks(range(len(records)))
         ax.set_xticklabels([f"{r:,}" for r in records])
         ax.grid(axis='y', alpha=0.3)
@@ -891,7 +907,7 @@ class BenchmarkReporter:
         ax.bar(range(len(records)), times, color='coral')
         ax.set_xlabel('Number of Records')
         ax.set_ylabel('Total Time (seconds)')
-        ax.set_title(f'Ingest Total Time - {bench_type.replace("_", " ").title()}')
+        ax.set_title(f'Ingest Total Time - {self._bench_label(bench_type)}')
         ax.set_xticks(range(len(records)))
         ax.set_xticklabels([f"{r:,}" for r in records])
         ax.grid(axis='y', alpha=0.3)
@@ -948,7 +964,7 @@ class BenchmarkReporter:
         # Sort by throughput descending (highest on left)
         sorted_items = sorted(comparison_data.items(), key=lambda x: x[1].throughput, reverse=True)
         bench_types = [item[0] for item in sorted_items]
-        labels = [bt.replace('_', ' ').title() for bt in bench_types]
+        labels = [self._bench_label(bt) for bt in bench_types]
         throughputs = [comparison_data[bt].throughput for bt in bench_types]
         
         # Use different colors for each bar
@@ -980,7 +996,7 @@ class BenchmarkReporter:
         # Sort by throughput descending (highest on left) to match throughput chart order
         sorted_items = sorted(comparison_data.items(), key=lambda x: x[1].throughput, reverse=True)
         bench_types = [item[0] for item in sorted_items]
-        labels = [bt.replace('_', ' ').title() for bt in bench_types]
+        labels = [self._bench_label(bt) for bt in bench_types]
         times = [comparison_data[bt].total_time for bt in bench_types]
         
         # Use different colors for each bar
@@ -991,7 +1007,7 @@ class BenchmarkReporter:
         ax.set_ylabel('Total Time (seconds)', fontsize=12)
         title = f'Total Ingest Time Comparison at {row_count:,} Records'
         if exclude_label:
-            title += f' (excluding {exclude_label.replace("_", " ").title()})'
+            title += f' (excluding {self._bench_label(exclude_label)})'
         ax.set_title(title, fontsize=14, fontweight='bold')
         ax.set_xticks(range(len(bench_types)))
         ax.set_xticklabels(labels, rotation=45, ha='right')

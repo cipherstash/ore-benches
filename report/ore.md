@@ -35,7 +35,7 @@ ON integer_encrypted_10000 (
 
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
-| 10,000 | 10 | 507.93μs | 26.93ms |
+| 10,000 | 10 | 502.66μs | 26.89ms |
 | 100,000 | 10 | 541.35μs | 26.12ms |
 | 1,000,000 | 10 | 541.58μs | 25.77ms |
 | 10,000,000 | 10 | 549.02μs | 26.25ms |
@@ -67,7 +67,7 @@ Full `EXPLAIN (FORMAT JSON)`:
         {
           "Alias": "integer_encrypted_v3_10000",
           "Async Capable": false,
-          "Index Cond": "(eql_v3_internal.ore_block_256((value)::jsonb) > eql_v3_internal.ore_block_256((('{\"c\": \"mBbLi`8P*<Ll8x=AA(O9n|MIP7Ob3@>aPKJ^5OcHEA!TJl5nhx3H>6(AjI%-tF{kl1R&ozsxQ)N$2fQ*aUA|#V@6+nGZwV9)}?k~Y;|SC5al#Uy4?0l?zPD$ZD>~0Vg\", \"i\": {\"c\": \"value\", \"t\": \"integer_encrypted_v3_10000\"}, \"v\": 3, \"ob\": [\"6a6a6a6ab06c241e413a084c2f2db73ff9b3a65b1371a8aff562d9da3bea15a04f6b769a39b089467ffd328aa870db838f4f023047d3775fb47f5c7d2d1631c795176e1460cb7f91f12252f877e7cd2d93b71ec8363578de5b1d06b35a2fc3c8a768f7315c94c75cd4c047c46455b718955448fbc7e8151d504d143d8d7055b2e717822be1cb0a2269f2a33fef19cc58299a7ecdca47aeed18fdd7d21d6dac4f89a07d5a2e08028efd9c5fdc5f0ad15d86b5bb6f9754306c5c37cb72bd9a30342b6e7d5b76415daa3eb772635bc4fd6e1348eb2e7c1c7914bbb299f6e0ce7ea58698e01727fe3468a9fcaed3e9586799b0bb6c1a1f2e3972d3872251289191e6b0618fd7127a53ce53674da7f9769f5fda4d6102af7fe58dc05cce9c489fb3b83577a764baa33297906a01e62971ad02572bc5782a5b5abd9a4388e618182c85de39908ccf35b8b1dc964cd46bcc89743711b650e0124b93a2d421ed861bb69a2b4ca5ba86fbd82e47388f0d2597a8ada3cb61ca2ed3589997b57aa53dc944cafc83f0aa7c06835a0611e9acebc71ec26cda4645d3efcb72\"]}'::jsonb)::eql_v3.integer_ord)::jsonb))",
+          "Index Cond": "(eql_v3_internal.ore_block_256((value)::jsonb) > eql_v3_internal.ore_block_256((('{\"c\": \"mBbLWBsRb)6eQXj+CUGLmauNb7J=5#Ij<k_Z5aA)Yl?GyMFSlq;y0qiAZ5m>bu(MfY$S*X$T)tFQsFESJ|`4Gvy~+(%0~u-L8W$KY;|SC5al#Uy4?0l?zPD$ZD>~0Vg\", \"i\": {\"c\": \"value\", \"t\": \"integer_encrypted_v3_10000\"}, \"v\": 3, \"ob\": [\"6a6a6a6ab06c241e413a084c2f2db73ff9b3a65b1371a8aff562d9da3bea15a04f6b769a39b089467ffd328aa870db838f4f023047d3775fb47f5c7d2d1631c795176e1460cb7f91f12252f877e7cd2d93b71ec8363578de5b1d06b35a2fc3c8a768f7315c94c75cd4c047c46455b718955448fbc7e8151d504d143d8d7055b2e717822be1cb0a22490886344f6e1d4cddadfb8776875fcf3c3e0abe2e76343ec6e50141fd235f9c9ee19780966731ee39b0b511d16e8bb36edee7dce9b67b0b6a4a38a49a1eae5d1e0bb93557f581daff17ecc75f9f2f9c17eccf907e6a38a8d409ae85f82542a420c88259d8565b0f1d4b813bd65dd1f0022d0f0826b18d7b3cfe226c5c6d47de8ebe6ffc4f235c645adeb69f6a6eee70b7cfd659a480ae4913ea1b3102db337a702401a344c7ef95836dce6d4cc3bb02f291ac164dac8a208fd0584e4d2574908de61026f54a98f534f85c85664d0b28518e3a52e39c88b8cc5eb124e1ff85b3f332a633b03b0541fbf45e07b67e1c5b96b63fcc4820f888b86a188b44c481aad4a47b515547b7fcde919d2163c57757\"]}'::jsonb)::eql_v3.integer_ord)::jsonb))",
           "Index Name": "integer_encrypted_v3_10000_ord_index",
           "Node Type": "Index Scan",
           "Parallel Aware": false,
@@ -248,7 +248,7 @@ ON integer_encrypted_10000 (
 
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
-| 10,000 | 100 | 926.61μs | 40.01ms |
+| 10,000 | 100 | 974.64μs | 42.60ms |
 | 100,000 | 100 | 977.05μs | 34.16ms |
 | 1,000,000 | 100 | 976.53μs | 35.87ms |
 | 10,000,000 | 100 | 1.00ms | 37.31ms |
@@ -280,7 +280,7 @@ Full `EXPLAIN (FORMAT JSON)`:
         {
           "Alias": "integer_encrypted_v3_10000",
           "Async Capable": false,
-          "Index Cond": "(eql_v3_internal.ore_block_256((value)::jsonb) > eql_v3_internal.ore_block_256((('{\"c\": \"mBbKe!>E(a6h;+Ol2$^u$nMR=7Dw)oamTZr_5CBIOP+{oR>4+x5JP^%AQRlq_N8QjmDhOEVxM^OsFdYIs(^#<Gh!}vkb1ea(xrA`Y;|SC5al#Uy4?0l?zPD$ZD>~0Vg\", \"i\": {\"c\": \"value\", \"t\": \"integer_encrypted_v3_10000\"}, \"v\": 3, \"ob\": [\"6a6a6a6ab06c241e413a084c2f2db73ff9b3a65b1371a8aff562d9da3bea15a04f6b769a39b089467ffd328aa870db838f4f023047d3775fb47f5c7d2d1631c795176e1460cb7f91f12252f877e7cd2d93b71ec8363578de5b1d06b35a2fc3c8a768f7315c94c75cd4c047c46455b718955448fbc7e8151d504d143d8d7055b2e717822be1cb0a22189e6a8d7cda38195e0fa0564c98ac79056600eb713a8472e9576ff306f467148c6dea66afbbc3bd49fd39bcd4847d6af71c18d0cd3f3e5ef459506c8437082ee3d74619cdf2f9505b6881e8b544e842c2f98a6806d2ea16b04593e8075a16d50e26aacbed1e7ac03a8f833dfc30e1c585a9267f211bc02dd9593446922e486354c1dbf58dca6c234ef7bf96f2f0164e68eaa32b2163f9555095fff06325b39c875efbcb2383e6ac919c04b9d3333b12cfcb2ac3627499ac487b5d833bcaa0fb45966835cd8f1553b8c0edc1c0842bb582557579dd56e2abc158ecf983744b3fee81fabb6a4e0e036ee05621c0f03542cb59002e1171fffec415932ab9eb8c3a8153604f0eee5edc62ca28dcb51c995f\"]}'::jsonb)::eql_v3.integer_ord)::jsonb))",
+          "Index Cond": "(eql_v3_internal.ore_block_256((value)::jsonb) > eql_v3_internal.ore_block_256((('{\"c\": \"mBbKU56O`Yy;m%(Dx9`_dev3L7Ufb$9A@2;5Kibtu6{_?$YJib)<G`BAV#Xb<72ZJ+xTyepk~LN$6p$$Y{ZZA1UF`<dA4cnHl=o9Y;|SC5al#Uy4?0l?zPD$ZD>~0Vg\", \"i\": {\"c\": \"value\", \"t\": \"integer_encrypted_v3_10000\"}, \"v\": 3, \"ob\": [\"6a6a6a6ab06c241e413a084c2f2db73ff9b3a65b1371a8aff562d9da3bea15a04f6b769a39b089467ffd328aa870db838f4f023047d3775fb47f5c7d2d1631c795176e1460cb7f91f12252f877e7cd2d93b71ec8363578de5b1d06b35a2fc3c8a768f7315c94c75cd4c047c46455b718955448fbc7e8151d504d143d8d7055b2e717822be1cb0a22f7940434ba5d8bd58e8012390a42164589e167363538df78ab9fe9fb7a378cab07a6534c6dff35c861f28333799c5ad21d84f5b40a6958bd229511ba57f0eece264ff386bfb6b05b1a834119b7a9086cd8f746b3376124ec58b137caea8bf427c238a49dde1ad7c983f5adf1acd84a8354c3480c9fcb5e7dd2a90e9ebc730faf80a83d279cdf6e7d064ba83bab30f7e9199e46b87dd235dd029450a878a33247724fc340886d9510d285e5bab097735b2cf2c6f92566da2c75d919af14c6eab5f7e7f62bc2e9324af2fa2203a082e15526501a5c945e07bf8859c93597e63d49119d63a14303505d65b9917b92aa03d54bbebf74bd1d1e2891d20675e292fec863bf1d14093ff9c5052a0a1afbcb8d93\"]}'::jsonb)::eql_v3.integer_ord)::jsonb))",
           "Index Name": "integer_encrypted_v3_10000_ord_index",
           "Node Type": "Index Scan",
           "Parallel Aware": false,
@@ -461,7 +461,7 @@ ON integer_encrypted_10000 (
 
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
-| 10,000 | 10 | 481.58μs | 26.01ms |
+| 10,000 | 10 | 459.12μs | 25.99ms |
 | 100,000 | 10 | 517.92μs | 25.91ms |
 | 1,000,000 | 10 | 512.07μs | 26.72ms |
 | 10,000,000 | 10 | 480.69μs | 26.00ms |
@@ -493,7 +493,7 @@ Full `EXPLAIN (FORMAT JSON)`:
         {
           "Alias": "integer_encrypted_v3_10000",
           "Async Capable": false,
-          "Index Cond": "(eql_v3_internal.ore_block_256((value)::jsonb) < eql_v3_internal.ore_block_256((('{\"c\": \"mBbLurbgOmR!vbw_A-;nRW)(M7AcK`MIm}1nMce#S&J|K_T6jOc0c{ZAg@aaEAHRE?OGT~Gt}}T;J8ixJ{`COCqH}3K#7qlETwi~Y;|SC5al#Uy4?0l?zPD$ZD>~0Vg\", \"i\": {\"c\": \"value\", \"t\": \"integer_encrypted_v3_10000\"}, \"v\": 3, \"ob\": [\"6a6a6a6ab06c241e413a084c2f2db73ff9b3a65b1371a8aff562d9da3bea15a04f6b769a39b089467ffd328aa870db838f4f023047d3775fb47f5c7d2d1631c795176e1460cb7f91f12252f877e7cd2d93b71ec8363578de5b1d06b35a2fc3c8a768f7315c94c75cd4c047c46455b718955448fbc7e8151d504d143d8d7055b2e717822be1cb0a226bece6753b211e0f40e61f327da8d83448351a78c2a592e5c9becd22be830c5ad9c9edb4b3fc119f314a3f765060bef11b21189721ee7c41a7fe14e83840bf450bd37208309c82e32da8258fc0c21f91e3f0d2a88c87fcad902a2b82c8ed1dc31ba25a3c4d3a27f567d29a5c5f5ce890a61e4a69a4a271ceed06e144ec916dbb0944c44807f819d4bafbfba746545c35f26c5b082e1e1f9e758c319d180449e93cd14440b43e5d273ce01f543595f6c9c4bc4f8ff940acc3741e10ab45fd4b76878055ed5f1132e0db6af1390a47c522bb06f077757becfbdaa68a46daa68140696377257ea9d912ab3023446f9c22ab5d553bf82b387fcae426e32f9a74117afbe6fc6b6ed1eb0525a3177b180c1212\"]}'::jsonb)::eql_v3.integer_ord)::jsonb))",
+          "Index Cond": "(eql_v3_internal.ore_block_256((value)::jsonb) < eql_v3_internal.ore_block_256((('{\"c\": \"mBbLl{C%Ofl0~-A-(IfQl0o0Z7TILl#*xnD^%i>Yz!Km6L-a=g&)uxVAhnj6unq99%|*}#SxN<x-r@zC+H;@rWPKyoii9Ij*rj%1Y;|SC5al#Uy4?0l?zPD$ZD>~0Vg\", \"i\": {\"c\": \"value\", \"t\": \"integer_encrypted_v3_10000\"}, \"v\": 3, \"ob\": [\"6a6a6a6ab06c241e413a084c2f2db73ff9b3a65b1371a8aff562d9da3bea15a04f6b769a39b089467ffd328aa870db838f4f023047d3775fb47f5c7d2d1631c795176e1460cb7f91f12252f877e7cd2d93b71ec8363578de5b1d06b35a2fc3c8a768f7315c94c75cd4c047c46455b718955448fbc7e8151d504d143d8d7055b2e717822be1cb0a228a2443aca787f0fb57be71172c456978a43b8a5b775baf4830ae4e374c2351d8e3ded9ac485f5dbe9599ddc2bed03a2e44ba12bc2e5e2c82790bdb96b3e13b4141a0f3dc497958fb679b5d8063b72f903e577640446e5fd25c572ab64a5a0ef6697cad7017fd06421facb751a5572c4c0357519d4a629c7311eecf341e6de0ee55b84c6bfd20dbe3778d4e22412dac66532ff6de23b2451a0f49da3b97513fcab360994e62883f02f860799e6954f70dae27ace2887d7f42f698a481bc62de663332c06d7a6a3abb6a11d71ad827dda203b92695883a2043c2e0a0996bb71429c42a70c80d25904af5441ebb808adecd349bb24aacf15eee3861486f41aaae6558aad6baaa206a9f0af6a6c09e95ac1a\"]}'::jsonb)::eql_v3.integer_ord)::jsonb))",
           "Index Name": "integer_encrypted_v3_10000_ord_index",
           "Node Type": "Index Scan",
           "Parallel Aware": false,
@@ -674,7 +674,7 @@ ON integer_encrypted_10000 (
 
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
-| 10,000 | 100 | 926.98μs | 40.61ms |
+| 10,000 | 100 | 907.54μs | 43.01ms |
 | 100,000 | 100 | 941.48μs | 33.38ms |
 | 1,000,000 | 100 | 867.27μs | 41.76ms |
 | 10,000,000 | 100 | 896.39μs | 36.92ms |
@@ -706,7 +706,7 @@ Full `EXPLAIN (FORMAT JSON)`:
         {
           "Alias": "integer_encrypted_v3_10000",
           "Async Capable": false,
-          "Index Cond": "(eql_v3_internal.ore_block_256((value)::jsonb) < eql_v3_internal.ore_block_256((('{\"c\": \"mBbKPhB%7y+hhU7K<P7GlkTO&7P256ChZ<I-56fnnUD}SZJQT{FvyF<ApSQdh6sJ4KSEPdNS|Okw%R=aPQPQGa*0Nz##Ce5qNR3WY;|SC5al#Uy4?0l?zPD$ZD>~0Vg\", \"i\": {\"c\": \"value\", \"t\": \"integer_encrypted_v3_10000\"}, \"v\": 3, \"ob\": [\"6a6a6a6ab06c241e413a084c2f2db73ff9b3a65b1371a8aff562d9da3bea15a04f6b769a39b089467ffd328aa870db838f4f023047d3775fb47f5c7d2d1631c795176e1460cb7f91f12252f877e7cd2d93b71ec8363578de5b1d06b35a2fc3c8a768f7315c94c75cd4c047c46455b718955448fbc7e8151d504d143d8d7055b2e717822be1cb0a2299f857e14fafa376a990a73e6e1a4e6f222e93bbbbd34898fc751fa25e246cd6020e3e246dd6a3400f981fb56eeada9669652100acf880f63f30c0663f1a9df560615399ee547e9c5bfd9f9218b3847fc8d216e32722e832d276188ac0ed85c5ce8a63a680ae60d286d4fe7969d4cb1f115f37117499137cec8b462259200783aa9d2ebb553a6b597ab71ba8dbc4a70b983ac7a16654732efeda143496a95a38d4fc33b335d610a6c3a82c9b0d87e935fda8dd8b47ec6ab8d413dd30560d76d241f46c048fe9573ac68af944e948413cc2209c4812acbcdbfd620a83b7b49e3ea41a09b097e8751a1868c5473a793f51ae3d010733550905e60578133e762c0f6855d995cf9814856a2e3b086c6c4e0e\"]}'::jsonb)::eql_v3.integer_ord)::jsonb))",
+          "Index Cond": "(eql_v3_internal.ore_block_256((value)::jsonb) < eql_v3_internal.ore_block_256((('{\"c\": \"mBbK)I?FpYxps3J?f(PG%{>If7PpY{-*4+!p?MHJKsJhNkZ_gMl`{s!AdG}a-(vN7Mf~u}Cm$k-M=GK89Q;$7KeK&;jKXY552bctY;|SC5al#Uy4?0l?zPD$ZD>~0Vg\", \"i\": {\"c\": \"value\", \"t\": \"integer_encrypted_v3_10000\"}, \"v\": 3, \"ob\": [\"6a6a6a6ab06c241e413a084c2f2db73ff9b3a65b1371a8aff562d9da3bea15a04f6b769a39b089467ffd328aa870db838f4f023047d3775fb47f5c7d2d1631c795176e1460cb7f91f12252f877e7cd2d93b71ec8363578de5b1d06b35a2fc3c8a768f7315c94c75cd4c047c46455b718955448fbc7e8151d504d143d8d7055b2e717822be1cb0a2200151d9d8f251f9a8450cb7f8965238f6bb402c5a8912c063f8daefbccccc742bb890860e7df922f3d97fd797c481026337b5ff190ca8ed5db4ff2dc8b0831adab25ed5f366ed6985ba40b14db3d9efcbd2025949decabebe172a6bc0e3de33ea373c0f01020ebea7b4789385cdcbe2eb8a1bfb8c4a60540ee584c91ba5dd15f237d62304abcb81620a7ae713c1bb881c548b82615244149082f42ab897df38741fc8ed64b86b7c4d1c9706b9bc64efe80581f7f4200f4a5f3d776bb0ef661806b8737f0d2719b663109d228fcbf5b4c682319b3f1bf0d3eddea3f3855c2397a7373e2fb46c93129eb8a9fd62370526d142110b7761da40bf3b9a6968d2a77d4b9fc908854497b2418db64b4675da1d9\"]}'::jsonb)::eql_v3.integer_ord)::jsonb))",
           "Index Name": "integer_encrypted_v3_10000_ord_index",
           "Node Type": "Index Scan",
           "Parallel Aware": false,
@@ -880,7 +880,7 @@ ON integer_encrypted_10000 (
 
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
-| 10,000 | 10 | 547.44μs | 26.28ms |
+| 10,000 | 10 | 526.53μs | 26.50ms |
 | 100,000 | 10 | 549.42μs | 25.54ms |
 | 1,000,000 | 10 | 533.49μs | 27.02ms |
 | 10,000,000 | 10 | 543.56μs | 26.34ms |
@@ -912,7 +912,7 @@ Full `EXPLAIN (FORMAT JSON)`:
         {
           "Alias": "integer_encrypted_v3_10000",
           "Async Capable": false,
-          "Index Cond": "(eql_v3_internal.ore_block_256((value)::jsonb) < eql_v3_internal.ore_block_256((('{\"c\": \"mBbJ?G)bT;OkIpyMmr}YB9w!~7AnMr<~wmW<Yo7wu341fS*>9`^ct7MAjU<h|JlKa>mIw-y(vLaVFxVlJai1*CmF5)CLmih;iYzAY;|SC5al#Uy4?0l?zPD$ZD>~0Vg\", \"i\": {\"c\": \"value\", \"t\": \"integer_encrypted_v3_10000\"}, \"v\": 3, \"ob\": [\"6a6a6a6ab06c241e413a084c2f2db73ff9b3a65b1371a8aff562d9da3bea15a04f6b769a39b089467ffd328aa870db838f4f023047d3775fb47f5c7d2d1631c795176e1460cb7f91f12252f877e7cd2d93b71ec8363578de5b1d06b35a2fc3c8a768f7315c94c75cd4c047c46455b718955448fbc7e8151d504d143d8d7055b2e717822be1cb0a22324a493bb0053abee8ab27eb7fbd8c87f98765faa75e7a0fb0fc578edd44c3439064686267ef144f4938e8ab37f33c40ef2b23895451ca6265dbe332cb7d20a7ea777f9f72223a4591ac0f3f490f738431eb38dc919d9807b981425db8853fd20730d87088881a276ff9c9c9ef92a0ba0941a7d7d039d0cab6109169776f4c2a012778143c705b11c432386e23d0c7778206f6df7c7d09c4c414880e3c929035fb9ac05a4e481cbeaba84478b914dffa27ea8f3a93bfd82911295bae5388e0eeb2b3530637210f0c11d361e42a85d39cbe96cbb7bdbf2e65abcbc4850ffb058282a41146c3aabe99976d53890f21d569bf573a3622e860ecb61beb28b84acf812faa929bf316e4372509215e6dbcadb9\"]}'::jsonb)::eql_v3.integer_ord)::jsonb))",
+          "Index Cond": "(eql_v3_internal.ore_block_256((value)::jsonb) < eql_v3_internal.ore_block_256((('{\"c\": \"mBbK-he;<Xee}+zGO09SS5fA~78gEJ(fl#Z2mb{EQMKu8T55}=^M;YcAV$D24^liSaPe6ZQ{)h-dF)3k@+E?r$CrusOulM5e5H0_Y;|SC5al#Uy4?0l?zPD$ZD>~0Vg\", \"i\": {\"c\": \"value\", \"t\": \"integer_encrypted_v3_10000\"}, \"v\": 3, \"ob\": [\"6a6a6a6ab06c241e413a084c2f2db73ff9b3a65b1371a8aff562d9da3bea15a04f6b769a39b089467ffd328aa870db838f4f023047d3775fb47f5c7d2d1631c795176e1460cb7f91f12252f877e7cd2d93b71ec8363578de5b1d06b35a2fc3c8a768f7315c94c75cd4c047c46455b718955448fbc7e8151d504d143d8d7055b2e717822be1cb0a2200d8f72210923597a171ad266453b215e6473ab07a8e310ed7feb75e4ac69926402cc1248fca4f0819cf05fec3ef69433b550dac8f5993adc66b4820e630ac999c50617e3638ddebb8532dea97bc1e1215fa185340c6c2c14c9b1854dfda8eef328fad65dfaeab686add3b9ebd07fbbf90aa32f8fb596878e07d801979d1c34a3563720fedcf17855aca308e8341b5e37e41b2c8cb4624c18a747c91b038a116e6c3a07a326d0353af401f2aa9564ac66c19f87925f16085126490a27c16bb0b34eda3ce201b34827d4157d92fed075f3665fafe085a3971171c1bd3d5e0dd9b5bf4cdb655cd4faae80c0dff33b019f6c613838d9453980e2458b0b3ea45db71bc74d4340896927fe4d1ef40639fc025\"]}'::jsonb)::eql_v3.integer_ord)::jsonb))",
           "Index Name": "integer_encrypted_v3_10000_ord_index",
           "Node Type": "Index Scan",
           "Parallel Aware": false,

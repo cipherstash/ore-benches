@@ -198,3 +198,7 @@ CREATE TABLE IF NOT EXISTS json_ste_vec_small_encrypted_v3_10000000 (
     value eql_v3.json NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS category_encrypted_v3_10000000 (
+    id SERIAL PRIMARY KEY,
+    value eql_v3.text_eq NOT NULL
+);

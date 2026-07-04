@@ -19,7 +19,7 @@
 > Flagged regressions across all 96 scenario/tier pairs: 14 → **3** (bloom
 > GIN at two tiers — array_ops vs v2's dedicated opclass, small absolute
 > deltas — and the ordered scan's residual at 10k only, consistent with the
-> stored-envelope needle cost tracked as issue #356 / CIP-3383). The open
+> stored-shape query needle cost tracked as issue #356 / CIP-3383). The open
 > items are the design-level issues: #355 (text domain gap) and #356
 > (k="q" query payloads).
 
@@ -222,7 +222,7 @@ Direct A/B on `string_encrypted_v3_100000` (create hash on
 0.0076 ms → btree restored 0.0113 ms per lookup. Hash is genuinely ~35%
 faster in-DB for the point lookup, but the absolute difference (0.004 ms)
 covers only a fraction of that scenario's criterion delta (~0.015–0.02 ms);
-the rest is the stored-envelope needle (issue 1). The btree choice remains
+the rest is the stored-shape query needle (issue 1). The btree choice remains
 correct for build-time reasons (hash builds degrade badly at scale).
 
 ---
@@ -256,7 +256,7 @@ variant with no `c` field — either accepted by the existing domains' CHECKs
 (`c` required only when `k != "q"`) or as parallel `*_query` domain types the
 comparison wrappers accept on the RHS (the pattern `eql_v3.jsonb_query`
 already establishes for SteVec needles). `from_v2_query` can then support
-scalar targets, and the bench harness's Store-shaped needle workaround
+scalar targets, and the bench harness's stored-shape query needle workaround
 (`src/v3.rs` module docs) goes away.
 
 **Evidence:** parameter shapes recorded in
@@ -288,7 +288,7 @@ document the cost as an accepted trade-off of the v3 type system.
   `jsonb_array_to_ore_block_256`), rewritten from v2's plpgsql to
   LANGUAGE sql in v3: in the opclass call path they cannot inline and pay
   the per-call SQL-function executor — 3.5× v2's per-call cost for
-  identical logic. The stored-envelope needle's domain-cast CHECK (issue 1)
+  identical logic. The stored-shape query needle's domain-cast CHECK (issue 1)
   contributes fixed per-query overhead on top.
 - **ORE-vs-OPE gap (0.74 vs 0.12 ms; index build 44 s vs 1 s at 1M):** the
   comparator+extraction machinery as a whole — ~0.4–0.5 ms of tracked
@@ -426,7 +426,7 @@ functions and committed result files restored afterwards.
 | COMBO/top_n_filtered_group_by (control) | 5.287 ms | 5.339 ms | 5.342 ms | +0.1% (noise) |
 
 - The ordered scan lands within 8% of v2 (residual consistent with the
-  stored-envelope needle, issue 1, and wider payloads).
+  stored-shape query needle, issue 1, and wider payloads).
 - **COMBO/bloom_ore_order_limit doesn't just recover — it beats v2 by 16%**
   (13.97 vs 16.64 ms): the Top-N sort over the bloom-matched set pays the
   extraction chain per compared row, so the helper fix has multiplied

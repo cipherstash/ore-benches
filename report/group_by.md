@@ -29,12 +29,16 @@ ON category_encrypted_10000 using hash (
 - 10,000: _none — planner picked a sequential / hash-aggregate / sort plan_
 - 100,000: _none — planner picked a sequential / hash-aggregate / sort plan_
 - 1,000,000: _none — planner picked a sequential / hash-aggregate / sort plan_
+- 10,000,000: _none — planner picked a sequential / hash-aggregate / sort plan_
+
+*⚠️ = Query time exceeds 100ms*
 
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
 | 10,000 | 1 | 2.17ms | N/A |
 | 100,000 | 1 | 19.31ms | N/A |
 | 1,000,000 | 1 | 83.25ms | N/A |
+| 10,000,000 | 1 | ⚠️ 933.22ms | N/A |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
 
@@ -267,6 +271,112 @@ Full `EXPLAIN (FORMAT JSON)`:
 ]
 ```
 
+**10,000,000 rows**
+
+```
+Aggregate
+  Group
+    Gather Merge
+      Sort
+        Aggregate (Hashed)
+          Seq Scan on category_encrypted_v3_10000000
+```
+
+Full `EXPLAIN (FORMAT JSON)`:
+
+```json
+[
+  {
+    "Plan": {
+      "Async Capable": false,
+      "Node Type": "Aggregate",
+      "Parallel Aware": false,
+      "Partial Mode": "Simple",
+      "Plan Rows": 1,
+      "Plan Width": 8,
+      "Plans": [
+        {
+          "Async Capable": false,
+          "Group Key": [
+            "((((category_encrypted_v3_10000000.value)::jsonb ->> 'hm'::text))::eql_v3_internal.hmac_256)"
+          ],
+          "Node Type": "Group",
+          "Parallel Aware": false,
+          "Parent Relationship": "Outer",
+          "Plan Rows": 250,
+          "Plan Width": 36,
+          "Plans": [
+            {
+              "Async Capable": false,
+              "Node Type": "Gather Merge",
+              "Parallel Aware": false,
+              "Parent Relationship": "Outer",
+              "Plan Rows": 500,
+              "Plan Width": 32,
+              "Plans": [
+                {
+                  "Async Capable": false,
+                  "Node Type": "Sort",
+                  "Parallel Aware": false,
+                  "Parent Relationship": "Outer",
+                  "Plan Rows": 250,
+                  "Plan Width": 32,
+                  "Plans": [
+                    {
+                      "Async Capable": false,
+                      "Group Key": [
+                        "(((category_encrypted_v3_10000000.value)::jsonb ->> 'hm'::text))::eql_v3_internal.hmac_256"
+                      ],
+                      "Node Type": "Aggregate",
+                      "Parallel Aware": false,
+                      "Parent Relationship": "Outer",
+                      "Partial Mode": "Partial",
+                      "Plan Rows": 250,
+                      "Plan Width": 32,
+                      "Planned Partitions": 0,
+                      "Plans": [
+                        {
+                          "Alias": "category_encrypted_v3_10000000",
+                          "Async Capable": false,
+                          "Node Type": "Seq Scan",
+                          "Parallel Aware": true,
+                          "Parent Relationship": "Outer",
+                          "Plan Rows": 4166670,
+                          "Plan Width": 32,
+                          "Relation Name": "category_encrypted_v3_10000000",
+                          "Startup Cost": 0.0,
+                          "Total Cost": 468750.38
+                        }
+                      ],
+                      "Startup Cost": 479167.05,
+                      "Strategy": "Hashed",
+                      "Total Cost": 479170.17
+                    }
+                  ],
+                  "Sort Key": [
+                    "((((category_encrypted_v3_10000000.value)::jsonb ->> 'hm'::text))::eql_v3_internal.hmac_256)"
+                  ],
+                  "Startup Cost": 479180.13,
+                  "Total Cost": 479180.76
+                }
+              ],
+              "Startup Cost": 480180.16,
+              "Total Cost": 480238.49,
+              "Workers Planned": 2
+            }
+          ],
+          "Startup Cost": 480180.16,
+          "Total Cost": 480240.37
+        }
+      ],
+      "Startup Cost": 480243.49,
+      "Strategy": "Plain",
+      "Total Cost": 480243.5
+    }
+  }
+]
+```
+
 </details>
 
 ![Query Performance - GROUP_BY/low_cardinality_groups_encrypted](query_group_by_low_cardinality_groups_encrypted_chart.png)
@@ -287,12 +397,16 @@ SELECT count(*) FROM (SELECT 1 FROM {TABLE} GROUP BY value) g
 - 10,000: _none — planner picked a sequential / hash-aggregate / sort plan_
 - 100,000: _none — planner picked a sequential / hash-aggregate / sort plan_
 - 1,000,000: _none — planner picked a sequential / hash-aggregate / sort plan_
+- 10,000,000: _none — planner picked a sequential / hash-aggregate / sort plan_
+
+*⚠️ = Query time exceeds 100ms*
 
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
 | 10,000 | 1 | 1.21ms | N/A |
 | 100,000 | 1 | 9.60ms | N/A |
 | 1,000,000 | 1 | 37.13ms | N/A |
+| 10,000,000 | 1 | ⚠️ 339.95ms | N/A |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
 
@@ -525,6 +639,112 @@ Full `EXPLAIN (FORMAT JSON)`:
 ]
 ```
 
+**10,000,000 rows**
+
+```
+Aggregate
+  Group
+    Gather Merge
+      Sort
+        Aggregate (Hashed)
+          Seq Scan on category_plaintext_10000000
+```
+
+Full `EXPLAIN (FORMAT JSON)`:
+
+```json
+[
+  {
+    "Plan": {
+      "Async Capable": false,
+      "Node Type": "Aggregate",
+      "Parallel Aware": false,
+      "Partial Mode": "Simple",
+      "Plan Rows": 1,
+      "Plan Width": 8,
+      "Plans": [
+        {
+          "Async Capable": false,
+          "Group Key": [
+            "category_plaintext_10000000.value"
+          ],
+          "Node Type": "Group",
+          "Parallel Aware": false,
+          "Parent Relationship": "Outer",
+          "Plan Rows": 250,
+          "Plan Width": 12,
+          "Plans": [
+            {
+              "Async Capable": false,
+              "Node Type": "Gather Merge",
+              "Parallel Aware": false,
+              "Parent Relationship": "Outer",
+              "Plan Rows": 500,
+              "Plan Width": 8,
+              "Plans": [
+                {
+                  "Async Capable": false,
+                  "Node Type": "Sort",
+                  "Parallel Aware": false,
+                  "Parent Relationship": "Outer",
+                  "Plan Rows": 250,
+                  "Plan Width": 8,
+                  "Plans": [
+                    {
+                      "Async Capable": false,
+                      "Group Key": [
+                        "category_plaintext_10000000.value"
+                      ],
+                      "Node Type": "Aggregate",
+                      "Parallel Aware": false,
+                      "Parent Relationship": "Outer",
+                      "Partial Mode": "Partial",
+                      "Plan Rows": 250,
+                      "Plan Width": 8,
+                      "Planned Partitions": 0,
+                      "Plans": [
+                        {
+                          "Alias": "category_plaintext_10000000",
+                          "Async Capable": false,
+                          "Node Type": "Seq Scan",
+                          "Parallel Aware": true,
+                          "Parent Relationship": "Outer",
+                          "Plan Rows": 4166608,
+                          "Plan Width": 8,
+                          "Relation Name": "category_plaintext_10000000",
+                          "Startup Cost": 0.0,
+                          "Total Cost": 95721.08
+                        }
+                      ],
+                      "Startup Cost": 106137.6,
+                      "Strategy": "Hashed",
+                      "Total Cost": 106140.1
+                    }
+                  ],
+                  "Sort Key": [
+                    "category_plaintext_10000000.value"
+                  ],
+                  "Startup Cost": 106150.06,
+                  "Total Cost": 106150.69
+                }
+              ],
+              "Startup Cost": 107150.08,
+              "Total Cost": 107208.42,
+              "Workers Planned": 2
+            }
+          ],
+          "Startup Cost": 107150.08,
+          "Total Cost": 107209.67
+        }
+      ],
+      "Startup Cost": 107212.8,
+      "Strategy": "Plain",
+      "Total Cost": 107212.81
+    }
+  }
+]
+```
+
 </details>
 
 ![Query Performance - GROUP_BY/low_cardinality_groups_plaintext](query_group_by_low_cardinality_groups_plaintext_chart.png)
@@ -554,12 +774,16 @@ ON category_encrypted_10000 using hash (
 - 10,000: _none — planner picked a sequential / hash-aggregate / sort plan_
 - 100,000: _none — planner picked a sequential / hash-aggregate / sort plan_
 - 1,000,000: _none — planner picked a sequential / hash-aggregate / sort plan_
+- 10,000,000: _none — planner picked a sequential / hash-aggregate / sort plan_
+
+*⚠️ = Query time exceeds 100ms*
 
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
 | 10,000 | 10 | 2.11ms | N/A |
 | 100,000 | 10 | 19.99ms | N/A |
 | 1,000,000 | 10 | 88.02ms | N/A |
+| 10,000,000 | 10 | ⚠️ 933.06ms | N/A |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
 
@@ -836,6 +1060,128 @@ Full `EXPLAIN (FORMAT JSON)`:
 ]
 ```
 
+**10,000,000 rows**
+
+```
+Limit
+  Sort
+    Aggregate (Sorted)
+      Gather Merge
+        Sort
+          Aggregate (Hashed)
+            Seq Scan on category_encrypted_v3_10000000
+```
+
+Full `EXPLAIN (FORMAT JSON)`:
+
+```json
+[
+  {
+    "Plan": {
+      "Async Capable": false,
+      "Node Type": "Limit",
+      "Parallel Aware": false,
+      "Plan Rows": 10,
+      "Plan Width": 40,
+      "Plans": [
+        {
+          "Async Capable": false,
+          "Node Type": "Sort",
+          "Parallel Aware": false,
+          "Parent Relationship": "Outer",
+          "Plan Rows": 250,
+          "Plan Width": 40,
+          "Plans": [
+            {
+              "Async Capable": false,
+              "Group Key": [
+                "((((value)::jsonb ->> 'hm'::text))::eql_v3_internal.hmac_256)"
+              ],
+              "Node Type": "Aggregate",
+              "Parallel Aware": false,
+              "Parent Relationship": "Outer",
+              "Partial Mode": "Finalize",
+              "Plan Rows": 250,
+              "Plan Width": 40,
+              "Plans": [
+                {
+                  "Async Capable": false,
+                  "Node Type": "Gather Merge",
+                  "Parallel Aware": false,
+                  "Parent Relationship": "Outer",
+                  "Plan Rows": 500,
+                  "Plan Width": 40,
+                  "Plans": [
+                    {
+                      "Async Capable": false,
+                      "Node Type": "Sort",
+                      "Parallel Aware": false,
+                      "Parent Relationship": "Outer",
+                      "Plan Rows": 250,
+                      "Plan Width": 40,
+                      "Plans": [
+                        {
+                          "Async Capable": false,
+                          "Group Key": [
+                            "(((value)::jsonb ->> 'hm'::text))::eql_v3_internal.hmac_256"
+                          ],
+                          "Node Type": "Aggregate",
+                          "Parallel Aware": false,
+                          "Parent Relationship": "Outer",
+                          "Partial Mode": "Partial",
+                          "Plan Rows": 250,
+                          "Plan Width": 40,
+                          "Planned Partitions": 0,
+                          "Plans": [
+                            {
+                              "Alias": "category_encrypted_v3_10000000",
+                              "Async Capable": false,
+                              "Node Type": "Seq Scan",
+                              "Parallel Aware": true,
+                              "Parent Relationship": "Outer",
+                              "Plan Rows": 4166670,
+                              "Plan Width": 32,
+                              "Relation Name": "category_encrypted_v3_10000000",
+                              "Startup Cost": 0.0,
+                              "Total Cost": 468750.38
+                            }
+                          ],
+                          "Startup Cost": 489583.72,
+                          "Strategy": "Hashed",
+                          "Total Cost": 489586.85
+                        }
+                      ],
+                      "Sort Key": [
+                        "((((value)::jsonb ->> 'hm'::text))::eql_v3_internal.hmac_256)"
+                      ],
+                      "Startup Cost": 489596.81,
+                      "Total Cost": 489597.43
+                    }
+                  ],
+                  "Startup Cost": 490596.83,
+                  "Total Cost": 490655.17,
+                  "Workers Planned": 2
+                }
+              ],
+              "Startup Cost": 490596.83,
+              "Strategy": "Sorted",
+              "Total Cost": 490660.79
+            }
+          ],
+          "Sort Key": [
+            "(count(*)) DESC"
+          ],
+          "Startup Cost": 490666.2,
+          "Total Cost": 490666.82
+        }
+      ],
+      "Startup Cost": 490666.2,
+      "Total Cost": 490666.22
+    }
+  }
+]
+```
+
 </details>
 
 ![Query Performance - GROUP_BY/top_n_groups_encrypted](query_group_by_top_n_groups_encrypted_chart.png)
@@ -856,12 +1202,16 @@ SELECT value, count(*) FROM {TABLE} GROUP BY 1 ORDER BY count(*) DESC LIMIT 10
 - 10,000: _none — planner picked a sequential / hash-aggregate / sort plan_
 - 100,000: _none — planner picked a sequential / hash-aggregate / sort plan_
 - 1,000,000: _none — planner picked a sequential / hash-aggregate / sort plan_
+- 10,000,000: _none — planner picked a sequential / hash-aggregate / sort plan_
+
+*⚠️ = Query time exceeds 100ms*
 
 | Data Set Size | Rows Returned | Query Time (no decrypt) | Query Time (with decrypt) |
 |---------------|---------------|-------------------------|---------------------------|
 | 10,000 | 10 | 1.24ms | N/A |
 | 100,000 | 10 | 10.07ms | N/A |
 | 1,000,000 | 10 | 38.70ms | N/A |
+| 10,000,000 | 10 | ⚠️ 349.58ms | N/A |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
 
@@ -1133,6 +1483,128 @@ Full `EXPLAIN (FORMAT JSON)`:
       ],
       "Startup Cost": 12737.22,
       "Total Cost": 12737.25
+    }
+  }
+]
+```
+
+**10,000,000 rows**
+
+```
+Limit
+  Sort
+    Aggregate (Sorted)
+      Gather Merge
+        Sort
+          Aggregate (Hashed)
+            Seq Scan on category_plaintext_10000000
+```
+
+Full `EXPLAIN (FORMAT JSON)`:
+
+```json
+[
+  {
+    "Plan": {
+      "Async Capable": false,
+      "Node Type": "Limit",
+      "Parallel Aware": false,
+      "Plan Rows": 10,
+      "Plan Width": 16,
+      "Plans": [
+        {
+          "Async Capable": false,
+          "Node Type": "Sort",
+          "Parallel Aware": false,
+          "Parent Relationship": "Outer",
+          "Plan Rows": 250,
+          "Plan Width": 16,
+          "Plans": [
+            {
+              "Async Capable": false,
+              "Group Key": [
+                "value"
+              ],
+              "Node Type": "Aggregate",
+              "Parallel Aware": false,
+              "Parent Relationship": "Outer",
+              "Partial Mode": "Finalize",
+              "Plan Rows": 250,
+              "Plan Width": 16,
+              "Plans": [
+                {
+                  "Async Capable": false,
+                  "Node Type": "Gather Merge",
+                  "Parallel Aware": false,
+                  "Parent Relationship": "Outer",
+                  "Plan Rows": 500,
+                  "Plan Width": 16,
+                  "Plans": [
+                    {
+                      "Async Capable": false,
+                      "Node Type": "Sort",
+                      "Parallel Aware": false,
+                      "Parent Relationship": "Outer",
+                      "Plan Rows": 250,
+                      "Plan Width": 16,
+                      "Plans": [
+                        {
+                          "Async Capable": false,
+                          "Group Key": [
+                            "value"
+                          ],
+                          "Node Type": "Aggregate",
+                          "Parallel Aware": false,
+                          "Parent Relationship": "Outer",
+                          "Partial Mode": "Partial",
+                          "Plan Rows": 250,
+                          "Plan Width": 16,
+                          "Planned Partitions": 0,
+                          "Plans": [
+                            {
+                              "Alias": "category_plaintext_10000000",
+                              "Async Capable": false,
+                              "Node Type": "Seq Scan",
+                              "Parallel Aware": true,
+                              "Parent Relationship": "Outer",
+                              "Plan Rows": 4166608,
+                              "Plan Width": 8,
+                              "Relation Name": "category_plaintext_10000000",
+                              "Startup Cost": 0.0,
+                              "Total Cost": 95721.08
+                            }
+                          ],
+                          "Startup Cost": 116554.12,
+                          "Strategy": "Hashed",
+                          "Total Cost": 116556.62
+                        }
+                      ],
+                      "Sort Key": [
+                        "value"
+                      ],
+                      "Startup Cost": 116566.58,
+                      "Total Cost": 116567.21
+                    }
+                  ],
+                  "Startup Cost": 117566.6,
+                  "Total Cost": 117624.94,
+                  "Workers Planned": 2
+                }
+              ],
+              "Startup Cost": 117566.6,
+              "Strategy": "Sorted",
+              "Total Cost": 117629.94
+            }
+          ],
+          "Sort Key": [
+            "(count(*)) DESC"
+          ],
+          "Startup Cost": 117635.34,
+          "Total Cost": 117635.97
+        }
+      ],
+      "Startup Cost": 117635.34,
+      "Total Cost": 117635.37
     }
   }
 ]
