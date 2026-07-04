@@ -33,6 +33,8 @@ impl EqlV2Encrypted {
         self.data.0
     }
 }
+pub mod v3;
+
 use stack_profile::ProfileStore;
 use std::borrow::Cow;
 use std::env;
@@ -699,7 +701,19 @@ pub fn write_metadata_file(
     target_rows: &str,
     scenarios: Vec<ScenarioMetadata>,
 ) -> Result<()> {
-    let dir = std::path::PathBuf::from("results/query");
+    write_metadata_file_in("results/query", prefix, target_rows, scenarios)
+}
+
+/// [`write_metadata_file`] with an explicit output directory — the v3
+/// benches keep their sidecars under `results/query/v3/` so the committed
+/// v2 results stay untouched as the regression baseline.
+pub fn write_metadata_file_in(
+    dir: &str,
+    prefix: &str,
+    target_rows: &str,
+    scenarios: Vec<ScenarioMetadata>,
+) -> Result<()> {
+    let dir = std::path::PathBuf::from(dir);
     std::fs::create_dir_all(&dir)?;
     let path = dir.join(format!("{}_metadata_{}.json", prefix, target_rows));
     let payload = serde_json::json!({

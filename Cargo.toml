@@ -24,6 +24,15 @@ rand = "0.8.5"
 # in mise.toml's setup-db task.
 cipherstash-client = { version = "=0.34.1-alpha.9", features = ["tokio"] }
 stack-profile = "=0.34.1-alpha.9"
+# EQL v2.3 -> v3 payload conversion (the supported migration path; the
+# converter's docs name these benches as a consumer). The pinned
+# cipherstash-client above emits v2.3 payloads; eql-bindings::from_v2
+# reshapes them into the eql_v3 domain payloads. Switch `branch` to
+# `tag = "eql-<semver>"` once EQL v3 is released.
+eql-bindings = { git = "https://github.com/cipherstash/encrypt-query-language", branch = "eql_v3" }
+# Plaintext::Decimal takes rust_decimal::Decimal, which cipherstash-client
+# does not re-export — used by the scalar_smoke_v3 numeric-family coverage.
+rust_decimal = "1"
 anyhow = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -76,6 +85,38 @@ path = "src/bin/encrypt_category.rs"
 name = "encrypt_combo"
 path = "src/bin/encrypt_combo.rs"
 
+[[bin]]
+name = "encrypt_string_v3"
+path = "src/bin/encrypt_string_v3.rs"
+
+[[bin]]
+name = "encrypt_int_v3"
+path = "src/bin/encrypt_int_v3.rs"
+
+[[bin]]
+name = "encrypt_int_ope_v3"
+path = "src/bin/encrypt_int_ope_v3.rs"
+
+[[bin]]
+name = "encrypt_category_v3"
+path = "src/bin/encrypt_category_v3.rs"
+
+[[bin]]
+name = "encrypt_combo_v3"
+path = "src/bin/encrypt_combo_v3.rs"
+
+[[bin]]
+name = "encrypt_ste_vec_small_v3"
+path = "src/bin/encrypt_ste_vec_small_v3.rs"
+
+[[bin]]
+name = "encrypt_scalar_smoke_v3"
+path = "src/bin/encrypt_scalar_smoke_v3.rs"
+
+[[bin]]
+name = "decrypt_probe"
+path = "src/bin/decrypt_probe.rs"
+
 [[bench]]
 name = "ore"
 harness = false
@@ -98,4 +139,40 @@ harness = false
 
 [[bench]]
 name = "combo"
+harness = false
+
+[[bench]]
+name = "exact_v3"
+harness = false
+
+[[bench]]
+name = "ore_v3"
+harness = false
+
+[[bench]]
+name = "group_by_v3"
+harness = false
+
+[[bench]]
+name = "match_v3"
+harness = false
+
+[[bench]]
+name = "ope_v3"
+harness = false
+
+[[bench]]
+name = "combo_v3"
+harness = false
+
+[[bench]]
+name = "json_v3"
+harness = false
+
+[[bench]]
+name = "scalar_smoke_v3"
+harness = false
+
+[[bench]]
+name = "plaintext_v3"
 harness = false

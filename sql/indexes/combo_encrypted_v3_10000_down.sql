@@ -1,0 +1,3 @@
+DROP INDEX IF EXISTS combo_encrypted_v3_10000_name_match_gin_index;
+DROP INDEX IF EXISTS combo_encrypted_v3_10000_age_ord_index;
+DROP INDEX IF EXISTS combo_encrypted_v3_10000_category_eq_btree_index;

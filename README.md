@@ -9,6 +9,38 @@ The latest benchmark results are available in the [`report/`](report/) directory
 - **[Benchmark Report](report/BENCHMARK_REPORT.md)** - Comprehensive report with performance tables and charts
 - Includes ingest throughput, query performance, SQL statements, and index configurations
 - Performance indicators (⚠️) highlight queries exceeding 100ms
+- **[EQL v3 vs v2 Comparison](report/V3_COMPARISON.md)** - regression tables, index-engagement audit, and docs/marketing charts (`report/v3/`)
+
+## 🆕 EQL v3 benches
+
+The `*_v3` benches target the upcoming EQL v3 release (domain-specific types —
+`eql_v3.text_search`, `eql_v3.integer_ord`, … — replacing the single
+`eql_v2_encrypted` composite). They live alongside the v2 benches; the
+committed v2 results are the regression baseline and are never overwritten
+(v3 results land in `results/query/v3/` and `results/ingest/v3/`).
+
+```bash
+# Install the v3 bundle alongside v2 (builds from a local eql_v3 checkout;
+# see EQL_V3_DIR / EQL_V3_SQL in the task for overrides)
+mise run setup-db-v3
+
+# Populate all v3 tables at a tier
+mise run prepare:v3:all 10000
+
+# Query benches: exact | match | ore | ope | group_by | combo | json | plaintext | smoke
+mise run bench:v3:query:all 10000     # arg = max tier (10000 | 100000 | 1000000)
+
+# Ingest benches (hyperfine, same tiers as v2)
+mise run bench:v3:ingest
+
+# v3-vs-v2 + encrypted-vs-plaintext report and charts
+mise run report:v3-compare
+```
+
+v3 payloads are produced by converting the pinned cipherstash-client's v2.3
+output through `eql-bindings::from_v2` (the supported migration path — see
+`src/v3.rs` for the details and caveats, including the synthetic CLLW-OPE
+term used by the `ope` benches until a client release emits `op`).
 
 ### Other benchmarks
 

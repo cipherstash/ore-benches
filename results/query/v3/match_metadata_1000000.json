@@ -1,0 +1,269 @@
+{
+  "scenarios": [
+    {
+      "explain": [
+        {
+          "Plan": {
+            "Async Capable": false,
+            "Node Type": "Limit",
+            "Parallel Aware": false,
+            "Plan Rows": 1,
+            "Plan Width": 640,
+            "Plans": [
+              {
+                "Alias": "string_encrypted_v3_1000000",
+                "Async Capable": false,
+                "Node Type": "Bitmap Heap Scan",
+                "Parallel Aware": false,
+                "Parent Relationship": "Outer",
+                "Plan Rows": 1,
+                "Plan Width": 640,
+                "Plans": [
+                  {
+                    "Async Capable": false,
+                    "Index Cond": "((eql_v3_internal.bloom_filter((value)::jsonb))::smallint[] @> (eql_v3_internal.bloom_filter((('{\"c\": \"mBbKTLD5ykVEz!XeeZg|Q#FXh72cBryQgNysOREL{moes`OOu3nv}#K+bRd}omLFCeshTyIp;IllFH+>u|~yeXv>Is6$Tv}rFLO#b!Eg5<upmU-1bZEwaF)KXjao=\", \"i\": {\"c\": \"value\", \"t\": \"string_encrypted_v3_1000000\"}, \"v\": 3, \"bf\": [1673, 567, 943, 1076, 1471, 1346], \"hm\": \"d22ac625c9c1daba9b8150da007d2b5439805886ec39577fd9ef95ffe4f86795\", \"ob\": [\"f8bc8c8c8c8c8c8c148eaac3a25aee669623505bb82c16eb29a7175a9ef4e2a737a2773bf9618cb2cd9052275e9f85cd524150b3812138804ed85eb01498ba3069836158f28bed37ea70b957eba0dedb7716b5ff06e87dd519cb5b26536c0999ca90b109bda9b2e96f77317232133257105cdbf358dc8b95db957a0530f37ae1bc4014d6d80f09c38a3dddc975353e78160b81007fdff4f9f4ff1c6c1026b9eeac7e298178b898d414d9ba5095ccaccc27dc598061ba46344bcfaee218023d7bd5c384aac6f95ce15aa48bd74d76ddb7cd677f5c16bce28120f7c54ff61c266552cb7dbd35d7b4fc3ba6bde84c839e7eacb8769ffd17fe8764e1ded2d90f4c0ef2991b38ecaf69869a7cbf2aa124fe365a9bf70f6f8e047d0b855463de318e7ef99035ad0ce00e2c11f7170c3a8746949a954a5043fbc8515cf0a8b89741ab301bb9f7d5af394f29e56c49dd9c562aa534bdea3da4701120d765b626961e5856fc4525ed785d3b19f91b3c6a38d0a12b343811d3c637c8978faf28aa72d74e0720c2b5743dd77373c8899b5dc02c319ae4c906abfe18975a\"]}'::jsonb)::eql_v3.text_search)::jsonb))::smallint[])",
+                    "Index Name": "string_encrypted_v3_1000000_match_gin_index",
+                    "Node Type": "Bitmap Index Scan",
+                    "Parallel Aware": false,
+                    "Parent Relationship": "Outer",
+                    "Plan Rows": 1,
+                    "Plan Width": 0,
+                    "Startup Cost": 0.0,
+                    "Total Cost": 261.97
+                  }
+                ],
+                "Recheck Cond": "((eql_v3_internal.bloom_filter((value)::jsonb))::smallint[] @> (eql_v3_internal.bloom_filter((('{\"c\": \"mBbKTLD5ykVEz!XeeZg|Q#FXh72cBryQgNysOREL{moes`OOu3nv}#K+bRd}omLFCeshTyIp;IllFH+>u|~yeXv>Is6$Tv}rFLO#b!Eg5<upmU-1bZEwaF)KXjao=\", \"i\": {\"c\": \"value\", \"t\": \"string_encrypted_v3_1000000\"}, \"v\": 3, \"bf\": [1673, 567, 943, 1076, 1471, 1346], \"hm\": \"d22ac625c9c1daba9b8150da007d2b5439805886ec39577fd9ef95ffe4f86795\", \"ob\": [\"f8bc8c8c8c8c8c8c148eaac3a25aee669623505bb82c16eb29a7175a9ef4e2a737a2773bf9618cb2cd9052275e9f85cd524150b3812138804ed85eb01498ba3069836158f28bed37ea70b957eba0dedb7716b5ff06e87dd519cb5b26536c0999ca90b109bda9b2e96f77317232133257105cdbf358dc8b95db957a0530f37ae1bc4014d6d80f09c38a3dddc975353e78160b81007fdff4f9f4ff1c6c1026b9eeac7e298178b898d414d9ba5095ccaccc27dc598061ba46344bcfaee218023d7bd5c384aac6f95ce15aa48bd74d76ddb7cd677f5c16bce28120f7c54ff61c266552cb7dbd35d7b4fc3ba6bde84c839e7eacb8769ffd17fe8764e1ded2d90f4c0ef2991b38ecaf69869a7cbf2aa124fe365a9bf70f6f8e047d0b855463de318e7ef99035ad0ce00e2c11f7170c3a8746949a954a5043fbc8515cf0a8b89741ab301bb9f7d5af394f29e56c49dd9c562aa534bdea3da4701120d765b626961e5856fc4525ed785d3b19f91b3c6a38d0a12b343811d3c637c8978faf28aa72d74e0720c2b5743dd77373c8899b5dc02c319ae4c906abfe18975a\"]}'::jsonb)::eql_v3.text_search)::jsonb))::smallint[])",
+                "Relation Name": "string_encrypted_v3_1000000",
+                "Startup Cost": 261.97,
+                "Total Cost": 266.49
+              }
+            ],
+            "Startup Cost": 261.97,
+            "Total Cost": 266.49
+          }
+        }
+      ],
+      "id": "MATCH/match/eql_cast_firstname/1000000",
+      "indexes_used": [
+        "string_encrypted_v3_1000000_match_gin_index"
+      ],
+      "parameters": [
+        {
+          "bf": [
+            1673,
+            567,
+            943,
+            1076,
+            1471,
+            1346
+          ],
+          "c": "mBbKTLD5ykVEz!XeeZg|Q#FXh72cBryQgNysOREL{moes`OOu3nv}#K+bRd}omLFCeshTyIp;IllFH+>u|~yeXv>Is6$Tv}rFLO#b!Eg5<upmU-1bZEwaF)KXjao=",
+          "hm": "d22ac625c9c1daba9b8150da007d2b5439805886ec39577fd9ef95ffe4f86795",
+          "i": {
+            "c": "value",
+            "t": "string_encrypted_v3_1000000"
+          },
+          "ob": [
+            "f8bc8c8c8c8c8c8c148eaac3a25aee669623505bb82c16eb29a7175a9ef4e2a737a2773bf9618cb2cd9052275e9f85cd524150b3812138804ed85eb01498ba3069836158f28bed37ea70b957eba0dedb7716b5ff06e87dd519cb5b26536c0999ca90b109bda9b2e96f77317232133257105cdbf358dc8b95db957a0530f37ae1bc4014d6d80f09c38a3dddc975353e78160b81007fdff4f9f4ff1c6c1026b9eeac7e298178b898d414d9ba5095ccaccc27dc598061ba46344bcfaee218023d7bd5c384aac6f95ce15aa48bd74d76ddb7cd677f5c16bce28120f7c54ff61c266552cb7dbd35d7b4fc3ba6bde84c839e7eacb8769ffd17fe8764e1ded2d90f4c0ef2991b38ecaf69869a7cbf2aa124fe365a9bf70f6f8e047d0b855463de318e7ef99035ad0ce00e2c11f7170c3a8746949a954a5043fbc8515cf0a8b89741ab301bb9f7d5af394f29e56c49dd9c562aa534bdea3da4701120d765b626961e5856fc4525ed785d3b19f91b3c6a38d0a12b343811d3c637c8978faf28aa72d74e0720c2b5743dd77373c8899b5dc02c319ae4c906abfe18975a"
+          ],
+          "v": 3
+        }
+      ],
+      "query": "SELECT id, value FROM string_encrypted_v3_1000000 WHERE value @> $1 LIMIT 10",
+      "rows_returned": 10
+    },
+    {
+      "explain": [
+        {
+          "Plan": {
+            "Async Capable": false,
+            "Node Type": "Limit",
+            "Parallel Aware": false,
+            "Plan Rows": 1,
+            "Plan Width": 640,
+            "Plans": [
+              {
+                "Alias": "string_encrypted_v3_1000000",
+                "Async Capable": false,
+                "Node Type": "Bitmap Heap Scan",
+                "Parallel Aware": false,
+                "Parent Relationship": "Outer",
+                "Plan Rows": 1,
+                "Plan Width": 640,
+                "Plans": [
+                  {
+                    "Async Capable": false,
+                    "Index Cond": "((eql_v3_internal.bloom_filter((value)::jsonb))::smallint[] @> (eql_v3_internal.bloom_filter((('{\"c\": \"mBbJvJYs<aJZh$A2sEiP_X@1U83x7Eab>_=3nrp@=|y#qF#@tBzTxk-AWXy{s~7d`P&_@H$!F#$JT=MJZ~Z(5V4`X8nH@b$!XX!ArFLO#b!Eg5<upmU-1bZEwaF)KXjao=\", \"i\": {\"c\": \"value\", \"t\": \"string_encrypted_v3_1000000\"}, \"v\": 3, \"bf\": [690, 684, 1574, 1524, 948, 1215, 0, 1646, 687, 587, 1705, 872, 1334, 899, 1342, 104, 1129, 1548, 1265, 566, 1849, 953, 413, 1369, 1070, 192, 606, 1826, 1030, 438], \"hm\": \"fe348dd0003b5ce3173aaaaf495e30c6c4bce6201da8e9d6064d18598c818022\", \"ob\": [\"1e17dc69f8909090c00f2d549cf7c0571af2a3f32b85275b2bb943dde8b1a1df2f72ad9917386cd49096575761dc049e5ba711e2fdc2e3fdbfab357e00beb0fc5bc0dfced927aab195495bd31947d7aacf083e7046b8f503180caa4083372f1b0f4e9aed43d4735e87ecdeda4798cf4a5a5016da7eade2cf9461be2912a70c4e3f1b411b25854842a27d8521f6aeec88d90d2a88942a871e90bcdb92214292e5dfdc37cd107e767d36a675444471bac1e4d7e7c4427cdbc482b1223a2ce8026962b7ef4a920d68deecb5d771d14679e47bad047feb1e87a295268f4b8b0ca8988906120dde3d1ed3171d1a79f1e010b263835b8ecf3ed3fc0c5eeb9d5c5f642c2fa5f5f9d4a721a8af8fbdddcbddc402316d30a14525a033ac63389dabc8e1eb7b2c9252ab7d27a3b63b663b5b958de98e37de1a5f05b6c1062c3399f81e48af7e93d8efb11bcbc881532ec1ad3544fcdd441ff063377daaf74dfcc9b46a3edaa12734030fb0c52fd58695c202f8e9855ae023d3254b7f38e1e161b609748879da11997212fc79c981d8d5b6031fdd829b25e52050188d72\"]}'::jsonb)::eql_v3.text_search)::jsonb))::smallint[])",
+                    "Index Name": "string_encrypted_v3_1000000_match_gin_index",
+                    "Node Type": "Bitmap Index Scan",
+                    "Parallel Aware": false,
+                    "Parent Relationship": "Outer",
+                    "Plan Rows": 1,
+                    "Plan Width": 0,
+                    "Startup Cost": 0.0,
+                    "Total Cost": 1292.35
+                  }
+                ],
+                "Recheck Cond": "((eql_v3_internal.bloom_filter((value)::jsonb))::smallint[] @> (eql_v3_internal.bloom_filter((('{\"c\": \"mBbJvJYs<aJZh$A2sEiP_X@1U83x7Eab>_=3nrp@=|y#qF#@tBzTxk-AWXy{s~7d`P&_@H$!F#$JT=MJZ~Z(5V4`X8nH@b$!XX!ArFLO#b!Eg5<upmU-1bZEwaF)KXjao=\", \"i\": {\"c\": \"value\", \"t\": \"string_encrypted_v3_1000000\"}, \"v\": 3, \"bf\": [690, 684, 1574, 1524, 948, 1215, 0, 1646, 687, 587, 1705, 872, 1334, 899, 1342, 104, 1129, 1548, 1265, 566, 1849, 953, 413, 1369, 1070, 192, 606, 1826, 1030, 438], \"hm\": \"fe348dd0003b5ce3173aaaaf495e30c6c4bce6201da8e9d6064d18598c818022\", \"ob\": [\"1e17dc69f8909090c00f2d549cf7c0571af2a3f32b85275b2bb943dde8b1a1df2f72ad9917386cd49096575761dc049e5ba711e2fdc2e3fdbfab357e00beb0fc5bc0dfced927aab195495bd31947d7aacf083e7046b8f503180caa4083372f1b0f4e9aed43d4735e87ecdeda4798cf4a5a5016da7eade2cf9461be2912a70c4e3f1b411b25854842a27d8521f6aeec88d90d2a88942a871e90bcdb92214292e5dfdc37cd107e767d36a675444471bac1e4d7e7c4427cdbc482b1223a2ce8026962b7ef4a920d68deecb5d771d14679e47bad047feb1e87a295268f4b8b0ca8988906120dde3d1ed3171d1a79f1e010b263835b8ecf3ed3fc0c5eeb9d5c5f642c2fa5f5f9d4a721a8af8fbdddcbddc402316d30a14525a033ac63389dabc8e1eb7b2c9252ab7d27a3b63b663b5b958de98e37de1a5f05b6c1062c3399f81e48af7e93d8efb11bcbc881532ec1ad3544fcdd441ff063377daaf74dfcc9b46a3edaa12734030fb0c52fd58695c202f8e9855ae023d3254b7f38e1e161b609748879da11997212fc79c981d8d5b6031fdd829b25e52050188d72\"]}'::jsonb)::eql_v3.text_search)::jsonb))::smallint[])",
+                "Relation Name": "string_encrypted_v3_1000000",
+                "Startup Cost": 1292.35,
+                "Total Cost": 1296.87
+              }
+            ],
+            "Startup Cost": 1292.35,
+            "Total Cost": 1296.87
+          }
+        }
+      ],
+      "id": "MATCH/match/eql_cast_lastname/1000000",
+      "indexes_used": [
+        "string_encrypted_v3_1000000_match_gin_index"
+      ],
+      "parameters": [
+        {
+          "bf": [
+            690,
+            684,
+            1574,
+            1524,
+            948,
+            1215,
+            0,
+            1646,
+            687,
+            587,
+            1705,
+            872,
+            1334,
+            899,
+            1342,
+            104,
+            1129,
+            1548,
+            1265,
+            566,
+            1849,
+            953,
+            413,
+            1369,
+            1070,
+            192,
+            606,
+            1826,
+            1030,
+            438
+          ],
+          "c": "mBbJvJYs<aJZh$A2sEiP_X@1U83x7Eab>_=3nrp@=|y#qF#@tBzTxk-AWXy{s~7d`P&_@H$!F#$JT=MJZ~Z(5V4`X8nH@b$!XX!ArFLO#b!Eg5<upmU-1bZEwaF)KXjao=",
+          "hm": "fe348dd0003b5ce3173aaaaf495e30c6c4bce6201da8e9d6064d18598c818022",
+          "i": {
+            "c": "value",
+            "t": "string_encrypted_v3_1000000"
+          },
+          "ob": [
+            "1e17dc69f8909090c00f2d549cf7c0571af2a3f32b85275b2bb943dde8b1a1df2f72ad9917386cd49096575761dc049e5ba711e2fdc2e3fdbfab357e00beb0fc5bc0dfced927aab195495bd31947d7aacf083e7046b8f503180caa4083372f1b0f4e9aed43d4735e87ecdeda4798cf4a5a5016da7eade2cf9461be2912a70c4e3f1b411b25854842a27d8521f6aeec88d90d2a88942a871e90bcdb92214292e5dfdc37cd107e767d36a675444471bac1e4d7e7c4427cdbc482b1223a2ce8026962b7ef4a920d68deecb5d771d14679e47bad047feb1e87a295268f4b8b0ca8988906120dde3d1ed3171d1a79f1e010b263835b8ecf3ed3fc0c5eeb9d5c5f642c2fa5f5f9d4a721a8af8fbdddcbddc402316d30a14525a033ac63389dabc8e1eb7b2c9252ab7d27a3b63b663b5b958de98e37de1a5f05b6c1062c3399f81e48af7e93d8efb11bcbc881532ec1ad3544fcdd441ff063377daaf74dfcc9b46a3edaa12734030fb0c52fd58695c202f8e9855ae023d3254b7f38e1e161b609748879da11997212fc79c981d8d5b6031fdd829b25e52050188d72"
+          ],
+          "v": 3
+        }
+      ],
+      "query": "SELECT id, value FROM string_encrypted_v3_1000000 WHERE value @> $1 LIMIT 10",
+      "rows_returned": 10
+    },
+    {
+      "explain": [
+        {
+          "Plan": {
+            "Async Capable": false,
+            "Node Type": "Limit",
+            "Parallel Aware": false,
+            "Plan Rows": 1,
+            "Plan Width": 640,
+            "Plans": [
+              {
+                "Alias": "string_encrypted_v3_1000000",
+                "Async Capable": false,
+                "Node Type": "Bitmap Heap Scan",
+                "Parallel Aware": false,
+                "Parent Relationship": "Outer",
+                "Plan Rows": 1,
+                "Plan Width": 640,
+                "Plans": [
+                  {
+                    "Async Capable": false,
+                    "Index Cond": "((eql_v3_internal.bloom_filter((value)::jsonb))::smallint[] @> (eql_v3_internal.bloom_filter((('{\"c\": \"mBbLD;S<#Eca7t|%GPGO91(-W8J=)|OW)ROa@+JH{?*S!&P7N>Fk<Tw?a{;_ju^CT@*10wTQFa}9mO||32LEC&wqJ4P-lB&A);(KrFLO#b!Eg5<upmU-1bZEwaF)KXjao=\", \"i\": {\"c\": \"value\", \"t\": \"string_encrypted_v3_1000000\"}, \"v\": 3, \"bf\": [1524, 1215, 872, 1369, 0, 948, 1548, 1826, 1129, 690, 413, 1705, 899, 104, 1265, 1646, 438, 606, 192, 953, 1574, 687, 684, 1070, 587, 1334, 566, 1849, 1342, 1030], \"hm\": \"fe348dd0003b5ce3173aaaaf495e30c6c4bce6201da8e9d6064d18598c818022\", \"ob\": [\"1e17dc69f8909090c00f2d549cf7c0571af2a3f32b85275b2bb943dde8b1a1df2f72ad9917386cd49096575761dc049e5ba711e2fdc2e3fdbfab357e00beb0fc5bc0dfced927aab195495bd31947d7aacf083e7046b8f503180caa4083372f1b0f4e9aed43d4735e87ecdeda4798cf4a5a5016da7eade2cf9461be2912a70c4e3f1b411b25854842cd8b50f770de72735fea56b63077ade82178f9a4c722b620ab99e15dc97a3ff78a1c969c46ed6fc7d6e9a351a69a67276b6e71fb325116b556d2d91383f997728c85f9683ff95b18769dae1283f5d4ba112ad1840d1ed2bedaf47a7615c938744eab4a307d1825c77ea45ff2fee935c9ada99f6cde6d34ea6fb2713b47d82c80dc7371523d18d0ecda35e3c9754074098c37dbfd79768bb0cdf19366782a43abb016682000d50efa40ba50c8f9955956170e0a9a7eb1eaf0bac2d695170981602bfbc49b9e397e597bb96ad75d89cff573ac753832baf61a2dd56ab693514a81133c523948ab3afe6ec735351b2b4ba941a2c3deeec806bcf4d40a7f7660ae94dd89d7aa740564cfce8d4e4ecb58ead2\"]}'::jsonb)::eql_v3.text_search)::jsonb))::smallint[])",
+                    "Index Name": "string_encrypted_v3_1000000_match_gin_index",
+                    "Node Type": "Bitmap Index Scan",
+                    "Parallel Aware": false,
+                    "Parent Relationship": "Outer",
+                    "Plan Rows": 1,
+                    "Plan Width": 0,
+                    "Startup Cost": 0.0,
+                    "Total Cost": 1292.35
+                  }
+                ],
+                "Recheck Cond": "((eql_v3_internal.bloom_filter((value)::jsonb))::smallint[] @> (eql_v3_internal.bloom_filter((('{\"c\": \"mBbLD;S<#Eca7t|%GPGO91(-W8J=)|OW)ROa@+JH{?*S!&P7N>Fk<Tw?a{;_ju^CT@*10wTQFa}9mO||32LEC&wqJ4P-lB&A);(KrFLO#b!Eg5<upmU-1bZEwaF)KXjao=\", \"i\": {\"c\": \"value\", \"t\": \"string_encrypted_v3_1000000\"}, \"v\": 3, \"bf\": [1524, 1215, 872, 1369, 0, 948, 1548, 1826, 1129, 690, 413, 1705, 899, 104, 1265, 1646, 438, 606, 192, 953, 1574, 687, 684, 1070, 587, 1334, 566, 1849, 1342, 1030], \"hm\": \"fe348dd0003b5ce3173aaaaf495e30c6c4bce6201da8e9d6064d18598c818022\", \"ob\": [\"1e17dc69f8909090c00f2d549cf7c0571af2a3f32b85275b2bb943dde8b1a1df2f72ad9917386cd49096575761dc049e5ba711e2fdc2e3fdbfab357e00beb0fc5bc0dfced927aab195495bd31947d7aacf083e7046b8f503180caa4083372f1b0f4e9aed43d4735e87ecdeda4798cf4a5a5016da7eade2cf9461be2912a70c4e3f1b411b25854842cd8b50f770de72735fea56b63077ade82178f9a4c722b620ab99e15dc97a3ff78a1c969c46ed6fc7d6e9a351a69a67276b6e71fb325116b556d2d91383f997728c85f9683ff95b18769dae1283f5d4ba112ad1840d1ed2bedaf47a7615c938744eab4a307d1825c77ea45ff2fee935c9ada99f6cde6d34ea6fb2713b47d82c80dc7371523d18d0ecda35e3c9754074098c37dbfd79768bb0cdf19366782a43abb016682000d50efa40ba50c8f9955956170e0a9a7eb1eaf0bac2d695170981602bfbc49b9e397e597bb96ad75d89cff573ac753832baf61a2dd56ab693514a81133c523948ab3afe6ec735351b2b4ba941a2c3deeec806bcf4d40a7f7660ae94dd89d7aa740564cfce8d4e4ecb58ead2\"]}'::jsonb)::eql_v3.text_search)::jsonb))::smallint[])",
+                "Relation Name": "string_encrypted_v3_1000000",
+                "Startup Cost": 1292.35,
+                "Total Cost": 1296.87
+              }
+            ],
+            "Startup Cost": 1292.35,
+            "Total Cost": 1296.87
+          }
+        }
+      ],
+      "id": "MATCH/match/eql_bloom/1000000",
+      "indexes_used": [
+        "string_encrypted_v3_1000000_match_gin_index"
+      ],
+      "parameters": [
+        {
+          "bf": [
+            1524,
+            1215,
+            872,
+            1369,
+            0,
+            948,
+            1548,
+            1826,
+            1129,
+            690,
+            413,
+            1705,
+            899,
+            104,
+            1265,
+            1646,
+            438,
+            606,
+            192,
+            953,
+            1574,
+            687,
+            684,
+            1070,
+            587,
+            1334,
+            566,
+            1849,
+            1342,
+            1030
+          ],
+          "c": "mBbLD;S<#Eca7t|%GPGO91(-W8J=)|OW)ROa@+JH{?*S!&P7N>Fk<Tw?a{;_ju^CT@*10wTQFa}9mO||32LEC&wqJ4P-lB&A);(KrFLO#b!Eg5<upmU-1bZEwaF)KXjao=",
+          "hm": "fe348dd0003b5ce3173aaaaf495e30c6c4bce6201da8e9d6064d18598c818022",
+          "i": {
+            "c": "value",
+            "t": "string_encrypted_v3_1000000"
+          },
+          "ob": [
+            "1e17dc69f8909090c00f2d549cf7c0571af2a3f32b85275b2bb943dde8b1a1df2f72ad9917386cd49096575761dc049e5ba711e2fdc2e3fdbfab357e00beb0fc5bc0dfced927aab195495bd31947d7aacf083e7046b8f503180caa4083372f1b0f4e9aed43d4735e87ecdeda4798cf4a5a5016da7eade2cf9461be2912a70c4e3f1b411b25854842cd8b50f770de72735fea56b63077ade82178f9a4c722b620ab99e15dc97a3ff78a1c969c46ed6fc7d6e9a351a69a67276b6e71fb325116b556d2d91383f997728c85f9683ff95b18769dae1283f5d4ba112ad1840d1ed2bedaf47a7615c938744eab4a307d1825c77ea45ff2fee935c9ada99f6cde6d34ea6fb2713b47d82c80dc7371523d18d0ecda35e3c9754074098c37dbfd79768bb0cdf19366782a43abb016682000d50efa40ba50c8f9955956170e0a9a7eb1eaf0bac2d695170981602bfbc49b9e397e597bb96ad75d89cff573ac753832baf61a2dd56ab693514a81133c523948ab3afe6ec735351b2b4ba941a2c3deeec806bcf4d40a7f7660ae94dd89d7aa740564cfce8d4e4ecb58ead2"
+          ],
+          "v": 3
+        }
+      ],
+      "query": "SELECT id, value FROM string_encrypted_v3_1000000 WHERE eql_v3.match_term(value) @> eql_v3.match_term($1::eql_v3.text_search) LIMIT 10",
+      "rows_returned": 10
+    }
+  ],
+  "target_rows": "1000000"
+}

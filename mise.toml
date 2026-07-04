@@ -169,6 +169,61 @@ psql -v ON_ERROR_STOP=1 -U postgres -d postgres < sql/schema.sql
 echo "Database setup complete!"
 """
 
+[tasks.setup-db-v3]
+description = "Install the EQL v3 bundle and create the v3 bench tables (coexists with v2)"
+depends = ["postgres"]
+run = """
+#!/usr/bin/env bash
+set -e
+
+echo "Waiting for PostgreSQL to be ready..."
+until pg_isready -U postgres > /dev/null 2>&1; do
+  sleep 1
+done
+
+# EQL v3 is not released yet: default is to build the bundle from a local
+# checkout of the eql_v3 branch. Overrides:
+#   EQL_V3_SQL=<path to cipherstash-encrypt.sql>  use a prebuilt bundle
+#   EQL_V3_DIR=<path to encrypt-query-language>   checkout to build from
+# Once eql-3.x releases, switch the default here to the release download
+# (same pattern as setup-db above) and pin the tag.
+if [ -z "${EQL_V3_SQL:-}" ]; then
+  EQL_V3_DIR="${EQL_V3_DIR:-../encrypt-query-language}"
+  if [ ! -d "$EQL_V3_DIR" ]; then
+    echo "Error: EQL checkout not found at $EQL_V3_DIR (set EQL_V3_DIR or EQL_V3_SQL)"
+    exit 1
+  fi
+  BRANCH=$(git -C "$EQL_V3_DIR" rev-parse --abbrev-ref HEAD)
+  if [ "$BRANCH" != "eql_v3" ]; then
+    echo "warning: $EQL_V3_DIR is on branch '$BRANCH', not 'eql_v3' — building anyway"
+  fi
+  echo "Building EQL v3 bundle from $EQL_V3_DIR..."
+  (cd "$EQL_V3_DIR" && mise run build --version 3.0.0-dev)
+  EQL_V3_SQL="$EQL_V3_DIR/release/cipherstash-encrypt.sql"
+fi
+
+# The v3 bundle is self-contained (schemas eql_v3 / eql_v3_internal) and
+# coexists with the v2.3 install — setup-db and setup-db-v3 target the same
+# database. Skip the install if eql_v3 is already present; the bundle is not
+# idempotent (bare CREATE FUNCTION / CREATE DOMAIN). To reinstall after a
+# bundle change, run the v3 uninstaller first (release/
+# cipherstash-encrypt-uninstall.sql — drops only the eql_v3 schemas).
+if psql -U postgres -d postgres -tAc "SELECT 1 FROM pg_namespace WHERE nspname = 'eql_v3'" | grep -q 1; then
+  echo "eql_v3 schema already installed — skipping bundle install."
+else
+  echo "Installing EQL v3 from $EQL_V3_SQL..."
+  psql -v ON_ERROR_STOP=1 -U postgres -d postgres < "$EQL_V3_SQL"
+fi
+
+echo "Creating v3 bench tables..."
+psql -v ON_ERROR_STOP=1 -U postgres -d postgres < sql/schema_v3.sql
+
+echo "Creating plaintext baseline tables..."
+psql -v ON_ERROR_STOP=1 -U postgres -d postgres < sql/plaintext_baselines.sql
+
+echo "EQL v3 database setup complete!"
+"""
+
 [tasks."bench:build"]
 description = "Build all binaries in release mode"
 run = """
@@ -208,6 +263,49 @@ echo "Combining results..."
 
 echo "Benchmark complete! Results written to results/ingest/${BENCH_NAME}_combined.json"
 """
+
+[tasks."bench:v3:ingest:_run"]
+description = "Internal: run a v3 ingest benchmark and move results under results/ingest/v3/"
+run = """
+#!/usr/bin/env bash
+set -e
+BENCH_NAME="$1"
+TABLE_NAME="$2"
+mise run bench:ingest:_run "$BENCH_NAME" "$TABLE_NAME" "${3:-500,1000,10000}"
+mkdir -p results/ingest/v3
+mv "results/ingest/${BENCH_NAME}_combined.json" "results/ingest/v3/${BENCH_NAME}_combined.json"
+echo "Moved results to results/ingest/v3/${BENCH_NAME}_combined.json"
+"""
+
+[tasks."bench:v3:ingest:encrypt_string"]
+description = "Run encrypt_string_v3 ingest benchmark (eql_v3.text_search)"
+run = "mise run bench:v3:ingest:_run encrypt_string_v3 string_encrypted_v3"
+
+[tasks."bench:v3:ingest:encrypt_int"]
+description = "Run encrypt_int_v3 ingest benchmark (eql_v3.integer_ord)"
+run = "mise run bench:v3:ingest:_run encrypt_int_v3 integer_encrypted_v3"
+
+[tasks."bench:v3:ingest:encrypt_int_ope"]
+description = "Run encrypt_int_ope_v3 ingest benchmark (eql_v3.integer_ord_ope, synthetic op)"
+run = "mise run bench:v3:ingest:_run encrypt_int_ope_v3 integer_encrypted_ope_v3"
+
+[tasks."bench:v3:ingest:encrypt_category"]
+description = "Run encrypt_category_v3 ingest benchmark (eql_v3.text_eq)"
+run = "mise run bench:v3:ingest:_run encrypt_category_v3 category_encrypted_v3"
+
+[tasks."bench:v3:ingest:json-ste-vec-small"]
+description = "Run encrypt_ste_vec_small_v3 ingest benchmark (eql_v3.json)"
+run = "mise run bench:v3:ingest:_run encrypt_ste_vec_small_v3 json_ste_vec_small_encrypted_v3"
+
+[tasks."bench:v3:ingest"]
+description = "Run all v3 ingest benchmarks"
+depends = [
+  "bench:v3:ingest:encrypt_int",
+  "bench:v3:ingest:encrypt_string",
+  "bench:v3:ingest:encrypt_int_ope",
+  "bench:v3:ingest:encrypt_category",
+  "bench:v3:ingest:json-ste-vec-small",
+]
 
 [tasks."bench:ingest:encrypt_int"]
 description = "Run encrypt_int ingest benchmark and combine results"
@@ -352,7 +450,17 @@ while true; do
 done
 
 echo "Creating indexes..."
+# Time the index build and append to the build-times log — index build cost
+# is a first-class result for the v3 comparison (the v3 ORE btree opclass
+# has a plpgsql comparator; build time at 1M is a named risk to measure).
+INDEX_BUILD_START=$(date +%s)
 psql -U postgres -d postgres < sql/indexes/${TABLE_NAME}_up.sql
+INDEX_BUILD_SECS=$(( $(date +%s) - INDEX_BUILD_START ))
+mkdir -p results/ingest
+# NB: single-quoted printf format — this script lives in a TOML basic
+# multiline string, which consumes backslash escapes before bash sees them.
+printf '{"table": "%s", "build_seconds": %s, "recorded_at": "%s"}\n' "$TABLE_NAME" "$INDEX_BUILD_SECS" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> results/ingest/index_build_times.jsonl
+echo "Index build took ${INDEX_BUILD_SECS}s (logged to results/ingest/index_build_times.jsonl)"
 
 # ANALYZE the freshly-loaded table so the planner has accurate
 # selectivity stats for the functional indexes. Without this, the
@@ -386,6 +494,57 @@ run = "mise run prepare:_table category_encrypted encrypt_category $1"
 [tasks."prepare:combo_encrypted"]
 description = "Prepare combo_encrypted_<size> table with three encrypted columns (name + age + category)"
 run = "mise run prepare:_table combo_encrypted encrypt_combo $1"
+
+[tasks."prepare:string_encrypted_v3"]
+description = "Prepare string_encrypted_v3 table (eql_v3.text_search) with target row count"
+run = "mise run prepare:_table string_encrypted_v3 encrypt_string_v3 $1"
+
+[tasks."prepare:integer_encrypted_v3"]
+description = "Prepare integer_encrypted_v3 table (eql_v3.integer_ord) with target row count"
+run = "mise run prepare:_table integer_encrypted_v3 encrypt_int_v3 $1"
+
+[tasks."prepare:integer_encrypted_ope_v3"]
+description = "Prepare integer_encrypted_ope_v3 table (eql_v3.integer_ord_ope, synthetic op term) with target row count"
+run = "mise run prepare:_table integer_encrypted_ope_v3 encrypt_int_ope_v3 $1"
+
+[tasks."prepare:category_encrypted_v3"]
+description = "Prepare category_encrypted_v3 table (eql_v3.text_eq) with target row count"
+run = "mise run prepare:_table category_encrypted_v3 encrypt_category_v3 $1"
+
+[tasks."prepare:combo_encrypted_v3"]
+description = "Prepare combo_encrypted_v3 table (three eql_v3 columns) with target row count"
+run = "mise run prepare:_table combo_encrypted_v3 encrypt_combo_v3 $1"
+
+[tasks."prepare:json_ste_vec_small_v3"]
+description = "Prepare json_ste_vec_small_encrypted_v3 table (eql_v3.json) with target row count"
+run = "mise run prepare:_table json_ste_vec_small_encrypted_v3 encrypt_ste_vec_small_v3 $1"
+
+[tasks."prepare:scalar_smoke_v3"]
+description = "Populate the scalar_smoke_v3 new-family smoke table (10k rows, no tier variants)"
+depends = ["postgres", "bench:build"]
+run = """
+#!/usr/bin/env bash
+set -e
+CURRENT=$(psql -U postgres -d postgres -tAc "SELECT COUNT(*) FROM scalar_smoke_v3;")
+TARGET="${1:-10000}"
+if [ "$CURRENT" -ge "$TARGET" ]; then
+  echo "scalar_smoke_v3 already has $CURRENT rows (>= $TARGET)."
+  exit 0
+fi
+NUM_RECORDS=$((TARGET - CURRENT)) ./target/release/encrypt_scalar_smoke_v3
+"""
+
+[tasks."prepare:v3:all"]
+description = "Prepare every v3 encrypted table at the given tier (default 10000)"
+run = """
+#!/usr/bin/env bash
+set -e
+TIER="${1:-10000}"
+for t in string_encrypted_v3 integer_encrypted_v3 integer_encrypted_ope_v3 category_encrypted_v3 combo_encrypted_v3 json_ste_vec_small_v3; do
+  mise run "prepare:$t" "$TIER"
+done
+mise run prepare:scalar_smoke_v3
+"""
 
 [tasks."prepare:category_plaintext"]
 description = "Prepare category_plaintext_<size> table with ~250 low-cardinality categorical strings (CAT_001..CAT_250, uniform random)"
@@ -443,6 +602,73 @@ FINAL_ROWS=$(psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM $TABLE_NAM
 echo "Preparation complete! Final row count: $FINAL_ROWS"
 """
 
+[tasks."prepare:integer_plaintext"]
+description = "Prepare integer_plaintext_<size> table (random ints, btree) — plaintext baseline for ORE/OPE range scenarios"
+depends = ["postgres"]
+run = """
+#!/usr/bin/env bash
+set -e
+TARGET_ROWS="$1"
+case "$TARGET_ROWS" in
+  10000|100000|1000000|10000000) ;;
+  *) echo "Error: TARGET_ROWS must be one of: 10000, 100000, 1000000, 10000000"; exit 1 ;;
+esac
+TABLE_NAME="integer_plaintext_${TARGET_ROWS}"
+until pg_isready -U postgres > /dev/null 2>&1; do sleep 1; done
+CURRENT_ROWS=$(psql -U postgres -d postgres -tAc "SELECT COUNT(*) FROM $TABLE_NAME;")
+if [ "$CURRENT_ROWS" -ge "$TARGET_ROWS" ]; then
+  echo "$TABLE_NAME already has $CURRENT_ROWS rows (>= $TARGET_ROWS)."
+  psql -U postgres -d postgres -c "CREATE INDEX IF NOT EXISTS ${TABLE_NAME}_value_idx ON $TABLE_NAME (value);"
+  exit 0
+fi
+ROWS_TO_INSERT=$((TARGET_ROWS - CURRENT_ROWS))
+echo "Inserting $ROWS_TO_INSERT rows into $TABLE_NAME..."
+# Same distribution as the encrypted integer bench: uniform over the full
+# i32 range (Faker.fake::<i32>()).
+psql -v ON_ERROR_STOP=1 -U postgres -d postgres -c "
+  INSERT INTO $TABLE_NAME (value)
+  SELECT (floor(random() * 4294967296) - 2147483648)::int
+  FROM generate_series(1, $ROWS_TO_INSERT);"
+psql -U postgres -d postgres -c "CREATE INDEX IF NOT EXISTS ${TABLE_NAME}_value_idx ON $TABLE_NAME (value);"
+psql -U postgres -d postgres -c "ANALYZE $TABLE_NAME;"
+echo "Preparation complete."
+"""
+
+[tasks."prepare:json_small_plaintext"]
+description = "Prepare json_small_plaintext_<size> table (FakeJsonSmall-shaped jsonb, jsonb_path_ops GIN) — plaintext baseline for JSON scenarios"
+depends = ["postgres"]
+run = """
+#!/usr/bin/env bash
+set -e
+TARGET_ROWS="$1"
+case "$TARGET_ROWS" in
+  10000|100000|1000000|10000000) ;;
+  *) echo "Error: TARGET_ROWS must be one of: 10000, 100000, 1000000, 10000000"; exit 1 ;;
+esac
+TABLE_NAME="json_small_plaintext_${TARGET_ROWS}"
+until pg_isready -U postgres > /dev/null 2>&1; do sleep 1; done
+CURRENT_ROWS=$(psql -U postgres -d postgres -tAc "SELECT COUNT(*) FROM $TABLE_NAME;")
+if [ "$CURRENT_ROWS" -ge "$TARGET_ROWS" ]; then
+  echo "$TABLE_NAME already has $CURRENT_ROWS rows (>= $TARGET_ROWS)."
+  psql -U postgres -d postgres -c "CREATE INDEX IF NOT EXISTS ${TABLE_NAME}_gin_idx ON $TABLE_NAME USING GIN (value jsonb_path_ops);"
+  exit 0
+fi
+ROWS_TO_INSERT=$((TARGET_ROWS - CURRENT_ROWS))
+echo "Inserting $ROWS_TO_INSERT rows into $TABLE_NAME..."
+psql -v ON_ERROR_STOP=1 -U postgres -d postgres -c "
+  INSERT INTO $TABLE_NAME (value)
+  SELECT jsonb_build_object(
+    'first_name', md5(random()::text),
+    'last_name',  md5(random()::text),
+    'age',        (18 + floor(random() * 82))::int,
+    'email',      md5(random()::text) || '@example.com'
+  )
+  FROM generate_series(1, $ROWS_TO_INSERT);"
+psql -U postgres -d postgres -c "CREATE INDEX IF NOT EXISTS ${TABLE_NAME}_gin_idx ON $TABLE_NAME USING GIN (value jsonb_path_ops);"
+psql -U postgres -d postgres -c "ANALYZE $TABLE_NAME;"
+echo "Preparation complete."
+"""
+
 [tasks."prepare:string_plaintext"]
 description = "Prepare string_plaintext_<size> table with random high-cardinality strings (md5)"
 depends = ["postgres"]
@@ -480,7 +706,11 @@ echo "Current rows in $TABLE_NAME: $CURRENT_ROWS"
 echo "Target rows: $TARGET_ROWS"
 
 if [ "$CURRENT_ROWS" -ge "$TARGET_ROWS" ]; then
-  echo "Table already has $CURRENT_ROWS rows (>= $TARGET_ROWS). No action needed."
+  echo "Table already has $CURRENT_ROWS rows (>= $TARGET_ROWS)."
+  # Still ensure the value index exists — older populations predate it, and
+  # the early exit must not skip it (that's how the 1M plaintext baseline
+  # ran unindexed the first time).
+  psql -U postgres -d postgres -c "CREATE INDEX IF NOT EXISTS ${TABLE_NAME}_value_idx ON $TABLE_NAME (value);"
   exit 0
 fi
 
@@ -495,6 +725,13 @@ psql -v ON_ERROR_STOP=1 -U postgres -d postgres -c "
   SELECT md5(random()::text || g::text)
   FROM generate_series(1, $ROWS_TO_INSERT) g;
 "
+
+# btree on value: the v3 plaintext baseline bench (benches/plaintext_v3.rs)
+# runs `WHERE value = $1` against this table, and the encrypted counterpart
+# is btree-indexed — an unindexed plaintext baseline would overstate EQL's
+# relative performance. Idempotent; harmless for other consumers.
+psql -U postgres -d postgres -c "CREATE INDEX IF NOT EXISTS ${TABLE_NAME}_value_idx ON $TABLE_NAME (value);"
+psql -U postgres -d postgres -c "ANALYZE $TABLE_NAME;"
 
 FINAL_ROWS=$(psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM $TABLE_NAME;" | tr -d ' ')
 echo "Preparation complete! Final row count: $FINAL_ROWS"
@@ -699,6 +936,121 @@ OUTPUT_FILE="results/query/json_rows_${TARGET_ROWS}.json"
 TARGET_ROWS="$TARGET_ROWS" cargo criterion --bench json --message-format json > "$OUTPUT_FILE"
 
 echo "Benchmark complete! Results written to $OUTPUT_FILE"
+"""
+
+[tasks."bench:v3:query:_run"]
+description = "Internal: run one v3 query bench (prepare deps, clean criterion group, write results under results/query/v3/)"
+run = """
+#!/usr/bin/env bash
+set -e
+
+# Signature: <bench> <group> [prepare tasks...] <target_rows>
+# TARGET_ROWS comes LAST: the per-family wrapper tasks are single-line
+# commands, and mise appends caller args to those — so the tier the user
+# passes lands at the end of the arg list.
+BENCH_NAME="$1"     # cargo bench target, e.g. exact_v3
+GROUP="$2"          # criterion group to clean, e.g. EXACT
+shift 2
+
+# All-but-last args are prepare task names; the last is the tier.
+PREPS=""
+while [ $# -gt 1 ]; do
+  PREPS="$PREPS $1"
+  shift
+done
+TARGET_ROWS="${1:-}"
+
+if [ -z "$BENCH_NAME" ] || [ -z "$GROUP" ] || [ -z "$TARGET_ROWS" ]; then
+  echo "Usage: mise run bench:v3:query:_run <bench> <group> [prepare tasks...] <target_rows>"
+  exit 1
+fi
+if ! [[ "$TARGET_ROWS" =~ ^[0-9]+$ ]]; then
+  echo "Error: target row count must be a positive integer"
+  exit 1
+fi
+
+for prep in $PREPS; do
+  echo "Preparing via prepare:$prep..."
+  mise run "prepare:$prep" "$TARGET_ROWS"
+done
+
+echo "Cleaning old criterion data for $GROUP..."
+rm -rf "target/criterion/data/main/$GROUP" "target/criterion/reports/$GROUP"
+
+echo "Running $BENCH_NAME query benchmark..."
+mkdir -p results/query/v3
+OUTPUT_FILE="results/query/v3/${BENCH_NAME%_v3}_rows_${TARGET_ROWS}.json"
+TARGET_ROWS="$TARGET_ROWS" cargo criterion --bench "$BENCH_NAME" --message-format json > "$OUTPUT_FILE"
+
+echo "Benchmark complete! Results written to $OUTPUT_FILE"
+"""
+
+[tasks."bench:v3:query:exact"]
+description = "Run EXACT v3 query benchmark (eql_v3.text_search)"
+run = "mise run bench:v3:query:_run exact_v3 EXACT string_encrypted_v3"
+
+[tasks."bench:v3:query:ore"]
+description = "Run ORE v3 query benchmark (eql_v3.integer_ord)"
+run = "mise run bench:v3:query:_run ore_v3 ORE integer_encrypted_v3"
+
+[tasks."bench:v3:query:group_by"]
+description = "Run GROUP BY v3 query benchmark (eql_v3.text_eq + shared plaintext baseline)"
+run = "mise run bench:v3:query:_run group_by_v3 GROUP_BY category_encrypted_v3 category_plaintext"
+
+[tasks."bench:v3:query:match"]
+description = "Run MATCH v3 query benchmark (bloom containment; incl. no-index variants at 10k)"
+run = "mise run bench:v3:query:_run match_v3 MATCH string_encrypted_v3"
+
+[tasks."bench:v3:query:ope"]
+description = "Run OPE v3 query benchmark (eql_v3.integer_ord_ope, synthetic op term)"
+run = "mise run bench:v3:query:_run ope_v3 OPE integer_encrypted_ope_v3"
+
+[tasks."bench:v3:query:combo"]
+description = "Run COMBO v3 query benchmark (composite predicates)"
+run = "mise run bench:v3:query:_run combo_v3 COMBO combo_encrypted_v3"
+
+[tasks."bench:v3:query:json"]
+description = "Run JSON v3 query benchmark (eql_v3.json SteVec)"
+run = "mise run bench:v3:query:_run json_v3 JSON json_ste_vec_small_v3"
+
+[tasks."bench:v3:query:smoke"]
+description = "Run the new-family scalar smoke bench (fixed 10k table)"
+depends = ["postgres", "bench:build"]
+run = """
+#!/usr/bin/env bash
+set -e
+mise run prepare:scalar_smoke_v3
+rm -rf target/criterion/data/main/SMOKE_V3 target/criterion/reports/SMOKE_V3
+mkdir -p results/query/v3
+cargo criterion --bench scalar_smoke_v3 --message-format json > results/query/v3/scalar_smoke_rows_10000.json
+echo "Benchmark complete! Results written to results/query/v3/scalar_smoke_rows_10000.json"
+"""
+
+[tasks."bench:v3:query:plaintext"]
+description = "Run the plaintext baseline bench (string/integer/json plaintext tables)"
+run = "mise run bench:v3:query:_run plaintext_v3 PLAINTEXT string_plaintext integer_plaintext json_small_plaintext"
+
+[tasks."bench:v3:query:all"]
+description = "Run all v3 query benchmarks across tiers up to max_rows (default 1000000)"
+run = """
+#!/usr/bin/env bash
+set -e
+MAX_ROWS="${1:-1000000}"
+for rows in 10000 100000 1000000; do
+  if [ "$rows" -gt "$MAX_ROWS" ]; then break; fi
+  for fam in exact match ore ope group_by combo json plaintext; do
+    mise run "bench:v3:query:$fam" "$rows"
+  done
+done
+mise run bench:v3:query:smoke
+"""
+
+[tasks."report:v3-compare"]
+description = "Generate the EQL v3 vs v2 comparison report + charts (report/V3_COMPARISON.md, report/v3/*)"
+run = """
+#!/usr/bin/env bash
+set -e
+python3 report_v3_compare.py --threshold "${1:-10}"
 """
 
 [tasks."bench:query:all"]

@@ -1,0 +1,247 @@
+{
+  "scenarios": [
+    {
+      "explain": [
+        {
+          "Plan": {
+            "Async Capable": false,
+            "Node Type": "Aggregate",
+            "Parallel Aware": false,
+            "Partial Mode": "Simple",
+            "Plan Rows": 1,
+            "Plan Width": 8,
+            "Plans": [
+              {
+                "Async Capable": false,
+                "Group Key": [
+                  "(((category_encrypted_v3_10000.value)::jsonb ->> 'hm'::text))::eql_v3_internal.hmac_256"
+                ],
+                "Node Type": "Aggregate",
+                "Parallel Aware": false,
+                "Parent Relationship": "Outer",
+                "Partial Mode": "Simple",
+                "Plan Rows": 250,
+                "Plan Width": 36,
+                "Planned Partitions": 0,
+                "Plans": [
+                  {
+                    "Alias": "category_encrypted_v3_10000",
+                    "Async Capable": false,
+                    "Node Type": "Seq Scan",
+                    "Parallel Aware": false,
+                    "Parent Relationship": "Outer",
+                    "Plan Rows": 10000,
+                    "Plan Width": 32,
+                    "Relation Name": "category_encrypted_v3_10000",
+                    "Startup Cost": 0.0,
+                    "Total Cost": 542.0
+                  }
+                ],
+                "Startup Cost": 567.0,
+                "Strategy": "Hashed",
+                "Total Cost": 570.12
+              }
+            ],
+            "Startup Cost": 573.25,
+            "Strategy": "Plain",
+            "Total Cost": 573.26
+          }
+        }
+      ],
+      "id": "GROUP_BY/group_by/low_cardinality_groups_encrypted/10000",
+      "indexes_used": [],
+      "parameters": [],
+      "query": "SELECT count(*) FROM (SELECT 1 FROM category_encrypted_v3_10000 GROUP BY eql_v3.eq_term(value)) g",
+      "rows_returned": 1
+    },
+    {
+      "explain": [
+        {
+          "Plan": {
+            "Async Capable": false,
+            "Node Type": "Aggregate",
+            "Parallel Aware": false,
+            "Partial Mode": "Simple",
+            "Plan Rows": 1,
+            "Plan Width": 8,
+            "Plans": [
+              {
+                "Async Capable": false,
+                "Group Key": [
+                  "category_plaintext_10000.value"
+                ],
+                "Node Type": "Aggregate",
+                "Parallel Aware": false,
+                "Parent Relationship": "Outer",
+                "Partial Mode": "Simple",
+                "Plan Rows": 250,
+                "Plan Width": 12,
+                "Planned Partitions": 0,
+                "Plans": [
+                  {
+                    "Alias": "category_plaintext_10000",
+                    "Async Capable": false,
+                    "Node Type": "Seq Scan",
+                    "Parallel Aware": false,
+                    "Parent Relationship": "Outer",
+                    "Plan Rows": 10000,
+                    "Plan Width": 8,
+                    "Relation Name": "category_plaintext_10000",
+                    "Startup Cost": 0.0,
+                    "Total Cost": 155.0
+                  }
+                ],
+                "Startup Cost": 180.0,
+                "Strategy": "Hashed",
+                "Total Cost": 182.5
+              }
+            ],
+            "Startup Cost": 185.62,
+            "Strategy": "Plain",
+            "Total Cost": 185.63
+          }
+        }
+      ],
+      "id": "GROUP_BY/group_by/low_cardinality_groups_plaintext/10000",
+      "indexes_used": [],
+      "parameters": [],
+      "query": "SELECT count(*) FROM (SELECT 1 FROM category_plaintext_10000 GROUP BY value) g",
+      "rows_returned": 1
+    },
+    {
+      "explain": [
+        {
+          "Plan": {
+            "Async Capable": false,
+            "Node Type": "Limit",
+            "Parallel Aware": false,
+            "Plan Rows": 10,
+            "Plan Width": 40,
+            "Plans": [
+              {
+                "Async Capable": false,
+                "Node Type": "Sort",
+                "Parallel Aware": false,
+                "Parent Relationship": "Outer",
+                "Plan Rows": 250,
+                "Plan Width": 40,
+                "Plans": [
+                  {
+                    "Async Capable": false,
+                    "Group Key": [
+                      "(((value)::jsonb ->> 'hm'::text))::eql_v3_internal.hmac_256"
+                    ],
+                    "Node Type": "Aggregate",
+                    "Parallel Aware": false,
+                    "Parent Relationship": "Outer",
+                    "Partial Mode": "Simple",
+                    "Plan Rows": 250,
+                    "Plan Width": 40,
+                    "Planned Partitions": 0,
+                    "Plans": [
+                      {
+                        "Alias": "category_encrypted_v3_10000",
+                        "Async Capable": false,
+                        "Node Type": "Seq Scan",
+                        "Parallel Aware": false,
+                        "Parent Relationship": "Outer",
+                        "Plan Rows": 10000,
+                        "Plan Width": 32,
+                        "Relation Name": "category_encrypted_v3_10000",
+                        "Startup Cost": 0.0,
+                        "Total Cost": 542.0
+                      }
+                    ],
+                    "Startup Cost": 592.0,
+                    "Strategy": "Hashed",
+                    "Total Cost": 595.12
+                  }
+                ],
+                "Sort Key": [
+                  "(count(*)) DESC"
+                ],
+                "Startup Cost": 600.53,
+                "Total Cost": 601.15
+              }
+            ],
+            "Startup Cost": 600.53,
+            "Total Cost": 600.55
+          }
+        }
+      ],
+      "id": "GROUP_BY/group_by/top_n_groups_encrypted/10000",
+      "indexes_used": [],
+      "parameters": [],
+      "query": "SELECT eql_v3.eq_term(value), count(*) FROM category_encrypted_v3_10000 GROUP BY 1 ORDER BY count(*) DESC LIMIT 10",
+      "rows_returned": 10
+    },
+    {
+      "explain": [
+        {
+          "Plan": {
+            "Async Capable": false,
+            "Node Type": "Limit",
+            "Parallel Aware": false,
+            "Plan Rows": 10,
+            "Plan Width": 16,
+            "Plans": [
+              {
+                "Async Capable": false,
+                "Node Type": "Sort",
+                "Parallel Aware": false,
+                "Parent Relationship": "Outer",
+                "Plan Rows": 250,
+                "Plan Width": 16,
+                "Plans": [
+                  {
+                    "Async Capable": false,
+                    "Group Key": [
+                      "value"
+                    ],
+                    "Node Type": "Aggregate",
+                    "Parallel Aware": false,
+                    "Parent Relationship": "Outer",
+                    "Partial Mode": "Simple",
+                    "Plan Rows": 250,
+                    "Plan Width": 16,
+                    "Planned Partitions": 0,
+                    "Plans": [
+                      {
+                        "Alias": "category_plaintext_10000",
+                        "Async Capable": false,
+                        "Node Type": "Seq Scan",
+                        "Parallel Aware": false,
+                        "Parent Relationship": "Outer",
+                        "Plan Rows": 10000,
+                        "Plan Width": 8,
+                        "Relation Name": "category_plaintext_10000",
+                        "Startup Cost": 0.0,
+                        "Total Cost": 155.0
+                      }
+                    ],
+                    "Startup Cost": 205.0,
+                    "Strategy": "Hashed",
+                    "Total Cost": 207.5
+                  }
+                ],
+                "Sort Key": [
+                  "(count(*)) DESC"
+                ],
+                "Startup Cost": 212.9,
+                "Total Cost": 213.53
+              }
+            ],
+            "Startup Cost": 212.9,
+            "Total Cost": 212.93
+          }
+        }
+      ],
+      "id": "GROUP_BY/group_by/top_n_groups_plaintext/10000",
+      "indexes_used": [],
+      "parameters": [],
+      "query": "SELECT value, count(*) FROM category_plaintext_10000 GROUP BY 1 ORDER BY count(*) DESC LIMIT 10",
+      "rows_returned": 10
+    }
+  ],
+  "target_rows": "10000"
+}
