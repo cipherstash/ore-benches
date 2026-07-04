@@ -30,14 +30,14 @@ Methodology notes:
 | MATCH/match/eql_cast_firstname | 10000 | 152.3 µs | 190.1 µs | +24.8% | ⚠️ semantics changed | v2 LIKE → v3 @> (no LIKE operator in v3; same bloom semantics) |
 | COMBO/combo/filtered_group_by | 100000 | 665.2 µs | 783.0 µs | +17.7% | ⚠️ semantics changed | v2 LIKE → v3 @> |
 | EXACT/exact/eql_hash | 1000000 | 104.6 µs | 122.1 µs | +16.8% | ⚠️ semantics changed | index type changed: v2 hash → v3 btree on eq_term |
-| GROUP_BY/group_by/low_cardinality_groups_encrypted | 10000000 | 775.51 ms | 901.77 ms | +16.3% | 🔴 REGRESSION |  |
 | EXACT/exact/eql_hash | 10000000 | 106.9 µs | 122.8 µs | +14.9% | ⚠️ semantics changed | index type changed: v2 hash → v3 btree on eq_term |
 | MATCH/match/eql_cast_lastname | 10000 | 439.7 µs | 504.9 µs | +14.8% | ⚠️ semantics changed | v2 LIKE → v3 @> (no LIKE operator in v3; same bloom semantics) |
 | EXACT/exact/eql_cast | 10000000 | 110.3 µs | 126.6 µs | +14.8% | 🔴 REGRESSION | v3 string rows are wider (text_search adds an ORE term v2 didn't carry) |
 | JSON/json/contains/functional | 10000 | 237.4 µs | 271.9 µs | +14.5% | ⚠️ semantics changed | v2 jsonb_array recipe → v3 to_ste_vec_query GIN recipe |
-| GROUP_BY/group_by/top_n_groups_encrypted | 10000000 | 809.18 ms | 917.56 ms | +13.4% | 🔴 REGRESSION |  |
+| GROUP_BY/group_by/low_cardinality_groups_encrypted | 10000000 | 775.51 ms | 887.48 ms | +14.4% | 🔴 REGRESSION |  |
 | EXACT/exact/eql_hash | 100000 | 102.9 µs | 116.4 µs | +13.1% | ⚠️ semantics changed | index type changed: v2 hash → v3 btree on eq_term |
 | EXACT/exact/eql_hash | 10000 | 108.7 µs | 121.8 µs | +12.1% | ⚠️ semantics changed | index type changed: v2 hash → v3 btree on eq_term |
+| GROUP_BY/group_by/top_n_groups_encrypted | 10000000 | 809.18 ms | 901.04 ms | +11.4% | 🔴 REGRESSION |  |
 | MATCH/match/eql_cast_lastname | 100000 | 1.79 ms | 2.00 ms | +11.3% | ⚠️ semantics changed | v2 LIKE → v3 @> (no LIKE operator in v3; same bloom semantics) |
 | MATCH/match/eql_bloom | 100000 | 1.75 ms | 1.92 ms | +9.7% |  | v3 GIN uses native array_ops on the bloom term (no shipped opclass) |
 | MATCH/match/eql_cast_lastname | 1000000 | 14.40 ms | 15.73 ms | +9.2% | ⚠️ semantics changed | v2 LIKE → v3 @> (no LIKE operator in v3; same bloom semantics) |
@@ -68,6 +68,8 @@ Methodology notes:
 | EXACT/exact_decrypt/eql_hash | 1000000 | 23.64 ms | 24.08 ms | +1.9% | ⚠️ semantics changed | index type changed: v2 hash → v3 btree on eq_term |
 | GROUP_BY/group_by/low_cardinality_groups_plaintext | 10000 | 1.16 ms | 1.18 ms | +1.9% |  |  |
 | MATCH/match_decrypt/eql_cast_firstname | 100000 | 26.41 ms | 26.86 ms | +1.7% | ⚠️ semantics changed | v2 LIKE → v3 @> |
+| GROUP_BY/group_by/low_cardinality_groups_plaintext | 10000000 | 339.33 ms | 344.48 ms | +1.5% |  |  |
+| GROUP_BY/group_by/top_n_groups_plaintext | 10000000 | 349.91 ms | 354.84 ms | +1.4% |  |  |
 | JSON/json/field_eq/functional | 10000000 | 108.8 µs | 110.3 µs | +1.4% |  | same btree plan as v2 (needle matches every row in both versions) |
 | EXACT/exact/eql_cast | 100000 | 113.5 µs | 114.8 µs | +1.1% |  | v3 string rows are wider (text_search adds an ORE term v2 didn't carry) |
 | EXACT/exact_decrypt/eql_cast | 1000000 | 23.88 ms | 24.13 ms | +1.0% |  |  |
@@ -76,10 +78,8 @@ Methodology notes:
 | JSON/json/field_eq/bare | 10000000 | 108.7 µs | 109.5 µs | +0.7% |  | same btree plan as v2 (needle matches every row in both versions) |
 | ORE/ore_decrypt/range_lt_ordered_10 | 1000000 | 26.86 ms | 26.81 ms | -0.2% |  |  |
 | COMBO/combo/bloom_ore_order_limit | 100000 | 2.08 ms | 2.08 ms | -0.3% | ⚠️ semantics changed | v2 LIKE → v3 @> |
-| GROUP_BY/group_by/top_n_groups_plaintext | 10000000 | 349.91 ms | 347.85 ms | -0.6% |  |  |
 | MATCH/match_decrypt/eql_cast_lastname | 10000 | 26.13 ms | 25.94 ms | -0.7% | ⚠️ semantics changed | v2 LIKE → v3 @> |
 | ORE/ore_decrypt/range_gt_10 | 100000 | 25.72 ms | 25.53 ms | -0.7% |  |  |
-| GROUP_BY/group_by/low_cardinality_groups_plaintext | 10000000 | 339.33 ms | 335.39 ms | -1.2% |  |  |
 | MATCH/match_decrypt/eql_cast_lastname | 100000 | 27.84 ms | 27.51 ms | -1.2% | ⚠️ semantics changed | v2 LIKE → v3 @> |
 | EXACT/exact_decrypt/eql_hash | 10000 | 23.96 ms | 23.64 ms | -1.3% | ⚠️ semantics changed | index type changed: v2 hash → v3 btree on eq_term |
 | COMBO/combo/top_n_filtered_group_by | 1000000 | 5.29 ms | 5.20 ms | -1.6% | ⚠️ semantics changed | v2 LIKE → v3 @> |

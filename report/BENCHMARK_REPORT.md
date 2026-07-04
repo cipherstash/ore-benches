@@ -113,7 +113,7 @@ Per-query-type detail is broken out into separate pages — click into a scenari
 |-|-|-|-|-|
 | COMBO | `bloom_ore_order_limit`, `filtered_group_by`, `top_n_filtered_group_by` | 10,000, 100,000, 1,000,000 | 8.20ms | [open](combo.md) |
 | EXACT | `eql_cast`, `eql_hash` | 10,000, 100,000, 1,000,000, 10,000,000 | 124.69μs | [open](exact.md) |
-| GROUP_BY | `low_cardinality_groups_encrypted`, `low_cardinality_groups_plaintext`, `top_n_groups_encrypted`, `top_n_groups_plaintext` | 10,000, 100,000, 1,000,000, 10,000,000 | 625.64ms | [open](group_by.md) |
+| GROUP_BY | `low_cardinality_groups_encrypted`, `low_cardinality_groups_plaintext`, `top_n_groups_encrypted`, `top_n_groups_plaintext` | 10,000, 100,000, 1,000,000, 10,000,000 | 621.96ms | [open](group_by.md) |
 | JSON | `contains/functional`, `field_eq/bare`, `field_eq/extractor`, `field_eq/functional`, `field_order/functional` | 10,000, 100,000, 1,000,000, 10,000,000 | 886.45μs | [open](json.md) |
 | MATCH | `eql_bloom`, `eql_bloom_noindex`, `eql_cast_firstname`, `eql_cast_firstname_noindex`, `eql_cast_lastname`, `eql_cast_lastname_noindex` | 10,000, 100,000, 1,000,000 | 11.57ms | [open](match.md) |
 | OPE | `range_gt_10`, `range_gt_100`, `range_lt_10`, `range_lt_100`, `range_lt_ordered_10` | 10,000, 100,000, 1,000,000, 10,000,000 | 215.61μs | [open](ope.md) |
@@ -127,9 +127,9 @@ Per-query-type detail is broken out into separate pages — click into a scenari
 
 | Scenario | Tier | v2 median | v3 median | Δ | |
 |-|-|-|-|-|-|
-| GROUP_BY/group_by/low_cardinality_groups_encrypted | 10000000 | 775.51 ms | 901.77 ms | +16.3% | 🔴 |
 | EXACT/exact/eql_cast | 10000000 | 110.3 µs | 126.6 µs | +14.8% | 🔴 |
-| GROUP_BY/group_by/top_n_groups_encrypted | 10000000 | 809.18 ms | 917.56 ms | +13.4% | 🔴 |
+| GROUP_BY/group_by/low_cardinality_groups_encrypted | 10000000 | 775.51 ms | 887.48 ms | +14.4% | 🔴 |
+| GROUP_BY/group_by/top_n_groups_encrypted | 10000000 | 809.18 ms | 901.04 ms | +11.4% | 🔴 |
 | GROUP_BY/group_by/low_cardinality_groups_encrypted | 1000000 | 92.57 ms | 83.05 ms | -10.3% | 🟢 |
 | ORE/ore/range_lt_10 | 1000000 | 577.0 µs | 494.6 µs | -14.3% | 🟢 |
 | JSON/json/field_order/functional | 10000 | 317.9 µs | 269.0 µs | -15.4% | 🟢 |
@@ -170,8 +170,8 @@ The same query shapes against plaintext tables with equivalent indexes (see `ben
 | OPE/ope/range_lt_ordered_10 | 116.9 µs (1.2×) | 120.3 µs (1.2×) | 118.4 µs (1.2×) | 115.2 µs (1.2×) |
 | JSON/json/contains/functional | 271.9 µs (2.5×) | 352.9 µs (1.5×) | 395.9 µs (1.4×) | 3.36 ms (22.8×) |
 | JSON/json/field_eq/bare | 114.3 µs (0.5×) | 113.5 µs (0.5×) | 116.8 µs (0.4×) | 109.5 µs (0.7×) |
-| GROUP_BY/group_by/low_cardinality_groups_encrypted | 2.11 ms (1.8×) | 19.16 ms (2.0×) | 83.05 ms (2.2×) | 901.77 ms (2.7×) |
-| GROUP_BY/group_by/top_n_groups_encrypted | 2.07 ms (1.7×) | 19.90 ms (2.0×) | 85.63 ms (2.2×) | 917.56 ms (2.6×) |
+| GROUP_BY/group_by/low_cardinality_groups_encrypted | 2.11 ms (1.8×) | 19.16 ms (2.0×) | 83.05 ms (2.2×) | 887.48 ms (2.6×) |
+| GROUP_BY/group_by/top_n_groups_encrypted | 2.07 ms (1.7×) | 19.90 ms (2.0×) | 85.63 ms (2.2×) | 901.04 ms (2.5×) |
 
 ![encrypted vs plaintext at 10,000 rows](v3/overhead_vs_plaintext_10000.png)
 

@@ -38,7 +38,7 @@ ON category_encrypted_10000 using hash (
 | 10,000 | 1 | 2.17ms | N/A |
 | 100,000 | 1 | 19.31ms | N/A |
 | 1,000,000 | 1 | 83.25ms | N/A |
-| 10,000,000 | 1 | ⚠️ 933.22ms | N/A |
+| 10,000,000 | 1 | ⚠️ 899.99ms | N/A |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
 
@@ -406,7 +406,7 @@ SELECT count(*) FROM (SELECT 1 FROM {TABLE} GROUP BY value) g
 | 10,000 | 1 | 1.21ms | N/A |
 | 100,000 | 1 | 9.60ms | N/A |
 | 1,000,000 | 1 | 37.13ms | N/A |
-| 10,000,000 | 1 | ⚠️ 339.95ms | N/A |
+| 10,000,000 | 1 | ⚠️ 343.93ms | N/A |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
 
@@ -783,7 +783,7 @@ ON category_encrypted_10000 using hash (
 | 10,000 | 10 | 2.11ms | N/A |
 | 100,000 | 10 | 19.99ms | N/A |
 | 1,000,000 | 10 | 88.02ms | N/A |
-| 10,000,000 | 10 | ⚠️ 933.06ms | N/A |
+| 10,000,000 | 10 | ⚠️ 912.90ms | N/A |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
 
@@ -1211,7 +1211,7 @@ SELECT value, count(*) FROM {TABLE} GROUP BY 1 ORDER BY count(*) DESC LIMIT 10
 | 10,000 | 10 | 1.24ms | N/A |
 | 100,000 | 10 | 10.07ms | N/A |
 | 1,000,000 | 10 | 38.70ms | N/A |
-| 10,000,000 | 10 | ⚠️ 349.58ms | N/A |
+| 10,000,000 | 10 | ⚠️ 363.08ms | N/A |
 
 _Rows Returned is the actual count from a one-shot pre-bench execution. For LIMIT-bounded queries it matches the LIMIT (or is lower when the table doesn't have enough matching rows); for aggregates wrapped in `count(*)` it's 1._
 
