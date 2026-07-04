@@ -90,8 +90,7 @@ async fn build_query(
 fn criterion_benchmark(c: &mut Criterion) {
     let rt = Runtime::new().unwrap();
 
-    let target_rows = std::env::var("TARGET_ROWS")
-        .unwrap_or_else(|_| "unknown".to_string());
+    let target_rows = std::env::var("TARGET_ROWS").unwrap_or_else(|_| "unknown".to_string());
 
     let table_suffix = match target_rows.as_str() {
         "10000" | "100000" | "1000000" | "10000000" => format!("_{}", target_rows),

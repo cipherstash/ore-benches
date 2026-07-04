@@ -69,8 +69,7 @@ static QUERY_TEMPLATES: &[(&str, &str, &str)] = &[
 fn criterion_benchmark(c: &mut Criterion) {
     let rt = Runtime::new().unwrap();
 
-    let target_rows = std::env::var("TARGET_ROWS")
-        .unwrap_or_else(|_| "unknown".to_string());
+    let target_rows = std::env::var("TARGET_ROWS").unwrap_or_else(|_| "unknown".to_string());
 
     let table_suffix = match target_rows.as_str() {
         "10000" | "100000" | "1000000" | "10000000" => format!("_{}", target_rows),
@@ -148,10 +147,8 @@ fn criterion_benchmark(c: &mut Criterion) {
         let scenario_id = bench_id.clone();
         group.bench_function(function_name, |b| {
             b.to_async(&rt).iter(|| async {
-                let rows = bench_assert(
-                    sqlx::query(&query_str).fetch_all(&pool).await,
-                    &scenario_id,
-                );
+                let rows =
+                    bench_assert(sqlx::query(&query_str).fetch_all(&pool).await, &scenario_id);
                 // Drain results to force aggregation to materialise. The
                 // count-wrapped scenarios return a single i64; the top-N
                 // scenarios return up to 10 (group-key bytes, count) rows

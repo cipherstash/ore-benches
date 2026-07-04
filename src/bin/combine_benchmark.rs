@@ -164,7 +164,7 @@ fn main() -> Result<()> {
     if args.len() != 2 {
         anyhow::bail!(
             "Usage: {} <benchmark_name>",
-            args.get(0)
+            args.first()
                 .map(|s| s.as_str())
                 .unwrap_or("combine_benchmark")
         );
