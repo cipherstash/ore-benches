@@ -5,11 +5,11 @@ This report summarises the performance benchmarks for encrypted database operati
 ## Table of Contents
 
 1. [Ingest Throughput](#ingest-throughput)
-   - [eql_v3.text_eq](#eql_v3text_eq)
-   - [eql_v3.integer_ord](#eql_v3integer_ord)
-   - [eql_v3.integer_ord_ope](#eql_v3integer_ord_ope)
-   - [eql_v3.json](#eql_v3json)
-   - [eql_v3.text_search](#eql_v3text_search)
+   - [public.text_eq](#publictext_eq)
+   - [public.integer_ord](#publicinteger_ord)
+   - [public.integer_ord_ope](#publicinteger_ord_ope)
+   - [public.json](#publicjson)
+   - [public.text_search](#publictext_search)
 2. [Query Performance](#query-performance)
    - [COMBO Queries](combo.md)
    - [EXACT Queries](exact.md)
@@ -39,67 +39,67 @@ Comparing all benchmark types at 10,000 records.
 
 ![Total Time Comparison at 10,000 records (excluding ste_vec_large)](ingest_comparison_time_10000_filtered.png)
 
-### eql_v3.text_eq
+### public.text_eq
 
 | Records | Throughput (records/sec) | Total Time | Avg Memory |
 |---------|--------------------------|------------|------------|
-| 500 | 665.19 | 0.75s | 18.72 MB |
-| 1,000 | 3.67K | 0.27s | 20.22 MB |
-| 10,000 | 10.97K | 0.91s | 22.28 MB |
+| 500 | 911.53 | 0.55s | 18.59 MB |
+| 1,000 | 3.96K | 0.25s | 19.91 MB |
+| 10,000 | 11.72K | 0.85s | 21.15 MB |
 
 ![Ingest Throughput - category](ingest_category_throughput_chart.png)
 
 ![Ingest Total Time - category](ingest_category_time_chart.png)
 
-### eql_v3.integer_ord
+### public.integer_ord
 
 Tests insertion of encrypted integer values.
 
 | Records | Throughput (records/sec) | Total Time | Avg Memory |
 |---------|--------------------------|------------|------------|
-| 500 | 418.51 | 1.19s | 19.06 MB |
-| 1,000 | 1.48K | 0.68s | 23.80 MB |
-| 10,000 | 2.08K | 4.82s | 26.45 MB |
+| 500 | 604.23 | 0.83s | 19.25 MB |
+| 1,000 | 1.55K | 0.64s | 23.65 MB |
+| 10,000 | 2.15K | 4.64s | 25.27 MB |
 
 ![Ingest Throughput - int](ingest_int_throughput_chart.png)
 
 ![Ingest Total Time - int](ingest_int_time_chart.png)
 
-### eql_v3.integer_ord_ope
+### public.integer_ord_ope
 
 | Records | Throughput (records/sec) | Total Time | Avg Memory |
 |---------|--------------------------|------------|------------|
-| 500 | 987.73 | 0.51s | 18.73 MB |
-| 1,000 | 3.58K | 0.28s | 20.00 MB |
-| 10,000 | 10.93K | 0.91s | 21.81 MB |
+| 500 | 733.76 | 0.68s | 18.60 MB |
+| 1,000 | 3.99K | 0.25s | 19.73 MB |
+| 10,000 | 11.93K | 0.84s | 21.56 MB |
 
 ![Ingest Throughput - int_ope](ingest_int_ope_throughput_chart.png)
 
 ![Ingest Total Time - int_ope](ingest_int_ope_time_chart.png)
 
-### eql_v3.json
+### public.json
 
 Tests insertion of small JSON objects with SteVec (searchable encrypted vector) indexing.
 
 | Records | Throughput (records/sec) | Total Time | Avg Memory |
 |---------|--------------------------|------------|------------|
-| 500 | 317.82 | 1.57s | 23.88 MB |
-| 1,000 | 2.38K | 0.42s | 35.89 MB |
-| 10,000 | 4.47K | 2.23s | 37.78 MB |
+| 500 | 821.86 | 0.61s | 24.01 MB |
+| 1,000 | 2.43K | 0.41s | 34.58 MB |
+| 10,000 | 4.46K | 2.24s | 39.31 MB |
 
 ![Ingest Throughput - ste_vec_small](ingest_ste_vec_small_throughput_chart.png)
 
 ![Ingest Total Time - ste_vec_small](ingest_ste_vec_small_time_chart.png)
 
-### eql_v3.text_search
+### public.text_search
 
 Tests insertion of encrypted string values.
 
 | Records | Throughput (records/sec) | Total Time | Avg Memory |
 |---------|--------------------------|------------|------------|
-| 500 | 318.12 | 1.57s | 23.48 MB |
-| 1,000 | 1.02K | 0.98s | 32.64 MB |
-| 10,000 | 1.27K | 7.90s | 36.31 MB |
+| 500 | 565.71 | 0.88s | 23.20 MB |
+| 1,000 | 1.04K | 0.96s | 32.66 MB |
+| 10,000 | 1.32K | 7.56s | 35.20 MB |
 
 ![Ingest Throughput - string](ingest_string_throughput_chart.png)
 

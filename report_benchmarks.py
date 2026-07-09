@@ -100,7 +100,8 @@ class BenchmarkReporter:
 
     def _bench_label(self, bench_type: str) -> str:
         if self.v3:
-            return f"eql_v3.{self.V3_BENCH_DOMAIN.get(bench_type, bench_type)}"
+            # alpha.3 moved the per-domain types eql_v3.* -> public.*
+            return f"public.{self.V3_BENCH_DOMAIN.get(bench_type, bench_type)}"
         return bench_type.replace('_', ' ').title()
 
     def load_ingest_results(self):

@@ -354,21 +354,21 @@ Scenarios matching an expected-index rule must show a non-empty `indexes_used` i
 
 | Bench | Records | v2 rec/s | v3 rec/s | Δ | Note |
 |---|---|---|---|---|---|
-| encrypt_category_v3 | 500 | — | 665 | |  |
-| encrypt_category_v3 | 1,000 | — | 3,672 | |  |
-| encrypt_category_v3 | 10,000 | — | 10,965 | |  |
-| encrypt_int_ope_v3 | 500 | — | 988 | | real CLLW-OPE op terms (cipherstash-client 0.38.1, Index::new_ope) |
-| encrypt_int_ope_v3 | 1,000 | — | 3,582 | |  |
-| encrypt_int_ope_v3 | 10,000 | — | 10,933 | |  |
-| encrypt_int_v3 | 500 | 699 | 419 | -40.1% |  |
-| encrypt_int_v3 | 1,000 | 1,587 | 1,479 | -6.8% |  |
-| encrypt_int_v3 | 10,000 | 2,127 | 2,076 | -2.4% |  |
-| encrypt_ste_vec_small_v3 | 500 | — | 318 | |  |
-| encrypt_ste_vec_small_v3 | 1,000 | — | 2,384 | |  |
-| encrypt_ste_vec_small_v3 | 10,000 | 4,032 | 4,475 | +11.0% |  |
-| encrypt_string_v3 | 500 | 966 | 318 | -67.1% | NOT a conversion regression: v3's only eq+match text domain (text_search) also REQUIRES the ORE term, so the config adds Index::new_ore() that v2's unique+match didn't carry — string ingest is capped at ORE-generation speed. A v3 hm+bf-only domain would restore v2 throughput. |
-| encrypt_string_v3 | 1,000 | 3,989 | 1,016 | -74.5% |  |
-| encrypt_string_v3 | 10,000 | 9,649 | 1,265 | -86.9% |  |
+| encrypt_category_v3 | 500 | — | 912 | |  |
+| encrypt_category_v3 | 1,000 | — | 3,955 | |  |
+| encrypt_category_v3 | 10,000 | — | 11,723 | |  |
+| encrypt_int_ope_v3 | 500 | — | 734 | | real CLLW-OPE op terms (cipherstash-client 0.38.1, Index::new_ope) |
+| encrypt_int_ope_v3 | 1,000 | — | 3,989 | |  |
+| encrypt_int_ope_v3 | 10,000 | — | 11,934 | |  |
+| encrypt_int_v3 | 500 | 699 | 604 | -13.5% |  |
+| encrypt_int_v3 | 1,000 | 1,587 | 1,552 | -2.2% |  |
+| encrypt_int_v3 | 10,000 | 2,127 | 2,154 | +1.3% |  |
+| encrypt_ste_vec_small_v3 | 500 | — | 822 | |  |
+| encrypt_ste_vec_small_v3 | 1,000 | — | 2,434 | |  |
+| encrypt_ste_vec_small_v3 | 10,000 | 4,032 | 4,461 | +10.6% |  |
+| encrypt_string_v3 | 500 | 966 | 566 | -41.5% | NOT a conversion regression: v3's only eq+match text domain (text_search) also REQUIRES the ORE term, so the config adds Index::new_ore() that v2's unique+match didn't carry — string ingest is capped at ORE-generation speed. A v3 hm+bf-only domain would restore v2 throughput. |
+| encrypt_string_v3 | 1,000 | 3,989 | 1,037 | -74.0% |  |
+| encrypt_string_v3 | 10,000 | 9,649 | 1,323 | -86.3% |  |
 
 ## Index build times
 
