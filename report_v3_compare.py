@@ -442,11 +442,16 @@ def write_report(rows, v3_query, v3_meta, v2_ingest, v3_ingest,
         w("_No overlapping scenario ids between v2 and v3 result sets yet._")
     w("")
 
-    # v3-only scenarios
+    # v3-only scenarios: any v3 scenario whose prefix never matched a v2
+    # counterpart (mirrors print_cli_table). Prefix-based so all tiers of a
+    # v3-only scenario are listed; excludes the ZeroKMS-dominated _decrypt
+    # variants. Picks up new v3-only scenarios (e.g. JSON field_gt)
+    # automatically instead of a hardcoded prefix allowlist.
+    matched_prefixes = {scenario_prefix(r["id"]) for r in rows}
     v3_only = sorted(
         cid for cid in v3_query
-        if cid.startswith(("OPE/", "SMOKE_V3/", "PLAINTEXT/"))
-        or "_noindex/" in cid
+        if scenario_prefix(cid) not in matched_prefixes
+        and "_decrypt" not in cid
     )
     if v3_only:
         w("## v3-only scenarios (no v2 counterpart)")

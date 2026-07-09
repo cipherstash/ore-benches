@@ -145,6 +145,10 @@ Methodology notes:
 
 | Scenario | Median |
 |---|---|
+| JSON/json/field_gt/functional/10000 | 233.8 µs |
+| JSON/json/field_gt/functional/100000 | 844.7 µs |
+| JSON/json/field_gt/functional/1000000 | 256.4 µs |
+| JSON/json/field_gt/functional/10000000 | 387.5 µs |
 | MATCH/match/eql_bloom_noindex/10000 | 56.79 ms |
 | MATCH/match/eql_cast_firstname_noindex/10000 | 187.08 ms |
 | MATCH/match/eql_cast_lastname_noindex/10000 | 55.16 ms |
@@ -168,26 +172,6 @@ Methodology notes:
 | OPE/ope/range_lt_ordered_10/100000 | 120.3 µs |
 | OPE/ope/range_lt_ordered_10/1000000 | 118.4 µs |
 | OPE/ope/range_lt_ordered_10/10000000 | 115.2 µs |
-| OPE/ope_decrypt/range_gt_10/10000 | 25.29 ms |
-| OPE/ope_decrypt/range_gt_10/100000 | 26.62 ms |
-| OPE/ope_decrypt/range_gt_10/1000000 | 25.96 ms |
-| OPE/ope_decrypt/range_gt_10/10000000 | 25.98 ms |
-| OPE/ope_decrypt/range_gt_100/10000 | 39.47 ms |
-| OPE/ope_decrypt/range_gt_100/100000 | 34.20 ms |
-| OPE/ope_decrypt/range_gt_100/1000000 | 35.34 ms |
-| OPE/ope_decrypt/range_gt_100/10000000 | 36.08 ms |
-| OPE/ope_decrypt/range_lt_10/10000 | 25.18 ms |
-| OPE/ope_decrypt/range_lt_10/100000 | 25.95 ms |
-| OPE/ope_decrypt/range_lt_10/1000000 | 25.67 ms |
-| OPE/ope_decrypt/range_lt_10/10000000 | 25.85 ms |
-| OPE/ope_decrypt/range_lt_100/10000 | 35.34 ms |
-| OPE/ope_decrypt/range_lt_100/100000 | 31.30 ms |
-| OPE/ope_decrypt/range_lt_100/1000000 | 33.58 ms |
-| OPE/ope_decrypt/range_lt_100/10000000 | 36.43 ms |
-| OPE/ope_decrypt/range_lt_ordered_10/10000 | 25.32 ms |
-| OPE/ope_decrypt/range_lt_ordered_10/100000 | 25.87 ms |
-| OPE/ope_decrypt/range_lt_ordered_10/1000000 | 25.98 ms |
-| OPE/ope_decrypt/range_lt_ordered_10/10000000 | 26.07 ms |
 | PLAINTEXT/plaintext/exact_eq/10000 | 94.1 µs |
 | PLAINTEXT/plaintext/exact_eq/100000 | 93.6 µs |
 | PLAINTEXT/plaintext/exact_eq/1000000 | 93.9 µs |
