@@ -1,5 +1,5 @@
 //! EQL v3 sibling of `benches/group_by.rs` — realistic-cardinality GROUP BY
-//! against `category_encrypted_v3_<N>` (`eql_v3.text_eq`). The plaintext
+//! against `category_encrypted_v3_<N>` (`public.text_eq`). The plaintext
 //! baselines run against the SAME `category_plaintext_<N>` tables the v2
 //! bench uses (shared baseline — pure-SQL populated, version-independent).
 //!

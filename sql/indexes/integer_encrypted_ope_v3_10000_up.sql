@@ -1,4 +1,4 @@
--- EQL v3 CLLW-OPE ordering index (eql_v3.integer_ord_ope): the fast path.
+-- EQL v3 CLLW-OPE ordering index (public.integer_ord_ope): the fast path.
 -- ord_ope_term -> eql_v3_internal.ope_cllw (DOMAIN over bytea), so this is
 -- a NATIVE bytea btree — no custom comparator anywhere in the chain.
 

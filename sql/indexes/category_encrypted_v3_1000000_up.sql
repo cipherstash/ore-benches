@@ -1,4 +1,4 @@
--- EQL v3 equality index (eql_v3.text_eq): functional btree over eq_term
+-- EQL v3 equality index (public.text_eq): functional btree over eq_term
 -- (hmac_256, DOMAIN over text). btree instead of v2's hash — see the
 -- string index file for the rationale.
 

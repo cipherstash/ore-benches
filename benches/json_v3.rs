@@ -1,30 +1,64 @@
 //! EQL v3 sibling of `benches/json.rs` — encrypted-JSONB (SteVec) queries
-//! against `json_ste_vec_small_encrypted_v3_<N>` (`eql_v3.json`).
+//! against `json_ste_vec_small_encrypted_v3_<N>` (`public.json`).
 //!
-//! Scenario ids match the v2 bench. The SQL surface maps as:
+//! Every scenario goes through the **named EQL v3 JSON functions** — the
+//! surface a real EQL caller (or the ORM/proxy that rewrites their query)
+//! emits — rather than casting the column to raw `jsonb` and using native
+//! `@>` / `->`. Scenario ids match the v2 bench so the v2↔v3 comparison
+//! joins by id. The SQL surface maps as:
 //!
 //!   contains/functional
-//!     v2: eql_v2.jsonb_array(value) @> eql_v2.jsonb_array($1::eql_v2_encrypted)
-//!     v3: value @> $1::jsonb::eql_v3.jsonb_query
-//!     One canonical containment recipe in v3: the typed @>(json, jsonb_query)
-//!     overload inlines to `eql_v3.to_ste_vec_query(value)::jsonb @> needle`
-//!     and engages the jsonb_path_ops GIN from the static index DDL. The
-//!     needle is the sampled row's sv entries stripped to `s` + term —
-//!     exactly what `eql_v3.to_ste_vec_query` produces.
+//!     v2: eql_v2.jsonb_array(value) @> eql_v2.jsonb_array($1::…)
+//!     v3: eql_v3.jsonb_contains(value, $1::jsonb)
+//!     `eql_v3.jsonb_contains(a, b)` inlines to
+//!     `eql_v3.jsonb_array(a) @> eql_v3.jsonb_array(b)`, so it engages the
+//!     static `GIN (eql_v3.jsonb_array(value))` index (the documented
+//!     whole-document containment recipe). Needle = the sampled row's whole
+//!     document, normalised to `s` + term entries.
 //!
-//!   field_eq/bare       (value -> '<sel>'::text) = $1::jsonb::eql_v3.jsonb_entry
-//!   field_eq/extractor  value @> $1::jsonb::eql_v3.jsonb_query   (single-entry needle)
-//!   field_eq/functional eql_v3.eq_term(value -> '<sel>'::text) = eql_v3.eq_term($1::jsonb::eql_v3.jsonb_entry)
-//!   field_order/functional  ORDER BY eql_v3.ore_cllw(value -> '<sel>'::text) LIMIT 10
+//!   field_eq/bare       eql_v3.jsonb_path_query_first(value, '<sel>') = $1::jsonb::public.jsonb_entry
+//!     The "natural" caller form: `jsonb_path_query_first` returns the
+//!     `public.jsonb_entry` leaf and `=` on that domain inlines to
+//!     `eql_v3.eq_term(a) = eql_v3.eq_term(b)` — structurally identical to
+//!     field_eq/functional, so it engages the same per-selector functional
+//!     index built at startup.
 //!
-//! One v3-specific expectation: `eql_v3."->"` is LANGUAGE sql (v2's was
-//! plpgsql), so the bare `->`+`=` form should now inline all the way down
-//! and match the per-selector functional index — check `indexes_used` for
-//! field_eq/bare, which could not engage in v2.
+//!   field_eq/extractor  eql_v3.jsonb_contains(value, $1::jsonb)  (single-entry needle)
+//!     Same containment function/index as contains/functional, but the
+//!     needle addresses a single selector: `{"sv":[{"s":…,"hm":…}]}`.
 //!
-//! Per-selector functional indexes (eq_term / ore_cllw over `value -> sel`)
-//! are built at startup once the selector is sampled, mirroring the v2
-//! bench's create_field_indexes.
+//!   field_eq/functional eql_v3.eq_term(eql_v3.jsonb_path_query_first(value, '<sel>'))
+//!                          = eql_v3.eq_term($1::jsonb::public.jsonb_entry)
+//!     The explicit per-selector functional form.
+//!
+//! The field_eq needles cast `$1::jsonb::public.jsonb_entry`, not
+//! `$1::public.jsonb_entry` — the `::jsonb` intermediate keeps the bound
+//! parameter's type the built-in `jsonb`; a direct bind-cast to the domain
+//! makes sqlx try to resolve `public.jsonb_entry` as the *parameter* type and
+//! fail with `type "public.jsonb_entry" does not exist`. Don't drop it.
+//!
+//!   field_order/functional
+//!     ORDER BY eql_v3.ore_cllw(eql_v3.jsonb_path_query_first(value, '<sel>')) LIMIT 10
+//!     `eql_v3.ore_cllw` returns `eql_v3_internal.ore_cllw`, whose
+//!     DEFAULT-FOR-TYPE btree opclass turns `ORDER BY … LIMIT` into an index
+//!     scan on the per-selector functional index.
+//!
+//!   field_gt/functional  — the encrypted equivalent of `x -> 'y' > 10`
+//!     WHERE eql_v3.jsonb_path_query_first(value, '<sel>') > $1::jsonb::public.jsonb_entry LIMIT 10
+//!     The `>` operator on public.jsonb_entry inlines to
+//!     `eql_v3.ore_cllw(a) > eql_v3.ore_cllw(b)` (a CLLW-ORE comparison), so
+//!     the predicate reuses the same `field_order_idx` — no extra index. The
+//!     threshold `$1` is a sampled oc leaf; an unselective bound may still
+//!     seq-scan (mirrors the scalar ORE `range_gt` scenarios).
+//!
+//! Field access is always `eql_v3.jsonb_path_query_first(value, '<sel>')`
+//! (the scalar EQL path-query — `jsonb_path_query` is SETOF and can't sit in
+//! an index expression), never a raw `value -> '<sel>'`. The selector is the
+//! sv element's deterministic `s` hash, sampled at startup.
+//!
+//! Per-selector functional indexes (eq_term / ore_cllw over
+//! `jsonb_path_query_first(value, sel)`) are built at startup once the
+//! selector is sampled, mirroring the v2 bench's create_field_indexes.
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use dbbenches::{
@@ -39,7 +73,7 @@ use tokio::runtime::Runtime;
 #[derive(Debug)]
 struct Needles {
     /// `{"sv":[{"s":..,"hm"|"oc":..}, ...]}` — the whole sampled document
-    /// normalized to the jsonb_query shape (drives contains/functional).
+    /// normalized to the containment-needle shape (drives contains/functional).
     document_query: String,
     hm_pick: Option<HmPick>,
     ore_pick: Option<OrePick>,
@@ -48,21 +82,26 @@ struct Needles {
 #[derive(Debug)]
 struct HmPick {
     selector: String,
-    /// `(value -> '<selector>')::jsonb` of the sampled row — an entry
-    /// merged with root meta, castable to eql_v3.jsonb_entry.
+    /// `eql_v3.jsonb_path_query_first(value, '<selector>')::jsonb` of the
+    /// sampled row — the merged leaf entry, castable to public.jsonb_entry.
+    /// Drives the field_eq/bare + field_eq/functional needles.
     sample_field_value: JsonValue,
-    /// Single-entry jsonb_query needle for field_eq/extractor.
+    /// Single-entry containment needle for field_eq/extractor.
     hmac_term: String,
 }
 
 #[derive(Debug)]
 struct OrePick {
     selector: String,
+    /// `eql_v3.jsonb_path_query_first(value, '<selector>')::jsonb` of a sampled
+    /// row — an oc-bearing leaf used as the range threshold for field_gt
+    /// (`field > this`), castable to public.jsonb_entry.
+    threshold: JsonValue,
 }
 
 async fn sample_needles(pool: &sqlx::PgPool, table: &str) -> Needles {
-    // v3 payloads are jsonb domains — `value::jsonb -> 'sv'` walks the
-    // document directly (no composite `.data` hop like v2).
+    // v3 payloads are the public.json jsonb domain — cast to raw jsonb for
+    // *sampling* (setup, not a measured query) and walk `-> 'sv'` directly.
     let rows = sqlx::query(&format!(
         "SELECT elem ->> 's'  AS sel,
                 elem ->> 'hm' AS hmac,
@@ -84,7 +123,7 @@ async fn sample_needles(pool: &sqlx::PgPool, table: &str) -> Needles {
     }
 
     // Normalize every entry to `s` + one term for the whole-document
-    // containment needle (what eql_v3.to_ste_vec_query does in SQL).
+    // containment needle (what eql_v3.jsonb_array reduces the column to).
     let mut query_entries: Vec<JsonValue> = Vec::with_capacity(rows.len());
     let mut hm_pick: Option<HmPick> = None;
     let mut ore_pick: Option<OrePick> = None;
@@ -103,8 +142,12 @@ async fn sample_needles(pool: &sqlx::PgPool, table: &str) -> Needles {
 
         if hm_pick.is_none() {
             if let Some(h) = hmac.as_deref() {
+                // Source the leaf needle through the same EQL path-query the
+                // measured queries use, so needle and column leaf agree
+                // byte-for-byte under eq_term (guarantees ≥1 match).
                 let field_row = sqlx::query(&format!(
-                    "SELECT (value -> '{sel}'::text)::jsonb AS sample_field_value
+                    "SELECT eql_v3.jsonb_path_query_first(value::jsonb, '{sel}')::jsonb
+                              AS sample_field_value
                      FROM {table}
                      LIMIT 1"
                 ))
@@ -121,8 +164,21 @@ async fn sample_needles(pool: &sqlx::PgPool, table: &str) -> Needles {
         }
 
         if ore_pick.is_none() && obj.contains_key("oc") {
+            // Sample this row's oc leaf through the same EQL path-query the
+            // measured queries use, as the field_gt range threshold.
+            let field_row = sqlx::query(&format!(
+                "SELECT eql_v3.jsonb_path_query_first(value::jsonb, '{sel}')::jsonb
+                          AS threshold
+                 FROM {table}
+                 LIMIT 1"
+            ))
+            .fetch_one(pool)
+            .await
+            .expect("query for ore threshold value failed");
+            let threshold: Json<JsonValue> = field_row.get("threshold");
             ore_pick = Some(OrePick {
                 selector: sel.clone(),
+                threshold: threshold.0,
             });
         }
     }
@@ -137,7 +193,9 @@ async fn sample_needles(pool: &sqlx::PgPool, table: &str) -> Needles {
 
 /// Build per-selector functional indexes (selector known only after
 /// sampling). btree for both — see the v2 json bench for the hash-vs-btree
-/// build-cost rationale.
+/// build-cost rationale. Both index the EQL path-query expression
+/// `eql_v3.jsonb_path_query_first(value, '<sel>')` so the field_eq/field_order
+/// queries (which call the same function) match.
 async fn create_field_indexes(pool: &sqlx::PgPool, table: &str, needles: &Needles) {
     eprintln!("json_v3 bench: building per-selector functional indexes...");
 
@@ -148,7 +206,7 @@ async fn create_field_indexes(pool: &sqlx::PgPool, table: &str, needles: &Needle
             .expect("drop stale field_eq index");
         sqlx::query(&format!(
             "CREATE INDEX {table}_field_eq_idx ON {table} \
-             USING btree (eql_v3.eq_term(value -> '{}'::text))",
+             USING btree (eql_v3.eq_term(eql_v3.jsonb_path_query_first(value, '{}')))",
             p.selector
         ))
         .execute(pool)
@@ -163,7 +221,7 @@ async fn create_field_indexes(pool: &sqlx::PgPool, table: &str, needles: &Needle
             .expect("drop stale field_order index");
         sqlx::query(&format!(
             "CREATE INDEX {table}_field_order_idx ON {table} \
-             USING btree (eql_v3.ore_cllw(value -> '{}'::text))",
+             USING btree (eql_v3.ore_cllw(eql_v3.jsonb_path_query_first(value, '{}')))",
             p.selector
         ))
         .execute(pool)
@@ -224,24 +282,27 @@ fn criterion_benchmark(c: &mut Criterion) {
         .map(|p| serde_json::to_string(&p.sample_field_value).expect("serialise hm field value"));
 
     // --- Query strings ---
+    // Every predicate is a named EQL v3 JSON function. `value` (public.json)
+    // coerces to the functions' `jsonb` parameter via the domain's base type.
 
     let q_contains_functional = format!(
         "SELECT id FROM {table_name} \
-         WHERE value @> $1::jsonb::eql_v3.jsonb_query LIMIT 10"
+         WHERE eql_v3.jsonb_contains(value, $1::jsonb) LIMIT 10"
     );
 
     let q_field_eq_bare = needles.hm_pick.as_ref().map(|p| {
         let selector = &p.selector;
         format!(
             "SELECT id FROM {table_name} \
-             WHERE (value -> '{selector}'::text) = $1::jsonb::eql_v3.jsonb_entry LIMIT 10"
+             WHERE eql_v3.jsonb_path_query_first(value, '{selector}') \
+                 = $1::jsonb::public.jsonb_entry LIMIT 10"
         )
     });
 
     let q_field_eq_extractor = needles.hm_pick.as_ref().map(|_| {
         format!(
             "SELECT id FROM {table_name} \
-             WHERE value @> $1::jsonb::eql_v3.jsonb_query LIMIT 10"
+             WHERE eql_v3.jsonb_contains(value, $1::jsonb) LIMIT 10"
         )
     });
 
@@ -249,8 +310,8 @@ fn criterion_benchmark(c: &mut Criterion) {
         let selector = &p.selector;
         format!(
             "SELECT id FROM {table_name} \
-             WHERE eql_v3.eq_term(value -> '{selector}'::text) \
-                 = eql_v3.eq_term($1::jsonb::eql_v3.jsonb_entry) LIMIT 10"
+             WHERE eql_v3.eq_term(eql_v3.jsonb_path_query_first(value, '{selector}')) \
+                 = eql_v3.eq_term($1::jsonb::public.jsonb_entry) LIMIT 10"
         )
     });
 
@@ -258,9 +319,29 @@ fn criterion_benchmark(c: &mut Criterion) {
         let selector = &p.selector;
         format!(
             "SELECT id FROM {table_name} \
-             ORDER BY eql_v3.ore_cllw(value -> '{selector}'::text) LIMIT 10"
+             ORDER BY eql_v3.ore_cllw(eql_v3.jsonb_path_query_first(value, '{selector}')) LIMIT 10"
         )
     });
+
+    // Encrypted-JSON field range — the equivalent of `x -> 'y' > 10`. The
+    // `>` operator on public.jsonb_entry inlines to
+    // `eql_v3.ore_cllw(a) > eql_v3.ore_cllw(b)`, so the LHS matches the same
+    // `field_order_idx` (ore_cllw over jsonb_path_query_first) — no extra
+    // index. Threshold needle is a sampled oc leaf; the planner may still
+    // prefer a seq scan when the bound is unselective (see `indexes_used`).
+    let q_field_gt_functional = needles.ore_pick.as_ref().map(|p| {
+        let selector = &p.selector;
+        format!(
+            "SELECT id FROM {table_name} \
+             WHERE eql_v3.jsonb_path_query_first(value, '{selector}') \
+                 > $1::jsonb::public.jsonb_entry LIMIT 10"
+        )
+    });
+
+    let ore_threshold_json = needles
+        .ore_pick
+        .as_ref()
+        .map(|p| serde_json::to_string(&p.threshold).expect("serialise ore threshold"));
 
     // --- Metadata sidecar ---
 
@@ -389,6 +470,20 @@ fn criterion_benchmark(c: &mut Criterion) {
             );
         }
 
+        if let (Some(q), Some(threshold)) =
+            (q_field_gt_functional.as_deref(), ore_threshold_json.as_deref())
+        {
+            out.push(
+                capture(
+                    &pool,
+                    format!("JSON/json/field_gt/functional/{}", target_rows),
+                    q,
+                    Some(threshold),
+                )
+                .await,
+            );
+        }
+
         out
     });
     write_metadata_file_in("results/query/v3", "json", &target_rows, metadata)
@@ -472,6 +567,19 @@ fn criterion_benchmark(c: &mut Criterion) {
                     })
                 },
             );
+        }
+
+        if let (Some(q), Some(threshold)) =
+            (q_field_gt_functional.clone(), ore_threshold_json.clone())
+        {
+            let id = format!("JSON/json/field_gt/functional/{}", target_rows);
+            group.bench_function(format!("json/field_gt/functional/{}", target_rows), |b| {
+                b.to_async(&rt).iter(|| async {
+                    let rows =
+                        bench_assert(sqlx::query(&q).bind(&threshold).fetch_all(&pool).await, &id);
+                    black_box(rows.len())
+                })
+            });
         }
     }
 

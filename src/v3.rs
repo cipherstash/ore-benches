@@ -2,8 +2,8 @@
 //!
 //! The pinned cipherstash-client (0.38.1) emits EQL **v2.3** wire
 //! payloads. EQL v3 replaced the single `eql_v2_encrypted` composite with
-//! per-capability jsonb DOMAIN types (`eql_v3.text_search`,
-//! `eql_v3.integer_ord`, …), and ships a supported conversion path in the
+//! per-capability jsonb DOMAIN types (`public.text_search`,
+//! `public.integer_ord`, …), and ships a supported conversion path in the
 //! `eql-bindings` crate (`from_v2`) that names these benches as a consumer.
 //! Everything v3-specific in the bench harness funnels through this module:
 //!
@@ -68,8 +68,10 @@ pub fn to_v3_stored_target(v2: &EqlCiphertext, target: TargetDomain) -> Result<V
         .with_context(|| format!("from_v2 conversion to `{:?}` failed", target))
 }
 
-/// Convert a v2 SteVec QUERY payload (containment needle) into the v3
-/// `eql_v3.jsonb_query` wire shape.
+/// Convert a v2 SteVec QUERY payload into the v3 SteVec containment-needle
+/// JSON (the `{"sv":[…]}` shape fed to `eql_v3.jsonb_contains(value, $1)` —
+/// alpha.3 dropped the dedicated `jsonb_query` type; the needle is a plain
+/// jsonb value).
 pub fn to_v3_query_json(v2_query: &Value) -> Result<Value> {
     from_v2_query(v2_query, TargetDomain::Json)
         .context("from_v2_query conversion to `json` failed")

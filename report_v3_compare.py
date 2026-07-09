@@ -50,20 +50,21 @@ SEMANTICS_CHANGED = {
     "MATCH/match_decrypt/eql_cast_lastname": "v2 LIKE → v3 @>",
     "EXACT/exact/eql_hash": "index type changed: v2 hash → v3 btree on eq_term",
     "EXACT/exact_decrypt/eql_hash": "index type changed: v2 hash → v3 btree on eq_term",
-    "JSON/json/contains/functional": "v2 jsonb_array recipe → v3 to_ste_vec_query GIN recipe",
     "COMBO/combo/bloom_ore_order_limit": "v2 LIKE → v3 @>",
     "COMBO/combo/filtered_group_by": "v2 LIKE → v3 @>",
     "COMBO/combo/top_n_filtered_group_by": "v2 LIKE → v3 @>",
     # DIAGNOSED bench artifact, not a v3 defect: the sampled needle matches
     # EVERY row (selector-lookup hm — the only hm-bearing sv entry in the
-    # 2.3+ wire format). sqlx's prepared statements flip to a generic plan
-    # after 5 executions; under it the v3 GIN engages and the bitmap index
-    # scan materializes the full 1M-row posting list (~60ms) before LIMIT
-    # can cut anything. Custom plan (literal needle): early-stop seq scan,
-    # 0.6ms. With a realistic selective needle the GIN bitmap is small and
-    # this plan is optimal. v2's generic plan stayed on the seq scan, hence
-    # the asymmetry.
-    "JSON/json/field_eq/extractor": "generic-plan GIN + every-row needle artifact (see report notes)",
+    # 2.3+ wire format). v3 extractor now runs eql_v3.jsonb_contains (the
+    # jsonb_array GIN recipe, single-entry needle), replacing v2's typed
+    # stevec_query GIN. sqlx's prepared statements flip to a generic plan
+    # after 5 executions; on the every-row needle the plan is unstable —
+    # sometimes an early-stop seq scan (~0.6ms), sometimes a full-posting-list
+    # GIN bitmap before LIMIT (tens of ms), which is why the number swings
+    # non-monotonically across tiers (e.g. 72ms @1M vs 0.6ms @10M). With a
+    # realistic selective needle the GIN bitmap is small and the plan is
+    # optimal.
+    "JSON/json/field_eq/extractor": "v2 stevec_query GIN → v3 jsonb_contains; every-row-needle plan instability (see notes)",
 }
 
 # Extra context notes keyed the same way (shown alongside numbers).
@@ -78,6 +79,11 @@ NOTES = {
     # both) — deltas isolate per-row extractor cost.
     "JSON/json/field_eq/bare": "same btree plan as v2 (needle matches every row in both versions)",
     "JSON/json/field_eq/functional": "same btree plan as v2 (needle matches every row in both versions)",
+    # v3 now runs eql_v3.jsonb_contains → jsonb_array(value) @> jsonb_array(needle),
+    # the SAME recipe/GIN as v2 (no longer semantics-changed). The 10M delta
+    # reflects GIN posting-list growth over the public.json domain vs the v2
+    # composite, not a recipe change.
+    "JSON/json/contains/functional": "same jsonb_array GIN recipe as v2; 10M delta is posting-list/data-shape",
     # Same-day v2 re-measurement (2026-07-04) adjudicated the 10M flags vs
     # the May-measured baseline: cross-session drift is ±8-19% at these
     # scales. v3 vs SAME-DAY v2: eql_cast -3.3%, top_n GROUP BY -0.7%,
@@ -380,9 +386,25 @@ def write_report(rows, v3_query, v3_meta, v2_ingest, v3_ingest,
     w("")
     w("Methodology notes:")
     w("")
+    w("- EQL v3 is installed from the pinned release bundle "
+      "**eql-3.0.0-alpha.3** (`mise run setup-db-v3`). alpha.3 places the "
+      "per-domain types in `public.*` (`public.text_search`, "
+      "`public.integer_ord`, `public.json`, …); the raw-jsonb SEM extractors "
+      "live in `eql_v3_internal`, and the benches call only the public "
+      "`eql_v3.*` wrappers.")
+    w("- **Re-baseline status:** the **JSON** tiers (10k–10M) were re-ingested "
+      "and re-run against alpha.3. The **non-JSON** v3 scenarios below are "
+      "still the pre-release alpha.2-equivalent measurements and are pending a "
+      "full alpha.3 re-baseline — treat their absolute numbers accordingly.")
     w("- v3 payloads are produced by `eql-bindings::from_v2` over the pinned "
       "cipherstash-client's v2.3 output (the supported migration path); "
       "conversion cost is inside the measured ingest path.")
+    w("- The JSON bench queries the encrypted document through the named EQL "
+      "JSON functions — `eql_v3.jsonb_contains` (GIN over "
+      "`eql_v3.jsonb_array(value)`) for containment and "
+      "`eql_v3.jsonb_path_query_first(value, selector)` feeding "
+      "`eql_v3.eq_term` / `eql_v3.ore_cllw` for field equality/ordering — not "
+      "raw `jsonb` `@>` / `->`.")
     w("- v3 query parameters are stored-shape payloads (no v3 scalar query "
       "wire shape exists); server-side timings are unaffected.")
     w("- The v3 string column (`text_search`) carries an ORE term v2's "

@@ -1,5 +1,5 @@
 //! EQL v3 sibling of `benches/ore.rs` — range queries against
-//! `integer_encrypted_v3_<N>` (`eql_v3.integer_ord`, ORE block term).
+//! `integer_encrypted_v3_<N>` (`public.integer_ord`, ORE block term).
 //!
 //! Scenario ids match the v2 bench exactly. Bound parameters are
 //! STORED-shape v3 payloads (see benches/exact_v3.rs — no scalar query wire

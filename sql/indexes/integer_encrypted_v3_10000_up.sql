@@ -1,4 +1,4 @@
--- EQL v3 ORE ordering index (eql_v3.integer_ord): functional btree over the
+-- EQL v3 ORE ordering index (public.integer_ord): functional btree over the
 -- ore_block_256 composite, compared by the custom plpgsql opclass. Build
 -- time at scale is a named risk — captured by prepare:_table.
 

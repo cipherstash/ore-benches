@@ -1,5 +1,5 @@
 //! EQL v3 sibling of `benches/match.rs` — substring/pattern matching against
-//! `string_encrypted_v3_<N>` (`eql_v3.text_search`, bloom term).
+//! `string_encrypted_v3_<N>` (`public.text_search`, bloom term).
 //!
 //! v3 has NO `~~`/LIKE operator: bloom matching is exposed as containment.
 //! v2's `value LIKE $1` scenarios keep their ids but run `value @> $1`
@@ -41,7 +41,7 @@ static QUERY_TEMPLATES: &[(&str, &str, &str)] = &[
         "eql_cast_lastname",
     ),
     (
-        "SELECT id, value FROM {TABLE} WHERE eql_v3.match_term(value) @> eql_v3.match_term($1::eql_v3.text_search) LIMIT 10",
+        "SELECT id, value FROM {TABLE} WHERE eql_v3.match_term(value) @> eql_v3.match_term($1::public.text_search) LIMIT 10",
         "Johnson",
         "eql_bloom",
     ),

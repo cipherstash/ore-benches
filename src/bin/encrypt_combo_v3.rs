@@ -1,10 +1,10 @@
 //! v3 sibling of `encrypt_combo`: three-column rows (`name`, `age`,
 //! `category`) into `combo_encrypted_v3_*`, with per-column v3 targets:
 //!
-//!   * `name`     → eql_v3.text_search (unique+match+ore config; see
+//!   * `name`     → public.text_search (unique+match+ore config; see
 //!                  encrypt_string_v3 for why ORE is added)
-//!   * `age`      → eql_v3.integer_ord
-//!   * `category` → eql_v3.text_eq
+//!   * `age`      → public.integer_ord
+//!   * `category` → public.text_eq
 //!
 //! Environment variables: DATABASE_URL, NUM_RECORDS, TABLE_SUFFIX,
 //! CS_CLIENT_ID / CS_CLIENT_KEY / CS_WORKSPACE_CRN.

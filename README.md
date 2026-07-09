@@ -12,15 +12,16 @@ The latest benchmark results are available in the [`report/`](report/) directory
 
 ## 🆕 EQL v3 benches
 
-The `*_v3` benches target the upcoming EQL v3 release (domain-specific types —
-`eql_v3.text_search`, `eql_v3.integer_ord`, … — replacing the single
+The `*_v3` benches target the EQL v3 release (domain-specific types —
+`public.text_search`, `public.integer_ord`, … — replacing the single
 `eql_v2_encrypted` composite). They live alongside the v2 benches; the
 committed v2 results are the regression baseline and are never overwritten
 (v3 results land in `results/query/v3/` and `results/ingest/v3/`).
 
 ```bash
-# Install the v3 bundle alongside v2 (builds from a local eql_v3 checkout;
-# see EQL_V3_DIR / EQL_V3_SQL in the task for overrides)
+# Install the v3 bundle alongside v2. Defaults to the pinned release
+# download (eql-3.0.0-alpha.3); override with EQL_V3_VERSION=<tag>,
+# EQL_V3_SQL=<prebuilt bundle>, or EQL_V3_DIR=<local checkout to build>.
 mise run setup-db-v3
 
 # Populate all v3 tables at a tier

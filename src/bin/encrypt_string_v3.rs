@@ -1,5 +1,5 @@
 //! v3 sibling of `encrypt_string`: random English names into
-//! `string_encrypted_v3_*` as `eql_v3.text_search` payloads.
+//! `string_encrypted_v3_*` as `public.text_search` payloads.
 //!
 //! The config adds `Index::new_ore()` on top of v2's unique+match: v3 has no
 //! hm+bf domain — `text_search` (the only equality+match domain) also

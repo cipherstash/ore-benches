@@ -1,5 +1,5 @@
 //! EQL v3 sibling of `benches/exact.rs` — equality lookups against
-//! `string_encrypted_v3_<N>` (`eql_v3.text_search`).
+//! `string_encrypted_v3_<N>` (`public.text_search`).
 //!
 //! Scenario ids are kept IDENTICAL to the v2 bench (`eql_cast`, `eql_hash`)
 //! so the comparison report joins v2 vs v3 by (group, scenario, tier); the
@@ -32,7 +32,7 @@ static QUERY_TEMPLATES: &[(&str, &str)] = &[
         "eql_cast",
     ),
     (
-        "SELECT id, value FROM {TABLE} WHERE eql_v3.eq_term(value) = eql_v3.eq_term($1::eql_v3.text_search) LIMIT 1",
+        "SELECT id, value FROM {TABLE} WHERE eql_v3.eq_term(value) = eql_v3.eq_term($1::public.text_search) LIMIT 1",
         "eql_hash",
     ),
 ];

@@ -1,6 +1,6 @@
 //! v3 sibling of `encrypt_category`: low-cardinality categorical strings
 //! (`CAT_001`..`CAT_250`) into `category_encrypted_v3_*` as
-//! `eql_v3.text_eq` payloads (hm only — GROUP BY / equality scenarios).
+//! `public.text_eq` payloads (hm only — GROUP BY / equality scenarios).
 //!
 //! Environment variables: DATABASE_URL, NUM_RECORDS, TABLE_SUFFIX,
 //! V3_CONVERT_ONLY, CS_CLIENT_ID / CS_CLIENT_KEY / CS_WORKSPACE_CRN.

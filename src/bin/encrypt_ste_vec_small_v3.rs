@@ -1,5 +1,5 @@
 //! v3 sibling of `encrypt_ste_vec_small`: small JSON documents (4 flat
-//! fields) into `json_ste_vec_small_encrypted_v3_*` as `eql_v3.json`
+//! fields) into `json_ste_vec_small_encrypted_v3_*` as `public.json`
 //! (SteVec document) payloads.
 //!
 //! SteVecMode::Standard is load-bearing: Standard emits `oc` (CLLW-ORE)

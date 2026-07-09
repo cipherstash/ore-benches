@@ -1,7 +1,7 @@
 //! EQL v3 CLLW-OPE ordering bench — NEW in v3, no v2 counterpart.
 //!
 //! Runs the SAME scenario shapes as benches/ore_v3.rs against
-//! `integer_encrypted_ope_v3_<N>` (`eql_v3.integer_ord_ope`) so the report
+//! `integer_encrypted_ope_v3_<N>` (`public.integer_ord_ope`) so the report
 //! can chart ORE (custom plpgsql btree opclass) vs OPE (native bytea btree,
 //! fully inlinable) per scenario — the headline v3 fast-ordering story.
 //!

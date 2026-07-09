@@ -1,5 +1,5 @@
 //! v3 sibling of `encrypt_int`: random i32s into `integer_encrypted_v3_*`
-//! as `eql_v3.integer_ord` payloads (ORE block term, custom btree opclass).
+//! as `public.integer_ord` payloads (ORE block term, custom btree opclass).
 //!
 //! Environment variables: DATABASE_URL, NUM_RECORDS, TABLE_SUFFIX,
 //! V3_CONVERT_ONLY, CS_CLIENT_ID / CS_CLIENT_KEY / CS_WORKSPACE_CRN.

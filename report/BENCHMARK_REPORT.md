@@ -114,7 +114,7 @@ Per-query-type detail is broken out into separate pages — click into a scenari
 | COMBO | `bloom_ore_order_limit`, `filtered_group_by`, `top_n_filtered_group_by` | 10,000, 100,000, 1,000,000 | 8.20ms | [open](combo.md) |
 | EXACT | `eql_cast`, `eql_hash` | 10,000, 100,000, 1,000,000, 10,000,000 | 124.69μs | [open](exact.md) |
 | GROUP_BY | `low_cardinality_groups_encrypted`, `low_cardinality_groups_plaintext`, `top_n_groups_encrypted`, `top_n_groups_plaintext` | 10,000, 100,000, 1,000,000, 10,000,000 | 621.96ms | [open](group_by.md) |
-| JSON | `contains/functional`, `field_eq/bare`, `field_eq/extractor`, `field_eq/functional`, `field_order/functional` | 10,000, 100,000, 1,000,000, 10,000,000 | 886.45μs | [open](json.md) |
+| JSON | `contains/functional`, `field_eq/bare`, `field_eq/extractor`, `field_eq/functional`, `field_gt/functional`, `field_order/functional` | 10,000, 100,000, 1,000,000, 10,000,000 | 434.09μs | [open](json.md) |
 | MATCH | `eql_bloom`, `eql_bloom_noindex`, `eql_cast_firstname`, `eql_cast_firstname_noindex`, `eql_cast_lastname`, `eql_cast_lastname_noindex` | 10,000, 100,000, 1,000,000 | 11.57ms | [open](match.md) |
 | OPE | `range_gt_10`, `range_gt_100`, `range_lt_10`, `range_lt_100`, `range_lt_ordered_10` | 10,000, 100,000, 1,000,000, 10,000,000 | 215.61μs | [open](ope.md) |
 | ORE | `range_gt_10`, `range_gt_100`, `range_lt_10`, `range_lt_100`, `range_lt_ordered_10` | 10,000, 100,000, 1,000,000, 10,000,000 | 685.33μs | [open](ore.md) |
@@ -123,22 +123,26 @@ Per-query-type detail is broken out into separate pages — click into a scenari
 
 ## Comparison vs EQL 2.3
 
-119 comparable scenario/tier pairs against the committed EQL 2.3 baseline: **3 regressions**, **18 improvements** (beyond ±10%), 37 pairs whose SQL semantics changed between versions (annotated, not flagged). Full table, methodology, and index-engagement audit: [V3_COMPARISON.md](V3_COMPARISON.md).
+119 comparable scenario/tier pairs against the committed EQL 2.3 baseline: **4 regressions**, **21 improvements** (beyond ±10%), 33 pairs whose SQL semantics changed between versions (annotated, not flagged). Full table, methodology, and index-engagement audit: [V3_COMPARISON.md](V3_COMPARISON.md).
 
 | Scenario | Tier | v2 median | v3 median | Δ | |
 |-|-|-|-|-|-|
+| JSON/json/contains/functional | 10000000 | 848.3 µs | 1.05 ms | +23.3% | 🔴 |
 | EXACT/exact/eql_cast | 10000000 | 110.3 µs | 126.6 µs | +14.8% | 🔴 |
 | GROUP_BY/group_by/low_cardinality_groups_encrypted | 10000000 | 775.51 ms | 887.48 ms | +14.4% | 🔴 |
 | GROUP_BY/group_by/top_n_groups_encrypted | 10000000 | 809.18 ms | 901.04 ms | +11.4% | 🔴 |
+| JSON/json/field_order/functional | 100000 | 306.2 µs | 274.8 µs | -10.3% | 🟢 |
 | GROUP_BY/group_by/low_cardinality_groups_encrypted | 1000000 | 92.57 ms | 83.05 ms | -10.3% | 🟢 |
+| JSON/json/field_eq/functional | 10000000 | 108.8 µs | 97.0 µs | -10.8% | 🟢 |
+| JSON/json/field_eq/bare | 10000000 | 108.7 µs | 96.7 µs | -11.0% | 🟢 |
+| JSON/json/contains/functional | 100000 | 279.9 µs | 248.8 µs | -11.1% | 🟢 |
 | ORE/ore/range_lt_10 | 1000000 | 577.0 µs | 494.6 µs | -14.3% | 🟢 |
-| JSON/json/field_order/functional | 10000 | 317.9 µs | 269.0 µs | -15.4% | 🟢 |
+| JSON/json/field_order/functional | 10000 | 317.9 µs | 253.3 µs | -20.3% | 🟢 |
 | ORE/ore/range_gt_10 | 10000 | 624.6 µs | 497.5 µs | -20.3% | 🟢 |
 | ORE/ore/range_gt_10 | 1000000 | 694.1 µs | 542.8 µs | -21.8% | 🟢 |
 | ORE/ore/range_lt_10 | 10000 | 595.5 µs | 455.6 µs | -23.5% | 🟢 |
 | ORE/ore/range_lt_10 | 100000 | 655.1 µs | 496.4 µs | -24.2% | 🟢 |
-| JSON/json/field_order/functional | 1000000 | 356.7 µs | 255.5 µs | -28.4% | 🟢 |
-| JSON/json/field_order/functional | 10000000 | 367.6 µs | 250.2 µs | -31.9% | 🟢 |
+| JSON/json/field_order/functional | 1000000 | 356.7 µs | 267.9 µs | -24.9% | 🟢 |
 | ORE/ore/range_lt_10 | 10000000 | 748.8 µs | 477.9 µs | -36.2% | 🟢 |
 | ORE/ore/range_gt_100 | 10000000 | 4.04 ms | 996.5 µs | -75.3% | 🟢 |
 | ORE/ore/range_lt_100 | 100000 | 3.87 ms | 932.2 µs | -75.9% | 🟢 |
@@ -168,8 +172,8 @@ The same query shapes against plaintext tables with equivalent indexes (see `ben
 | ORE/ore/range_lt_ordered_10 | 510.5 µs (5.1×) | 543.5 µs (5.4×) | 518.5 µs (5.2×) | 532.0 µs (5.5×) |
 | OPE/ope/range_gt_10 | 122.5 µs (1.3×) | 123.5 µs (1.4×) | 117.6 µs (1.3×) | 126.4 µs (1.4×) |
 | OPE/ope/range_lt_ordered_10 | 116.9 µs (1.2×) | 120.3 µs (1.2×) | 118.4 µs (1.2×) | 115.2 µs (1.2×) |
-| JSON/json/contains/functional | 271.9 µs (2.5×) | 352.9 µs (1.5×) | 395.9 µs (1.4×) | 3.36 ms (22.8×) |
-| JSON/json/field_eq/bare | 114.3 µs (0.5×) | 113.5 µs (0.5×) | 116.8 µs (0.4×) | 109.5 µs (0.7×) |
+| JSON/json/contains/functional | 231.6 µs (2.1×) | 248.8 µs (1.1×) | 420.5 µs (1.5×) | 1.05 ms (7.1×) |
+| JSON/json/field_eq/bare | 111.9 µs (0.5×) | 112.7 µs (0.5×) | 112.0 µs (0.4×) | 96.7 µs (0.7×) |
 | GROUP_BY/group_by/low_cardinality_groups_encrypted | 2.11 ms (1.8×) | 19.16 ms (2.0×) | 83.05 ms (2.2×) | 887.48 ms (2.6×) |
 | GROUP_BY/group_by/top_n_groups_encrypted | 2.07 ms (1.7×) | 19.90 ms (2.0×) | 85.63 ms (2.2×) | 901.04 ms (2.5×) |
 

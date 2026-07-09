@@ -1,4 +1,4 @@
--- EQL v3 functional indexes for the string bench (eql_v3.text_search).
+-- EQL v3 functional indexes for the string bench (public.text_search).
 --
 -- eq_term    -> eql_v3_internal.hmac_256 (DOMAIN over text): btree, NOT hash.
 --   v2 used hash here; hash index builds degrade badly at scale (see the

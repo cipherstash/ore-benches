@@ -6,7 +6,10 @@ Regression threshold: v3 slower by more than **10%** on a semantics-equivalent s
 
 Methodology notes:
 
+- EQL v3 is installed from the pinned release bundle **eql-3.0.0-alpha.3** (`mise run setup-db-v3`). alpha.3 places the per-domain types in `public.*` (`public.text_search`, `public.integer_ord`, `public.json`, …); the raw-jsonb SEM extractors live in `eql_v3_internal`, and the benches call only the public `eql_v3.*` wrappers.
+- **Re-baseline status:** the **JSON** tiers (10k–10M) were re-ingested and re-run against alpha.3. The **non-JSON** v3 scenarios below are still the pre-release alpha.2-equivalent measurements and are pending a full alpha.3 re-baseline — treat their absolute numbers accordingly.
 - v3 payloads are produced by `eql-bindings::from_v2` over the pinned cipherstash-client's v2.3 output (the supported migration path); conversion cost is inside the measured ingest path.
+- The JSON bench queries the encrypted document through the named EQL JSON functions — `eql_v3.jsonb_contains` (GIN over `eql_v3.jsonb_array(value)`) for containment and `eql_v3.jsonb_path_query_first(value, selector)` feeding `eql_v3.eq_term` / `eql_v3.ore_cllw` for field equality/ordering — not raw `jsonb` `@>` / `->`.
 - v3 query parameters are stored-shape payloads (no v3 scalar query wire shape exists); server-side timings are unaffected.
 - The v3 string column (`text_search`) carries an ORE term v2's unique+match config did not — v3 string rows are wider.
 - OPE ciphertexts are real CLLW-OPE terms emitted by cipherstash-client 0.38.1 (Index::new_ope); ordering parity against decrypted plaintext is asserted at bench startup.
@@ -14,26 +17,24 @@ Methodology notes:
 
 ## Query scenarios: v3 vs v2
 
-119 comparable scenario/tier pairs — **3 regressions**, 18 improvements beyond ±10%.
+119 comparable scenario/tier pairs — **4 regressions**, 21 improvements beyond ±10%.
 
 | Scenario | Tier | v2 median | v3 median | Δ | Flag | Note |
 |---|---|---|---|---|---|---|
-| JSON/json/field_eq/extractor | 1000000 | 463.3 µs | 62.06 ms | +13296.4% | ⚠️ semantics changed | generic-plan GIN + every-row needle artifact (see report notes) |
-| JSON/json/field_eq/extractor | 100000 | 466.7 µs | 7.82 ms | +1576.6% | ⚠️ semantics changed | generic-plan GIN + every-row needle artifact (see report notes) |
-| JSON/json/contains/functional | 10000000 | 848.3 µs | 3.36 ms | +295.9% | ⚠️ semantics changed | v2 jsonb_array recipe → v3 to_ste_vec_query GIN recipe |
-| JSON/json/field_eq/extractor | 10000 | 496.8 µs | 1.23 ms | +148.1% | ⚠️ semantics changed | generic-plan GIN + every-row needle artifact (see report notes) |
+| JSON/json/field_eq/extractor | 1000000 | 463.3 µs | 71.94 ms | +15427.6% | ⚠️ semantics changed | v2 stevec_query GIN → v3 jsonb_contains; every-row-needle plan instability (see notes) |
+| JSON/json/field_eq/extractor | 100000 | 466.7 µs | 6.12 ms | +1210.5% | ⚠️ semantics changed | v2 stevec_query GIN → v3 jsonb_contains; every-row-needle plan instability (see notes) |
+| JSON/json/field_eq/extractor | 10000 | 496.8 µs | 789.1 µs | +58.8% | ⚠️ semantics changed | v2 stevec_query GIN → v3 jsonb_contains; every-row-needle plan instability (see notes) |
 | COMBO/combo/bloom_ore_order_limit | 10000 | 286.9 µs | 440.7 µs | +53.6% | ⚠️ semantics changed | v2 LIKE → v3 @> |
-| JSON/json/field_eq/extractor | 10000000 | 418.3 µs | 603.8 µs | +44.3% | ⚠️ semantics changed | generic-plan GIN + every-row needle artifact (see report notes) |
+| JSON/json/field_eq/extractor | 10000000 | 418.3 µs | 637.9 µs | +52.5% | ⚠️ semantics changed | v2 stevec_query GIN → v3 jsonb_contains; every-row-needle plan instability (see notes) |
 | COMBO/combo/top_n_filtered_group_by | 10000 | 178.4 µs | 244.3 µs | +36.9% | ⚠️ semantics changed | v2 LIKE → v3 @> |
 | COMBO/combo/filtered_group_by | 10000 | 178.5 µs | 230.2 µs | +28.9% | ⚠️ semantics changed | v2 LIKE → v3 @> |
-| JSON/json/contains/functional | 100000 | 279.9 µs | 352.9 µs | +26.1% | ⚠️ semantics changed | v2 jsonb_array recipe → v3 to_ste_vec_query GIN recipe |
 | MATCH/match/eql_cast_firstname | 10000 | 152.3 µs | 190.1 µs | +24.8% | ⚠️ semantics changed | v2 LIKE → v3 @> (no LIKE operator in v3; same bloom semantics) |
+| JSON/json/contains/functional | 10000000 | 848.3 µs | 1.05 ms | +23.3% | 🔴 REGRESSION | same jsonb_array GIN recipe as v2; 10M delta is posting-list/data-shape |
 | COMBO/combo/filtered_group_by | 100000 | 665.2 µs | 783.0 µs | +17.7% | ⚠️ semantics changed | v2 LIKE → v3 @> |
 | EXACT/exact/eql_hash | 1000000 | 104.6 µs | 122.1 µs | +16.8% | ⚠️ semantics changed | index type changed: v2 hash → v3 btree on eq_term |
 | EXACT/exact/eql_hash | 10000000 | 106.9 µs | 122.8 µs | +14.9% | ⚠️ semantics changed | index type changed: v2 hash → v3 btree on eq_term |
 | MATCH/match/eql_cast_lastname | 10000 | 439.7 µs | 504.9 µs | +14.8% | ⚠️ semantics changed | v2 LIKE → v3 @> (no LIKE operator in v3; same bloom semantics) |
 | EXACT/exact/eql_cast | 10000000 | 110.3 µs | 126.6 µs | +14.8% | 🔴 REGRESSION | 10M flag adjudicated as baseline drift: v3 is 3.3% FASTER than same-day v2 |
-| JSON/json/contains/functional | 10000 | 237.4 µs | 271.9 µs | +14.5% | ⚠️ semantics changed | v2 jsonb_array recipe → v3 to_ste_vec_query GIN recipe |
 | GROUP_BY/group_by/low_cardinality_groups_encrypted | 10000000 | 775.51 ms | 887.48 ms | +14.4% | 🔴 REGRESSION | 10M flag adjudicated as baseline drift: +6.4% vs same-day v2 |
 | EXACT/exact/eql_hash | 100000 | 102.9 µs | 116.4 µs | +13.1% | ⚠️ semantics changed | index type changed: v2 hash → v3 btree on eq_term |
 | EXACT/exact/eql_hash | 10000 | 108.7 µs | 121.8 µs | +12.1% | ⚠️ semantics changed | index type changed: v2 hash → v3 btree on eq_term |
@@ -46,22 +47,22 @@ Methodology notes:
 | EXACT/exact/eql_cast | 1000000 | 115.1 µs | 124.1 µs | +7.8% |  | 10M flag adjudicated as baseline drift: v3 is 3.3% FASTER than same-day v2 |
 | EXACT/exact/eql_cast | 10000 | 119.3 µs | 128.5 µs | +7.7% |  | 10M flag adjudicated as baseline drift: v3 is 3.3% FASTER than same-day v2 |
 | MATCH/match/eql_bloom | 10000 | 405.4 µs | 436.4 µs | +7.6% |  | v3 GIN uses native array_ops on the bloom term (no shipped opclass) |
-| JSON/json/field_eq/bare | 1000000 | 109.0 µs | 116.8 µs | +7.2% |  | same btree plan as v2 (needle matches every row in both versions) |
-| JSON/json/field_eq/bare | 100000 | 106.8 µs | 113.5 µs | +6.3% |  | same btree plan as v2 (needle matches every row in both versions) |
+| JSON/json/field_eq/functional | 1000000 | 105.8 µs | 113.3 µs | +7.1% |  | same btree plan as v2 (needle matches every row in both versions) |
+| JSON/json/field_eq/functional | 10000 | 104.8 µs | 111.8 µs | +6.7% |  | same btree plan as v2 (needle matches every row in both versions) |
+| JSON/json/field_eq/functional | 100000 | 107.4 µs | 114.3 µs | +6.5% |  | same btree plan as v2 (needle matches every row in both versions) |
 | ORE/ore/range_lt_ordered_10 | 10000 | 480.9 µs | 510.5 µs | +6.1% |  |  |
 | GROUP_BY/group_by/low_cardinality_groups_plaintext | 100000 | 9.03 ms | 9.57 ms | +6.0% |  |  |
-| JSON/json/field_eq/functional | 1000000 | 105.8 µs | 111.9 µs | +5.8% |  | same btree plan as v2 (needle matches every row in both versions) |
 | MATCH/match_decrypt/eql_bloom | 100000 | 25.70 ms | 27.17 ms | +5.7% |  |  |
 | GROUP_BY/group_by/top_n_groups_plaintext | 100000 | 9.43 ms | 9.96 ms | +5.6% |  |  |
+| JSON/json/field_eq/bare | 100000 | 106.8 µs | 112.7 µs | +5.6% |  | same btree plan as v2 (needle matches every row in both versions) |
 | EXACT/exact_decrypt/eql_hash | 10000000 | 23.59 ms | 24.83 ms | +5.3% | ⚠️ semantics changed | index type changed: v2 hash → v3 btree on eq_term |
-| JSON/json/field_eq/functional | 100000 | 107.4 µs | 112.5 µs | +4.8% |  | same btree plan as v2 (needle matches every row in both versions) |
-| JSON/json/field_eq/bare | 10000 | 109.3 µs | 114.3 µs | +4.6% |  | same btree plan as v2 (needle matches every row in both versions) |
 | ORE/ore/range_lt_ordered_10 | 10000000 | 513.3 µs | 532.0 µs | +3.6% |  |  |
-| JSON/json/field_eq/functional | 10000 | 104.8 µs | 108.6 µs | +3.6% |  | same btree plan as v2 (needle matches every row in both versions) |
 | MATCH/match_decrypt/eql_cast_firstname | 10000 | 24.26 ms | 25.11 ms | +3.5% | ⚠️ semantics changed | v2 LIKE → v3 @> |
 | EXACT/exact_decrypt/eql_hash | 100000 | 23.94 ms | 24.67 ms | +3.0% | ⚠️ semantics changed | index type changed: v2 hash → v3 btree on eq_term |
 | EXACT/exact_decrypt/eql_cast | 10000000 | 24.10 ms | 24.78 ms | +2.8% |  |  |
+| JSON/json/field_eq/bare | 1000000 | 109.0 µs | 112.0 µs | +2.7% |  | same btree plan as v2 (needle matches every row in both versions) |
 | GROUP_BY/group_by/top_n_groups_plaintext | 10000 | 1.20 ms | 1.23 ms | +2.7% |  |  |
+| JSON/json/field_eq/bare | 10000 | 109.3 µs | 111.9 µs | +2.4% |  | same btree plan as v2 (needle matches every row in both versions) |
 | ORE/ore_decrypt/range_gt_10 | 10000000 | 25.44 ms | 26.00 ms | +2.2% |  |  |
 | MATCH/match/eql_cast_firstname | 100000 | 633.3 µs | 645.8 µs | +2.0% | ⚠️ semantics changed | v2 LIKE → v3 @> (no LIKE operator in v3; same bloom semantics) |
 | EXACT/exact_decrypt/eql_cast | 10000 | 24.06 ms | 24.53 ms | +2.0% |  |  |
@@ -70,12 +71,10 @@ Methodology notes:
 | MATCH/match_decrypt/eql_cast_firstname | 100000 | 26.41 ms | 26.86 ms | +1.7% | ⚠️ semantics changed | v2 LIKE → v3 @> |
 | GROUP_BY/group_by/low_cardinality_groups_plaintext | 10000000 | 339.33 ms | 344.48 ms | +1.5% |  |  |
 | GROUP_BY/group_by/top_n_groups_plaintext | 10000000 | 349.91 ms | 354.84 ms | +1.4% |  |  |
-| JSON/json/field_eq/functional | 10000000 | 108.8 µs | 110.3 µs | +1.4% |  | same btree plan as v2 (needle matches every row in both versions) |
 | EXACT/exact/eql_cast | 100000 | 113.5 µs | 114.8 µs | +1.1% |  | 10M flag adjudicated as baseline drift: v3 is 3.3% FASTER than same-day v2 |
 | EXACT/exact_decrypt/eql_cast | 1000000 | 23.88 ms | 24.13 ms | +1.0% |  |  |
 | ORE/ore/range_lt_ordered_10 | 1000000 | 513.2 µs | 518.5 µs | +1.0% |  |  |
 | EXACT/exact_decrypt/eql_cast | 100000 | 24.08 ms | 24.30 ms | +0.9% |  |  |
-| JSON/json/field_eq/bare | 10000000 | 108.7 µs | 109.5 µs | +0.7% |  | same btree plan as v2 (needle matches every row in both versions) |
 | ORE/ore_decrypt/range_lt_ordered_10 | 1000000 | 26.86 ms | 26.81 ms | -0.2% |  |  |
 | COMBO/combo/bloom_ore_order_limit | 100000 | 2.08 ms | 2.08 ms | -0.3% | ⚠️ semantics changed | v2 LIKE → v3 @> |
 | MATCH/match_decrypt/eql_cast_lastname | 10000 | 26.13 ms | 25.94 ms | -0.7% | ⚠️ semantics changed | v2 LIKE → v3 @> |
@@ -87,6 +86,8 @@ Methodology notes:
 | ORE/ore_decrypt/range_lt_10 | 1000000 | 26.97 ms | 26.52 ms | -1.7% |  |  |
 | GROUP_BY/group_by/top_n_groups_encrypted | 100000 | 20.28 ms | 19.90 ms | -1.9% |  | 10M flag adjudicated as baseline drift: parity (-0.7%) vs same-day v2 |
 | ORE/ore_decrypt/range_lt_ordered_10 | 10000000 | 26.82 ms | 26.24 ms | -2.2% |  |  |
+| JSON/json/contains/functional | 10000 | 237.4 µs | 231.6 µs | -2.4% |  | same jsonb_array GIN recipe as v2; 10M delta is posting-list/data-shape |
+| JSON/json/contains/functional | 1000000 | 431.5 µs | 420.5 µs | -2.6% |  | same jsonb_array GIN recipe as v2; 10M delta is posting-list/data-shape |
 | MATCH/match_decrypt/eql_cast_lastname | 1000000 | 39.48 ms | 38.34 ms | -2.9% | ⚠️ semantics changed | v2 LIKE → v3 @> |
 | GROUP_BY/group_by/top_n_groups_plaintext | 1000000 | 40.21 ms | 38.59 ms | -4.0% |  |  |
 | ORE/ore_decrypt/range_gt_10 | 1000000 | 27.04 ms | 25.93 ms | -4.1% |  |  |
@@ -98,25 +99,28 @@ Methodology notes:
 | ORE/ore_decrypt/range_lt_100 | 10000 | 46.05 ms | 42.75 ms | -7.2% |  |  |
 | ORE/ore_decrypt/range_lt_ordered_10 | 10000 | 28.42 ms | 26.33 ms | -7.4% |  |  |
 | ORE/ore_decrypt/range_lt_10 | 10000000 | 28.15 ms | 26.06 ms | -7.4% |  |  |
+| JSON/json/field_order/functional | 10000000 | 367.6 µs | 339.6 µs | -7.6% |  |  |
 | ORE/ore_decrypt/range_gt_100 | 10000 | 46.26 ms | 42.70 ms | -7.7% |  |  |
 | ORE/ore_decrypt/range_gt_10 | 10000 | 29.35 ms | 27.06 ms | -7.8% |  |  |
 | GROUP_BY/group_by/top_n_groups_encrypted | 1000000 | 93.01 ms | 85.63 ms | -7.9% |  | 10M flag adjudicated as baseline drift: parity (-0.7%) vs same-day v2 |
-| JSON/json/contains/functional | 1000000 | 431.5 µs | 395.9 µs | -8.2% | ⚠️ semantics changed | v2 jsonb_array recipe → v3 to_ste_vec_query GIN recipe |
 | ORE/ore/range_gt_10 | 100000 | 573.5 µs | 525.8 µs | -8.3% |  |  |
 | ORE/ore_decrypt/range_lt_100 | 1000000 | 45.47 ms | 41.65 ms | -8.4% |  |  |
-| JSON/json/field_order/functional | 100000 | 306.2 µs | 279.2 µs | -8.8% |  |  |
 | ORE/ore_decrypt/range_lt_10 | 10000 | 28.88 ms | 26.32 ms | -8.9% |  |  |
 | ORE/ore/range_gt_10 | 10000000 | 598.2 µs | 539.8 µs | -9.8% |  |  |
 | GROUP_BY/group_by/top_n_groups_encrypted | 10000 | 2.30 ms | 2.07 ms | -10.0% |  | 10M flag adjudicated as baseline drift: parity (-0.7%) vs same-day v2 |
+| JSON/json/field_order/functional | 100000 | 306.2 µs | 274.8 µs | -10.3% | 🟢 improvement |  |
 | GROUP_BY/group_by/low_cardinality_groups_encrypted | 1000000 | 92.57 ms | 83.05 ms | -10.3% | 🟢 improvement | 10M flag adjudicated as baseline drift: +6.4% vs same-day v2 |
+| JSON/json/field_eq/functional | 10000000 | 108.8 µs | 97.0 µs | -10.8% | 🟢 improvement | same btree plan as v2 (needle matches every row in both versions) |
+| JSON/json/field_eq/bare | 10000000 | 108.7 µs | 96.7 µs | -11.0% | 🟢 improvement | same btree plan as v2 (needle matches every row in both versions) |
+| JSON/json/contains/functional | 100000 | 279.9 µs | 248.8 µs | -11.1% | 🟢 improvement | same jsonb_array GIN recipe as v2; 10M delta is posting-list/data-shape |
 | MATCH/match/eql_cast_firstname | 1000000 | 3.68 ms | 3.26 ms | -11.3% | ⚠️ semantics changed | v2 LIKE → v3 @> (no LIKE operator in v3; same bloom semantics) |
 | ORE/ore_decrypt/range_lt_10 | 100000 | 29.44 ms | 26.08 ms | -11.4% |  |  |
 | ORE/ore_decrypt/range_lt_ordered_10 | 100000 | 29.32 ms | 25.49 ms | -13.0% |  |  |
 | ORE/ore/range_lt_10 | 1000000 | 577.0 µs | 494.6 µs | -14.3% | 🟢 improvement |  |
 | COMBO/combo/bloom_ore_order_limit | 1000000 | 16.64 ms | 14.13 ms | -15.1% | ⚠️ semantics changed | v2 LIKE → v3 @> |
-| JSON/json/field_order/functional | 10000 | 317.9 µs | 269.0 µs | -15.4% | 🟢 improvement |  |
 | COMBO/combo/filtered_group_by | 1000000 | 6.40 ms | 5.28 ms | -17.4% | ⚠️ semantics changed | v2 LIKE → v3 @> |
 | ORE/ore_decrypt/range_gt_100 | 100000 | 42.13 ms | 33.94 ms | -19.4% |  |  |
+| JSON/json/field_order/functional | 10000 | 317.9 µs | 253.3 µs | -20.3% | 🟢 improvement |  |
 | ORE/ore/range_gt_10 | 10000 | 624.6 µs | 497.5 µs | -20.3% | 🟢 improvement |  |
 | ORE/ore_decrypt/range_lt_100 | 10000000 | 46.70 ms | 36.93 ms | -20.9% |  |  |
 | ORE/ore/range_gt_10 | 1000000 | 694.1 µs | 542.8 µs | -21.8% | 🟢 improvement |  |
@@ -124,10 +128,9 @@ Methodology notes:
 | ORE/ore_decrypt/range_gt_100 | 1000000 | 47.06 ms | 36.18 ms | -23.1% |  |  |
 | ORE/ore/range_lt_10 | 10000 | 595.5 µs | 455.6 µs | -23.5% | 🟢 improvement |  |
 | ORE/ore/range_lt_10 | 100000 | 655.1 µs | 496.4 µs | -24.2% | 🟢 improvement |  |
+| JSON/json/field_order/functional | 1000000 | 356.7 µs | 267.9 µs | -24.9% | 🟢 improvement |  |
 | COMBO/combo/top_n_filtered_group_by | 100000 | 1.03 ms | 771.8 µs | -25.3% | ⚠️ semantics changed | v2 LIKE → v3 @> |
 | ORE/ore_decrypt/range_lt_100 | 100000 | 46.19 ms | 33.61 ms | -27.2% |  |  |
-| JSON/json/field_order/functional | 1000000 | 356.7 µs | 255.5 µs | -28.4% | 🟢 improvement |  |
-| JSON/json/field_order/functional | 10000000 | 367.6 µs | 250.2 µs | -31.9% | 🟢 improvement |  |
 | ORE/ore/range_lt_10 | 10000000 | 748.8 µs | 477.9 µs | -36.2% | 🟢 improvement |  |
 | ORE/ore/range_gt_100 | 10000000 | 4.04 ms | 996.5 µs | -75.3% | 🟢 improvement |  |
 | ORE/ore/range_lt_100 | 100000 | 3.87 ms | 932.2 µs | -75.9% | 🟢 improvement |  |
@@ -256,10 +259,10 @@ Scenarios matching an expected-index rule must show a non-empty `indexes_used` i
 | GROUP_BY/group_by/top_n_groups_plaintext/100000 | — | 10 |  |
 | GROUP_BY/group_by/top_n_groups_plaintext/1000000 | — | 10 |  |
 | GROUP_BY/group_by/top_n_groups_plaintext/10000000 | — | 10 |  |
-| JSON/json/contains/functional/10000 | json_ste_vec_small_encrypted_v3_10000_stevec_query_index | 1 | ✅ |
-| JSON/json/contains/functional/100000 | json_ste_vec_small_encrypted_v3_100000_stevec_query_index | 1 | ✅ |
-| JSON/json/contains/functional/1000000 | json_ste_vec_small_encrypted_v3_1000000_stevec_query_index | 1 | ✅ |
-| JSON/json/contains/functional/10000000 | json_ste_vec_small_encrypted_v3_10000000_stevec_query_index | 1 | ✅ |
+| JSON/json/contains/functional/10000 | json_ste_vec_small_encrypted_v3_10000_jsonb_array_index | 1 | ✅ |
+| JSON/json/contains/functional/100000 | json_ste_vec_small_encrypted_v3_100000_jsonb_array_index | 1 | ✅ |
+| JSON/json/contains/functional/1000000 | json_ste_vec_small_encrypted_v3_1000000_jsonb_array_index | 1 | ✅ |
+| JSON/json/contains/functional/10000000 | json_ste_vec_small_encrypted_v3_10000000_jsonb_array_index | 1 | ✅ |
 | JSON/json/field_eq/bare/10000 | json_ste_vec_small_encrypted_v3_10000_field_eq_idx | 10 | ✅ |
 | JSON/json/field_eq/bare/100000 | json_ste_vec_small_encrypted_v3_100000_field_eq_idx | 10 | ✅ |
 | JSON/json/field_eq/bare/1000000 | json_ste_vec_small_encrypted_v3_1000000_field_eq_idx | 10 | ✅ |
@@ -272,6 +275,10 @@ Scenarios matching an expected-index rule must show a non-empty `indexes_used` i
 | JSON/json/field_eq/functional/100000 | json_ste_vec_small_encrypted_v3_100000_field_eq_idx | 10 | ✅ |
 | JSON/json/field_eq/functional/1000000 | json_ste_vec_small_encrypted_v3_1000000_field_eq_idx | 10 | ✅ |
 | JSON/json/field_eq/functional/10000000 | json_ste_vec_small_encrypted_v3_10000000_field_eq_idx | 10 | ✅ |
+| JSON/json/field_gt/functional/10000 | json_ste_vec_small_encrypted_v3_10000_field_order_idx | 10 |  |
+| JSON/json/field_gt/functional/100000 | json_ste_vec_small_encrypted_v3_100000_field_order_idx | 10 |  |
+| JSON/json/field_gt/functional/1000000 | json_ste_vec_small_encrypted_v3_1000000_field_order_idx | 10 |  |
+| JSON/json/field_gt/functional/10000000 | json_ste_vec_small_encrypted_v3_10000000_field_order_idx | 10 |  |
 | JSON/json/field_order/functional/10000 | json_ste_vec_small_encrypted_v3_10000_field_order_idx | 10 | ✅ |
 | JSON/json/field_order/functional/100000 | json_ste_vec_small_encrypted_v3_100000_field_order_idx | 10 | ✅ |
 | JSON/json/field_order/functional/1000000 | json_ste_vec_small_encrypted_v3_1000000_field_order_idx | 10 | ✅ |

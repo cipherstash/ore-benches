@@ -1,5 +1,17 @@
 # EQL v3 Regression Analysis — Scenario Deep-Dives
 
+> **UPDATE (2026-07-08): suite pinned to the `eql-3.0.0-alpha.3` release.**
+> `mise run setup-db-v3` now installs the released bundle, which moved the
+> per-domain types `eql_v3.* → public.*` and inlined the `jsonb_entry` CHECK
+> (the fix this doc's `field_eq`/`combo` deep-dives trace — alpha.3's source
+> cites `cipherstash/benches#23`). The JSON bench was also rewritten to query
+> through the named EQL JSON functions (`eql_v3.jsonb_contains`,
+> `eql_v3.jsonb_path_query_first`, …) rather than raw `jsonb` operators, and
+> **re-ingested + re-run against alpha.3 at 10k/100k/1M** (results in
+> `results/query/v3/json_*`). The non-JSON `eql_v3.*`-typed numbers below are
+> still from the pre-release alpha.2-equivalent build and are **pending a full
+> re-baseline against alpha.3** (deferred).
+>
 > **STATUS (2026-07-04): both fixes merged upstream and verified end-to-end.**
 > EQL PRs [#357](https://github.com/cipherstash/encrypt-query-language/pull/357)
 > (plpgsql opclass helpers, issue #353) and

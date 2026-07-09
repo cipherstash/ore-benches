@@ -1,4 +1,4 @@
-//! Random i32s into `integer_encrypted_ope_v3_*` as `eql_v3.integer_ord_ope`
+//! Random i32s into `integer_encrypted_ope_v3_*` as `public.integer_ord_ope`
 //! payloads — the v3 CLLW-OPE fast ordering path (native bytea btree).
 //!
 //! cipherstash-client 0.38.1 emits the scalar OPE-CLLW `op` term for

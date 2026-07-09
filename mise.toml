@@ -181,33 +181,41 @@ until pg_isready -U postgres > /dev/null 2>&1; do
   sleep 1
 done
 
-# EQL v3 is not released yet: default is to build the bundle from a local
-# checkout of the eql_v3 branch. Overrides:
+# EQL v3 is released as of eql-3.0.0-alpha.3 (2026-07-08): the default is to
+# download the pinned release bundle (same pattern as setup-db above).
+# alpha.3 installs the eql_v3 / eql_v3_internal function schemas AND the
+# per-domain types (public.json, public.text_search, public.integer_ord, …)
+# — the types moved eql_v3.* -> public.* in this release, which is what the
+# v3 schema/index/bench SQL now targets. Overrides:
 #   EQL_V3_SQL=<path to cipherstash-encrypt.sql>  use a prebuilt bundle
-#   EQL_V3_DIR=<path to encrypt-query-language>   checkout to build from
-# Once eql-3.x releases, switch the default here to the release download
-# (same pattern as setup-db above) and pin the tag.
+#   EQL_V3_DIR=<path to encrypt-query-language>   build from a local checkout
+#     (for testing an unreleased fix before a pre-release is cut)
+EQL_V3_VERSION="${EQL_V3_VERSION:-eql-3.0.0-alpha.3}"
 if [ -z "${EQL_V3_SQL:-}" ]; then
-  EQL_V3_DIR="${EQL_V3_DIR:-../encrypt-query-language}"
-  if [ ! -d "$EQL_V3_DIR" ]; then
-    echo "Error: EQL checkout not found at $EQL_V3_DIR (set EQL_V3_DIR or EQL_V3_SQL)"
-    exit 1
+  if [ -n "${EQL_V3_DIR:-}" ]; then
+    if [ ! -d "$EQL_V3_DIR" ]; then
+      echo "Error: EQL checkout not found at $EQL_V3_DIR"
+      exit 1
+    fi
+    echo "Building EQL v3 bundle from local checkout $EQL_V3_DIR..."
+    (cd "$EQL_V3_DIR" && mise run build --version 3.0.0-dev)
+    EQL_V3_SQL="$EQL_V3_DIR/release/cipherstash-encrypt.sql"
+  else
+    echo "Downloading EQL v3 ($EQL_V3_VERSION)..."
+    curl -sfLo /tmp/cipherstash-encrypt-v3.sql \
+      "https://github.com/cipherstash/encrypt-query-language/releases/download/$EQL_V3_VERSION/cipherstash-encrypt.sql"
+    EQL_V3_SQL="/tmp/cipherstash-encrypt-v3.sql"
   fi
-  BRANCH=$(git -C "$EQL_V3_DIR" rev-parse --abbrev-ref HEAD)
-  if [ "$BRANCH" != "eql_v3" ]; then
-    echo "warning: $EQL_V3_DIR is on branch '$BRANCH', not 'eql_v3' — building anyway"
-  fi
-  echo "Building EQL v3 bundle from $EQL_V3_DIR..."
-  (cd "$EQL_V3_DIR" && mise run build --version 3.0.0-dev)
-  EQL_V3_SQL="$EQL_V3_DIR/release/cipherstash-encrypt.sql"
 fi
 
-# The v3 bundle is self-contained (schemas eql_v3 / eql_v3_internal) and
-# coexists with the v2.3 install — setup-db and setup-db-v3 target the same
-# database. Skip the install if eql_v3 is already present; the bundle is not
-# idempotent (bare CREATE FUNCTION / CREATE DOMAIN). To reinstall after a
-# bundle change, run the v3 uninstaller first (release/
-# cipherstash-encrypt-uninstall.sql — drops only the eql_v3 schemas).
+# The v3 bundle installs the eql_v3 / eql_v3_internal function schemas and the
+# public.* domain types, and coexists with the v2.3 install — setup-db and
+# setup-db-v3 target the same database. Skip the install if eql_v3 is already
+# present; the bundle is not idempotent (bare CREATE FUNCTION). To reinstall
+# after a bundle/version change (e.g. upgrading a pre-alpha.3 install that
+# still has eql_v3.* types), run the matching v3 uninstaller first
+# (cipherstash-encrypt-uninstall.sql from the same release — drops the eql_v3
+# schemas and the public.* domains).
 if psql -U postgres -d postgres -tAc "SELECT 1 FROM pg_namespace WHERE nspname = 'eql_v3'" | grep -q 1; then
   echo "eql_v3 schema already installed — skipping bundle install."
 else
@@ -278,23 +286,23 @@ echo "Moved results to results/ingest/v3/${BENCH_NAME}_combined.json"
 """
 
 [tasks."bench:v3:ingest:encrypt_string"]
-description = "Run encrypt_string_v3 ingest benchmark (eql_v3.text_search)"
+description = "Run encrypt_string_v3 ingest benchmark (public.text_search)"
 run = "mise run bench:v3:ingest:_run encrypt_string_v3 string_encrypted_v3"
 
 [tasks."bench:v3:ingest:encrypt_int"]
-description = "Run encrypt_int_v3 ingest benchmark (eql_v3.integer_ord)"
+description = "Run encrypt_int_v3 ingest benchmark (public.integer_ord)"
 run = "mise run bench:v3:ingest:_run encrypt_int_v3 integer_encrypted_v3"
 
 [tasks."bench:v3:ingest:encrypt_int_ope"]
-description = "Run encrypt_int_ope_v3 ingest benchmark (eql_v3.integer_ord_ope, real op term via client 0.38.1)"
+description = "Run encrypt_int_ope_v3 ingest benchmark (public.integer_ord_ope, real op term via client 0.38.1)"
 run = "mise run bench:v3:ingest:_run encrypt_int_ope_v3 integer_encrypted_ope_v3"
 
 [tasks."bench:v3:ingest:encrypt_category"]
-description = "Run encrypt_category_v3 ingest benchmark (eql_v3.text_eq)"
+description = "Run encrypt_category_v3 ingest benchmark (public.text_eq)"
 run = "mise run bench:v3:ingest:_run encrypt_category_v3 category_encrypted_v3"
 
 [tasks."bench:v3:ingest:json-ste-vec-small"]
-description = "Run encrypt_ste_vec_small_v3 ingest benchmark (eql_v3.json)"
+description = "Run encrypt_ste_vec_small_v3 ingest benchmark (public.json)"
 run = "mise run bench:v3:ingest:_run encrypt_ste_vec_small_v3 json_ste_vec_small_encrypted_v3"
 
 [tasks."bench:v3:ingest"]
@@ -496,19 +504,19 @@ description = "Prepare combo_encrypted_<size> table with three encrypted columns
 run = "mise run prepare:_table combo_encrypted encrypt_combo $1"
 
 [tasks."prepare:string_encrypted_v3"]
-description = "Prepare string_encrypted_v3 table (eql_v3.text_search) with target row count"
+description = "Prepare string_encrypted_v3 table (public.text_search) with target row count"
 run = "mise run prepare:_table string_encrypted_v3 encrypt_string_v3 $1"
 
 [tasks."prepare:integer_encrypted_v3"]
-description = "Prepare integer_encrypted_v3 table (eql_v3.integer_ord) with target row count"
+description = "Prepare integer_encrypted_v3 table (public.integer_ord) with target row count"
 run = "mise run prepare:_table integer_encrypted_v3 encrypt_int_v3 $1"
 
 [tasks."prepare:integer_encrypted_ope_v3"]
-description = "Prepare integer_encrypted_ope_v3 table (eql_v3.integer_ord_ope) with target row count"
+description = "Prepare integer_encrypted_ope_v3 table (public.integer_ord_ope) with target row count"
 run = "mise run prepare:_table integer_encrypted_ope_v3 encrypt_int_ope_v3 $1"
 
 [tasks."prepare:category_encrypted_v3"]
-description = "Prepare category_encrypted_v3 table (eql_v3.text_eq) with target row count"
+description = "Prepare category_encrypted_v3 table (public.text_eq) with target row count"
 run = "mise run prepare:_table category_encrypted_v3 encrypt_category_v3 $1"
 
 [tasks."prepare:combo_encrypted_v3"]
@@ -516,7 +524,7 @@ description = "Prepare combo_encrypted_v3 table (three eql_v3 columns) with targ
 run = "mise run prepare:_table combo_encrypted_v3 encrypt_combo_v3 $1"
 
 [tasks."prepare:json_ste_vec_small_v3"]
-description = "Prepare json_ste_vec_small_encrypted_v3 table (eql_v3.json) with target row count"
+description = "Prepare json_ste_vec_small_encrypted_v3 table (public.json) with target row count"
 run = "mise run prepare:_table json_ste_vec_small_encrypted_v3 encrypt_ste_vec_small_v3 $1"
 
 [tasks."prepare:scalar_smoke_v3"]
@@ -986,15 +994,15 @@ echo "Benchmark complete! Results written to $OUTPUT_FILE"
 """
 
 [tasks."bench:v3:query:exact"]
-description = "Run EXACT v3 query benchmark (eql_v3.text_search)"
+description = "Run EXACT v3 query benchmark (public.text_search)"
 run = "mise run bench:v3:query:_run exact_v3 EXACT string_encrypted_v3"
 
 [tasks."bench:v3:query:ore"]
-description = "Run ORE v3 query benchmark (eql_v3.integer_ord)"
+description = "Run ORE v3 query benchmark (public.integer_ord)"
 run = "mise run bench:v3:query:_run ore_v3 ORE integer_encrypted_v3"
 
 [tasks."bench:v3:query:group_by"]
-description = "Run GROUP BY v3 query benchmark (eql_v3.text_eq + shared plaintext baseline)"
+description = "Run GROUP BY v3 query benchmark (public.text_eq + shared plaintext baseline)"
 run = "mise run bench:v3:query:_run group_by_v3 GROUP_BY category_encrypted_v3 category_plaintext"
 
 [tasks."bench:v3:query:match"]
@@ -1002,7 +1010,7 @@ description = "Run MATCH v3 query benchmark (bloom containment; incl. no-index v
 run = "mise run bench:v3:query:_run match_v3 MATCH string_encrypted_v3"
 
 [tasks."bench:v3:query:ope"]
-description = "Run OPE v3 query benchmark (eql_v3.integer_ord_ope)"
+description = "Run OPE v3 query benchmark (public.integer_ord_ope)"
 run = "mise run bench:v3:query:_run ope_v3 OPE integer_encrypted_ope_v3"
 
 [tasks."bench:v3:query:combo"]
@@ -1010,7 +1018,7 @@ description = "Run COMBO v3 query benchmark (composite predicates)"
 run = "mise run bench:v3:query:_run combo_v3 COMBO combo_encrypted_v3"
 
 [tasks."bench:v3:query:json"]
-description = "Run JSON v3 query benchmark (eql_v3.json SteVec)"
+description = "Run JSON v3 query benchmark (public.json SteVec)"
 run = "mise run bench:v3:query:_run json_v3 JSON json_ste_vec_small_v3"
 
 [tasks."bench:v3:query:smoke"]
