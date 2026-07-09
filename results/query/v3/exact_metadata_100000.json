@@ -1,0 +1,267 @@
+{
+  "scenarios": [
+    {
+      "explain": [
+        {
+          "Plan": {
+            "Async Capable": false,
+            "Node Type": "Limit",
+            "Parallel Aware": false,
+            "Plan Rows": 1,
+            "Plan Width": 635,
+            "Plans": [
+              {
+                "Alias": "string_encrypted_v3_100000",
+                "Async Capable": false,
+                "Index Cond": "(((value)::jsonb ->> 'hm'::text) = ((('{\"c\": \"mBbLN+r8g4YgcBdu+5a_Lnqe6A#q049S2ijJ3B5-T>G%kqL=V<F5H9rvZ>?kAf;R~XSl>5Z(?Nrmp-cHXD2slwK}s02`W`yy5>p<#pW>YmsLmarFLO#b!Eg5<upmU-1bZEwaF)KXjao=\", \"i\": {\"c\": \"value\", \"t\": \"string_encrypted_v3_100000\"}, \"v\": 3, \"bf\": [1350, 141, 1697, 1485, 1453, 1805, 286, 1531, 1254, 204, 1615, 748, 36, 763, 461, 1589, 1885, 1315, 588, 607, 827, 300, 925, 1504, 1373, 1090, 159, 1309, 130, 586, 351, 725, 792, 1672, 1920, 1841, 1765, 1247, 1641, 1592, 438, 1405, 556, 426, 1081, 951, 147, 233, 251, 1333, 1341, 632, 808, 1230, 1699, 804, 410, 1422, 1556, 2021, 1593, 1818, 1355, 1590, 1969, 1994, 1541, 1400, 1826, 238, 1537, 677, 1075, 637, 18, 1813], \"hm\": \"28369ac87a26801c88729f107b6a0a59ec8e7df2bc199971e57de95fa4d9a205\", \"ob\": [\"7d5be628a8a1a5d8550934ce6650d06a3ba0db032e9677c59070ec3b61f5e1410f873fc57f0455f8e4866ec8d044b7e2e5daaba310d45ce075dcc639715a04a7650f34f2a945608192d1081cac077659b02af00c5dc97d17fe033eb5a150c0488ba090f61c0dfa884edc8309a5d8399e0ed283202f0dc595b8d11df49b74c3d8707682824faac4532c4350dac5e334756a28633b25f871eaedd9e6298077ff8a04e3807cd8a5afe75066d1c1b9e8d6361468d1889ca18e6908eccea859a7c9b7e0aad78ed923bdd09cbdb1e50fe7ea83bea9db1be6c8f336bd9918fc50aa31b09a6c5b67125861e7ac0cd264d20edc1cc77610fea5f26df36e51737bb91aeb1f4803d8b382bfef85e478674a02ccd30c470817f0c3ab402648081618a829eb8b3b596d2940f9ad1eee3f748b297329c1f1f84a873c3ef9e0f86d866c7b289d590fb911b56fa86b54258ef21fdcbd53b07372c0a143d06341154f9a1b26055f50228d20f92b3ce79c3682d5e5dbe3d5b329bd090814c0f24bb53d09f5da41bd7acb2f825d6a7a846cc6d2f66839591cd94b9feb39252e3d61\", \"e499141414141414c02a268347ec03abbc18838e87c562b0389adeed563dcfe75dff440e298879f077147f22e6d37d5311b9f9ddde45e5f6febcb10067ea8dbb560ddf7e01037c2e470f95abe04b8ed9cfeb049b4c5b7b29ec51eee9c826b3d52f7274074e6e7be64c11ee74e2c591e076be277277d339108032cfeaef2d68b0a7e7b295526b03ca5a1f0e70d281bb2fb6cda637321efde2676078500edc8541a6d4b3274ebd156093d1fad5d996315ee9f7a372e9e9fd2dd8ccd95a5e8e780310f95f835c3af1924c32ff0620a59e36ac160f1a4f0f43d578da4259953b1586808874470ebd113fec7f150bd1c53dd906fd3e0a4552e91059d9f6d4e2cd7fa4ff56c8688f64b66200093c3d2b2f5ca3c2cd7b03ee723fc9abb9d323bf8d8146e89c77123f44cf5774dde4f822913b94e542bfde60c8cce42c89464574b9f13ca609de7f9ba81060d4b9439f74629fdb04fc092a0c0ec9f5e65014f7f9a61ef78f81491edc74088a71f956f8a7b9a1242cc45bc47c22a5d7e14501baa29e6e67ccb9e0b86cc10693313739d6f0465a4ee4808d1b5163cede\"]}'::jsonb)::eql_v3.text_search)::jsonb ->> 'hm'::text))",
+                "Index Name": "string_encrypted_v3_100000_eq_btree_index",
+                "Node Type": "Index Scan",
+                "Parallel Aware": false,
+                "Parent Relationship": "Outer",
+                "Plan Rows": 1,
+                "Plan Width": 635,
+                "Relation Name": "string_encrypted_v3_100000",
+                "Scan Direction": "Forward",
+                "Startup Cost": 0.42,
+                "Total Cost": 8.44
+              }
+            ],
+            "Startup Cost": 0.42,
+            "Total Cost": 8.44
+          }
+        }
+      ],
+      "id": "EXACT/exact/eql_cast/100000",
+      "indexes_used": [
+        "string_encrypted_v3_100000_eq_btree_index"
+      ],
+      "parameters": [
+        {
+          "bf": [
+            1350,
+            141,
+            1697,
+            1485,
+            1453,
+            1805,
+            286,
+            1531,
+            1254,
+            204,
+            1615,
+            748,
+            36,
+            763,
+            461,
+            1589,
+            1885,
+            1315,
+            588,
+            607,
+            827,
+            300,
+            925,
+            1504,
+            1373,
+            1090,
+            159,
+            1309,
+            130,
+            586,
+            351,
+            725,
+            792,
+            1672,
+            1920,
+            1841,
+            1765,
+            1247,
+            1641,
+            1592,
+            438,
+            1405,
+            556,
+            426,
+            1081,
+            951,
+            147,
+            233,
+            251,
+            1333,
+            1341,
+            632,
+            808,
+            1230,
+            1699,
+            804,
+            410,
+            1422,
+            1556,
+            2021,
+            1593,
+            1818,
+            1355,
+            1590,
+            1969,
+            1994,
+            1541,
+            1400,
+            1826,
+            238,
+            1537,
+            677,
+            1075,
+            637,
+            18,
+            1813
+          ],
+          "c": "mBbLN+r8g4YgcBdu+5a_Lnqe6A#q049S2ijJ3B5-T>G%kqL=V<F5H9rvZ>?kAf;R~XSl>5Z(?Nrmp-cHXD2slwK}s02`W`yy5>p<#pW>YmsLmarFLO#b!Eg5<upmU-1bZEwaF)KXjao=",
+          "hm": "28369ac87a26801c88729f107b6a0a59ec8e7df2bc199971e57de95fa4d9a205",
+          "i": {
+            "c": "value",
+            "t": "string_encrypted_v3_100000"
+          },
+          "ob": [
+            "7d5be628a8a1a5d8550934ce6650d06a3ba0db032e9677c59070ec3b61f5e1410f873fc57f0455f8e4866ec8d044b7e2e5daaba310d45ce075dcc639715a04a7650f34f2a945608192d1081cac077659b02af00c5dc97d17fe033eb5a150c0488ba090f61c0dfa884edc8309a5d8399e0ed283202f0dc595b8d11df49b74c3d8707682824faac4532c4350dac5e334756a28633b25f871eaedd9e6298077ff8a04e3807cd8a5afe75066d1c1b9e8d6361468d1889ca18e6908eccea859a7c9b7e0aad78ed923bdd09cbdb1e50fe7ea83bea9db1be6c8f336bd9918fc50aa31b09a6c5b67125861e7ac0cd264d20edc1cc77610fea5f26df36e51737bb91aeb1f4803d8b382bfef85e478674a02ccd30c470817f0c3ab402648081618a829eb8b3b596d2940f9ad1eee3f748b297329c1f1f84a873c3ef9e0f86d866c7b289d590fb911b56fa86b54258ef21fdcbd53b07372c0a143d06341154f9a1b26055f50228d20f92b3ce79c3682d5e5dbe3d5b329bd090814c0f24bb53d09f5da41bd7acb2f825d6a7a846cc6d2f66839591cd94b9feb39252e3d61",
+            "e499141414141414c02a268347ec03abbc18838e87c562b0389adeed563dcfe75dff440e298879f077147f22e6d37d5311b9f9ddde45e5f6febcb10067ea8dbb560ddf7e01037c2e470f95abe04b8ed9cfeb049b4c5b7b29ec51eee9c826b3d52f7274074e6e7be64c11ee74e2c591e076be277277d339108032cfeaef2d68b0a7e7b295526b03ca5a1f0e70d281bb2fb6cda637321efde2676078500edc8541a6d4b3274ebd156093d1fad5d996315ee9f7a372e9e9fd2dd8ccd95a5e8e780310f95f835c3af1924c32ff0620a59e36ac160f1a4f0f43d578da4259953b1586808874470ebd113fec7f150bd1c53dd906fd3e0a4552e91059d9f6d4e2cd7fa4ff56c8688f64b66200093c3d2b2f5ca3c2cd7b03ee723fc9abb9d323bf8d8146e89c77123f44cf5774dde4f822913b94e542bfde60c8cce42c89464574b9f13ca609de7f9ba81060d4b9439f74629fdb04fc092a0c0ec9f5e65014f7f9a61ef78f81491edc74088a71f956f8a7b9a1242cc45bc47c22a5d7e14501baa29e6e67ccb9e0b86cc10693313739d6f0465a4ee4808d1b5163cede"
+          ],
+          "v": 3
+        }
+      ],
+      "query": "SELECT id, value FROM string_encrypted_v3_100000 WHERE value = $1 LIMIT 1",
+      "rows_returned": 1
+    },
+    {
+      "explain": [
+        {
+          "Plan": {
+            "Async Capable": false,
+            "Node Type": "Limit",
+            "Parallel Aware": false,
+            "Plan Rows": 1,
+            "Plan Width": 635,
+            "Plans": [
+              {
+                "Alias": "string_encrypted_v3_100000",
+                "Async Capable": false,
+                "Index Cond": "(((value)::jsonb ->> 'hm'::text) = ((('{\"c\": \"mBbJSl}Ec!H_TSK+j{`dYu2U2A+WSn+k~c)jauZ$1dPl4<h58Y>hr;4M{-+}t2P>1$}+?t)i&A-hFy)yv#8w{K!4|Jn!!_<<+Oe!$FC%WjGyu3rFLO#b!Eg5<upmU-1bZEwaF)KXjao=\", \"i\": {\"c\": \"value\", \"t\": \"string_encrypted_v3_100000\"}, \"v\": 3, \"bf\": [1765, 1818, 1593, 1485, 1373, 1920, 1333, 725, 1309, 1969, 586, 1350, 1531, 159, 792, 36, 925, 556, 438, 804, 426, 827, 1841, 1090, 204, 637, 141, 1254, 238, 147, 1315, 1230, 1556, 1541, 1355, 1247, 351, 1504, 286, 1590, 588, 1081, 748, 951, 410, 1615, 1537, 1422, 1400, 1075, 1592, 1885, 1826, 233, 1453, 461, 632, 1813, 18, 1405, 677, 251, 1699, 1341, 808, 763, 1589, 1641, 607, 1994, 1697, 300, 1805, 130, 1672, 2021], \"hm\": \"28369ac87a26801c88729f107b6a0a59ec8e7df2bc199971e57de95fa4d9a205\", \"ob\": [\"7d5be628a8a1a5d8550934ce6650d06a3ba0db032e9677c59070ec3b61f5e1410f873fc57f0455f8e4866ec8d044b7e2e5daaba310d45ce075dcc639715a04a7650f34f2a945608192d1081cac077659b02af00c5dc97d17fe033eb5a150c0488ba090f61c0dfa884edc8309a5d8399e0ed283202f0dc595b8d11df49b74c3d8707682824faac4535b619a031fdca7f5b89c691569db58fcc3b9ffa6da05ab1a2420374b9c0c3b6771cc1d5a6f763f02a79867f791b0cba7f72cc2bd75b33addc30d37e82675777ab434e7666ef899093d1b51c5f064e3b6b6963d2cf007a54931d804d3d234e32e46e8582af0922b6bd2a94aac5379f87161c25286415902270a70b0ebccbf4f0ae1112a37a56e28e300b1620a3d96b4c75bf94ff119eb415695bd919500158da3035d01e0f87a13ef2bfd600b21b9aa892966aeda4873324b9ac7e9d2b08e6b47943dc3e645c790aaca262655bbe14928cc6c98b4416210f095f17e45230719163c2c8d76644b1a4746380e403afba5482a4e96e408563780f34949f4eb82fc068fc6d29e6416748a6e192f2581efa68b\", \"e499141414141414c02a268347ec03abbc18838e87c562b0389adeed563dcfe75dff440e298879f077147f22e6d37d5311b9f9ddde45e5f6febcb10067ea8dbb560ddf7e01037c2e470f95abe04b8ed9cfeb049b4c5b7b29ec51eee9c826b3d52f7274074e6e7be64c11ee74e2c591e076be277277d339108032cfeaef2d68b0a7e7b295526b03cafac6f413202c5ae86ebe3824ee28ee25125695e9a5a2d8c06a2af68be0c33dd1fc3ad6bf26899a0072437ae3a96356ebad1c9ba853d464564ed526540fb0852578af0eddb2b4dfe4c55d6367669d5985dc3f1ef5922924dd6bfb7fa06d4ef848f4b986d44a01971a0c9849a848202c6e4a03e55e6cdd7fca30f547a399744c5522fd30284ba30cb00a2cf4badd87a20cd151798cbdbf6238c7fb8979addee51ae087e69cd281ce5cc00d4aeacbc36cbf9e30dd925cb906c6cfda1822f665c3d92562e928b1630f25cf343b86c81b543044a191beaf5e1352b1029d2ce4bb4c6cdfed068a1285e736dd27daf65e96cfb747db8ecf0456be2ec3b62c18a803ab550e1fa6dc86e7c1576837fa93c1451656\"]}'::jsonb)::eql_v3.text_search)::jsonb ->> 'hm'::text))",
+                "Index Name": "string_encrypted_v3_100000_eq_btree_index",
+                "Node Type": "Index Scan",
+                "Parallel Aware": false,
+                "Parent Relationship": "Outer",
+                "Plan Rows": 1,
+                "Plan Width": 635,
+                "Relation Name": "string_encrypted_v3_100000",
+                "Scan Direction": "Forward",
+                "Startup Cost": 0.42,
+                "Total Cost": 8.44
+              }
+            ],
+            "Startup Cost": 0.42,
+            "Total Cost": 8.44
+          }
+        }
+      ],
+      "id": "EXACT/exact/eql_hash/100000",
+      "indexes_used": [
+        "string_encrypted_v3_100000_eq_btree_index"
+      ],
+      "parameters": [
+        {
+          "bf": [
+            1765,
+            1818,
+            1593,
+            1485,
+            1373,
+            1920,
+            1333,
+            725,
+            1309,
+            1969,
+            586,
+            1350,
+            1531,
+            159,
+            792,
+            36,
+            925,
+            556,
+            438,
+            804,
+            426,
+            827,
+            1841,
+            1090,
+            204,
+            637,
+            141,
+            1254,
+            238,
+            147,
+            1315,
+            1230,
+            1556,
+            1541,
+            1355,
+            1247,
+            351,
+            1504,
+            286,
+            1590,
+            588,
+            1081,
+            748,
+            951,
+            410,
+            1615,
+            1537,
+            1422,
+            1400,
+            1075,
+            1592,
+            1885,
+            1826,
+            233,
+            1453,
+            461,
+            632,
+            1813,
+            18,
+            1405,
+            677,
+            251,
+            1699,
+            1341,
+            808,
+            763,
+            1589,
+            1641,
+            607,
+            1994,
+            1697,
+            300,
+            1805,
+            130,
+            1672,
+            2021
+          ],
+          "c": "mBbJSl}Ec!H_TSK+j{`dYu2U2A+WSn+k~c)jauZ$1dPl4<h58Y>hr;4M{-+}t2P>1$}+?t)i&A-hFy)yv#8w{K!4|Jn!!_<<+Oe!$FC%WjGyu3rFLO#b!Eg5<upmU-1bZEwaF)KXjao=",
+          "hm": "28369ac87a26801c88729f107b6a0a59ec8e7df2bc199971e57de95fa4d9a205",
+          "i": {
+            "c": "value",
+            "t": "string_encrypted_v3_100000"
+          },
+          "ob": [
+            "7d5be628a8a1a5d8550934ce6650d06a3ba0db032e9677c59070ec3b61f5e1410f873fc57f0455f8e4866ec8d044b7e2e5daaba310d45ce075dcc639715a04a7650f34f2a945608192d1081cac077659b02af00c5dc97d17fe033eb5a150c0488ba090f61c0dfa884edc8309a5d8399e0ed283202f0dc595b8d11df49b74c3d8707682824faac4535b619a031fdca7f5b89c691569db58fcc3b9ffa6da05ab1a2420374b9c0c3b6771cc1d5a6f763f02a79867f791b0cba7f72cc2bd75b33addc30d37e82675777ab434e7666ef899093d1b51c5f064e3b6b6963d2cf007a54931d804d3d234e32e46e8582af0922b6bd2a94aac5379f87161c25286415902270a70b0ebccbf4f0ae1112a37a56e28e300b1620a3d96b4c75bf94ff119eb415695bd919500158da3035d01e0f87a13ef2bfd600b21b9aa892966aeda4873324b9ac7e9d2b08e6b47943dc3e645c790aaca262655bbe14928cc6c98b4416210f095f17e45230719163c2c8d76644b1a4746380e403afba5482a4e96e408563780f34949f4eb82fc068fc6d29e6416748a6e192f2581efa68b",
+            "e499141414141414c02a268347ec03abbc18838e87c562b0389adeed563dcfe75dff440e298879f077147f22e6d37d5311b9f9ddde45e5f6febcb10067ea8dbb560ddf7e01037c2e470f95abe04b8ed9cfeb049b4c5b7b29ec51eee9c826b3d52f7274074e6e7be64c11ee74e2c591e076be277277d339108032cfeaef2d68b0a7e7b295526b03cafac6f413202c5ae86ebe3824ee28ee25125695e9a5a2d8c06a2af68be0c33dd1fc3ad6bf26899a0072437ae3a96356ebad1c9ba853d464564ed526540fb0852578af0eddb2b4dfe4c55d6367669d5985dc3f1ef5922924dd6bfb7fa06d4ef848f4b986d44a01971a0c9849a848202c6e4a03e55e6cdd7fca30f547a399744c5522fd30284ba30cb00a2cf4badd87a20cd151798cbdbf6238c7fb8979addee51ae087e69cd281ce5cc00d4aeacbc36cbf9e30dd925cb906c6cfda1822f665c3d92562e928b1630f25cf343b86c81b543044a191beaf5e1352b1029d2ce4bb4c6cdfed068a1285e736dd27daf65e96cfb747db8ecf0456be2ec3b62c18a803ab550e1fa6dc86e7c1576837fa93c1451656"
+          ],
+          "v": 3
+        }
+      ],
+      "query": "SELECT id, value FROM string_encrypted_v3_100000 WHERE eql_v3.eq_term(value) = eql_v3.eq_term($1::eql_v3.text_search) LIMIT 1",
+      "rows_returned": 1
+    }
+  ],
+  "target_rows": "100000"
+}

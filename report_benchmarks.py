@@ -70,10 +70,17 @@ class ScenarioMetadata:
 
 
 class BenchmarkReporter:
-    def __init__(self, results_dir: Path, output_file: Path, sql_dir: Optional[Path] = None):
+    def __init__(self, results_dir: Path, output_file: Path, sql_dir: Optional[Path] = None,
+                 v3: bool = False):
         self.results_dir = results_dir
         self.output_file = output_file
         self.sql_dir = sql_dir or Path("sql")
+        # EQL v3 mode: results live in the v3/ subdirectories (the committed
+        # v2 baseline files stay untouched in the parent dirs), and the v3
+        # ingest suite has its own bench inventory / filename suffix.
+        self.v3 = v3
+        self.query_dir = results_dir / "query" / "v3" if v3 else results_dir / "query"
+        self.ingest_dir = results_dir / "ingest" / "v3" if v3 else results_dir / "ingest"
         self.ingest_results: List[IngestResult] = []
         self.query_results: List[QueryResult] = []
         # Keyed by (query_type, query_name, row_count) so a scenario can
@@ -81,12 +88,34 @@ class BenchmarkReporter:
         self.metadata: Dict[Tuple[str, str, int], ScenarioMetadata] = {}
         self.index_cache: Dict[str, str] = {}  # Cache for index SQL
 
+    # EQL v3 mode: ingest benches are named by the domain type they write,
+    # which is what "how does each type perform for ingest" actually means.
+    V3_BENCH_DOMAIN = {
+        "int": "integer_ord",
+        "int_ope": "integer_ord_ope",
+        "string": "text_search",
+        "category": "text_eq",
+        "ste_vec_small": "json",
+    }
+
+    def _bench_label(self, bench_type: str) -> str:
+        if self.v3:
+            # alpha.3 moved the per-domain types eql_v3.* -> public.*
+            return f"public.{self.V3_BENCH_DOMAIN.get(bench_type, bench_type)}"
+        return bench_type.replace('_', ' ').title()
+
     def load_ingest_results(self):
         """Load ingest benchmark results"""
-        ingest_dir = self.results_dir / "ingest"
-        
-        for bench_type in ["int", "json_small", "json_large", "string", "ste_vec_small", "ste_vec_large"]:
-            file_path = ingest_dir / f"encrypt_{bench_type}_combined.json"
+        ingest_dir = self.ingest_dir
+        if self.v3:
+            bench_types = ["int", "int_ope", "string", "category", "ste_vec_small"]
+            suffix = "_v3"
+        else:
+            bench_types = ["int", "json_small", "json_large", "string", "ste_vec_small", "ste_vec_large"]
+            suffix = ""
+
+        for bench_type in bench_types:
+            file_path = ingest_dir / f"encrypt_{bench_type}{suffix}_combined.json"
             
             if not file_path.exists():
                 print(f"Warning: {file_path} not found, skipping", file=sys.stderr)
@@ -106,7 +135,7 @@ class BenchmarkReporter:
 
     def load_query_results(self):
         """Load query benchmark results from criterion JSON output"""
-        query_dir = self.results_dir / "query"
+        query_dir = self.query_dir
         
         for json_file in query_dir.glob("*.json"):
             # Parse filename: {query_type}_rows_{count}.json
@@ -166,7 +195,7 @@ class BenchmarkReporter:
 
     def load_query_metadata(self):
         """Load `*_metadata_*.json` sidecars written by each bench at startup."""
-        query_dir = self.results_dir / "query"
+        query_dir = self.query_dir
         meta_pattern = re.compile(r'^(.+)_metadata_(\d+)$')
         for json_file in query_dir.glob("*_metadata_*.json"):
             m = meta_pattern.match(json_file.stem)
@@ -758,10 +787,13 @@ class BenchmarkReporter:
             self._write_header(f, scenario_pages)
             self._write_ingest_section(f)
             self._write_query_overview(f, scenario_pages)
+            if self.v3:
+                self._write_v2_comparison(f)
+                self._write_plaintext_comparison(f)
             self._write_footer(f)
 
     def _write_header(self, f, scenario_pages: Dict[str, str]):
-        f.write("# Benchmark Report\n\n")
+        f.write(f"# Benchmark Report{' (EQL v3)' if self.v3 else ''}\n\n")
         f.write("This report summarises the performance benchmarks for encrypted database operations. "
                 "Per-query-type detail lives on its own page — click through from the "
                 "Query Performance section below.\n\n")
@@ -771,13 +803,17 @@ class BenchmarkReporter:
         # Add subsections for each ingest type
         ingest_types = sorted(set(r.bench_type for r in self.ingest_results))
         for it in ingest_types:
-            title = it.replace('_', ' ').title()
-            anchor = it.replace('_', '-')
+            title = self._bench_label(it)
+            # GitHub-style anchor: lowercase, drop dots, spaces -> hyphens.
+            anchor = title.lower().replace('.', '').replace(' ', '-')
             f.write(f"   - [{title}](#{anchor})\n")
 
         f.write("2. [Query Performance](#query-performance)\n")
         for qt in sorted(scenario_pages.keys()):
             f.write(f"   - [{qt} Queries]({scenario_pages[qt]})\n")
+        if self.v3:
+            f.write("3. [Comparison vs EQL 2.3](#comparison-vs-eql-23)\n")
+            f.write("4. [Comparison vs plaintext PostgreSQL](#comparison-vs-plaintext-postgresql)\n")
 
         f.write("\n---\n\n")
 
@@ -800,7 +836,7 @@ class BenchmarkReporter:
             # Sort by num_records
             results.sort(key=lambda x: x.num_records)
             
-            f.write(f"### {bench_type.replace('_', ' ').title()}\n\n")
+            f.write(f"### {self._bench_label(bench_type)}\n\n")
             
             # Add descriptions for each type
             descriptions = {
@@ -847,7 +883,7 @@ class BenchmarkReporter:
         ax.bar(range(len(records)), throughput, color='steelblue')
         ax.set_xlabel('Number of Records')
         ax.set_ylabel('Throughput (records/sec)')
-        ax.set_title(f'Ingest Throughput - {bench_type.replace("_", " ").title()}')
+        ax.set_title(f'Ingest Throughput - {self._bench_label(bench_type)}')
         ax.set_xticks(range(len(records)))
         ax.set_xticklabels([f"{r:,}" for r in records])
         ax.grid(axis='y', alpha=0.3)
@@ -872,7 +908,7 @@ class BenchmarkReporter:
         ax.bar(range(len(records)), times, color='coral')
         ax.set_xlabel('Number of Records')
         ax.set_ylabel('Total Time (seconds)')
-        ax.set_title(f'Ingest Total Time - {bench_type.replace("_", " ").title()}')
+        ax.set_title(f'Ingest Total Time - {self._bench_label(bench_type)}')
         ax.set_xticks(range(len(records)))
         ax.set_xticklabels([f"{r:,}" for r in records])
         ax.grid(axis='y', alpha=0.3)
@@ -929,7 +965,7 @@ class BenchmarkReporter:
         # Sort by throughput descending (highest on left)
         sorted_items = sorted(comparison_data.items(), key=lambda x: x[1].throughput, reverse=True)
         bench_types = [item[0] for item in sorted_items]
-        labels = [bt.replace('_', ' ').title() for bt in bench_types]
+        labels = [self._bench_label(bt) for bt in bench_types]
         throughputs = [comparison_data[bt].throughput for bt in bench_types]
         
         # Use different colors for each bar
@@ -961,7 +997,7 @@ class BenchmarkReporter:
         # Sort by throughput descending (highest on left) to match throughput chart order
         sorted_items = sorted(comparison_data.items(), key=lambda x: x[1].throughput, reverse=True)
         bench_types = [item[0] for item in sorted_items]
-        labels = [bt.replace('_', ' ').title() for bt in bench_types]
+        labels = [self._bench_label(bt) for bt in bench_types]
         times = [comparison_data[bt].total_time for bt in bench_types]
         
         # Use different colors for each bar
@@ -972,7 +1008,7 @@ class BenchmarkReporter:
         ax.set_ylabel('Total Time (seconds)', fontsize=12)
         title = f'Total Ingest Time Comparison at {row_count:,} Records'
         if exclude_label:
-            title += f' (excluding {exclude_label.replace("_", " ").title()})'
+            title += f' (excluding {self._bench_label(exclude_label)})'
         ax.set_title(title, fontsize=14, fontweight='bold')
         ax.set_xticks(range(len(bench_types)))
         ax.set_xticklabels(labels, rotation=45, ha='right')
@@ -1248,6 +1284,76 @@ class BenchmarkReporter:
         plt.savefig(output_path, dpi=100, bbox_inches='tight')
         plt.close()
 
+    def _write_v2_comparison(self, f):
+        """v3-vs-v2 summary: flagged deltas + charts, from the committed v2
+        baseline. Full 115-pair table + methodology in V3_COMPARISON.md."""
+        import report_v3_compare as cmp
+
+        v2q = cmp.load_criterion_dir(cmp.V2_QUERY_DIR)
+        v3q = cmp.load_criterion_dir(cmp.V3_QUERY_DIR)
+        rows = cmp.build_regression_rows(v2q, v3q, 10.0)
+
+        f.write("## Comparison vs EQL 2.3\n\n")
+        n_reg = sum(1 for r in rows if r["flag"] == "REGRESSION")
+        n_imp = sum(1 for r in rows if r["flag"] == "improvement")
+        n_sem = sum(1 for r in rows if r["flag"] == "semantics changed")
+        f.write(f"{len(rows)} comparable scenario/tier pairs against the committed "
+                f"EQL 2.3 baseline: **{n_reg} regressions**, **{n_imp} improvements** "
+                f"(beyond ±10%), {n_sem} pairs whose SQL semantics changed between "
+                "versions (annotated, not flagged). Full table, methodology, and "
+                "index-engagement audit: [V3_COMPARISON.md](V3_COMPARISON.md).\n\n")
+
+        flagged = [r for r in rows if r["flag"] in ("REGRESSION", "improvement")]
+        if flagged:
+            f.write("| Scenario | Tier | v2 median | v3 median | Δ | |\n")
+            f.write("|-|-|-|-|-|-|\n")
+            for r in sorted(flagged, key=lambda r: -r["delta_pct"]):
+                mark = "🔴" if r["flag"] == "REGRESSION" else "🟢"
+                f.write(f"| {cmp.scenario_prefix(r['id'])} | {cmp.tier_of(r['id'])} "
+                        f"| {cmp.fmt_ns(r['v2_ns'])} | {cmp.fmt_ns(r['v3_ns'])} "
+                        f"| {r['delta_pct']:+.1f}% | {mark} |\n")
+            f.write("\n")
+
+        for tier in sorted({cmp.tier_of(cid) for cid in v3q}, key=int):
+            chart = Path("report/v3") / f"v3_vs_v2_{tier}.png"
+            if chart.exists():
+                f.write(f"![v3 vs v2 at {int(tier):,} rows](v3/v3_vs_v2_{tier}.png)\n\n")
+
+    def _write_plaintext_comparison(self, f):
+        """Encrypted-vs-plaintext ratios for the headline scenarios, from the
+        PLAINTEXT bench family (same query shapes, btree/GIN-indexed
+        plaintext tables)."""
+        import report_v3_compare as cmp
+
+        v3q = cmp.load_criterion_dir(cmp.V3_QUERY_DIR)
+        tiers = sorted({cmp.tier_of(cid) for cid in v3q if cid.startswith("PLAINTEXT/")},
+                       key=int)
+
+        f.write("## Comparison vs plaintext PostgreSQL\n\n")
+        f.write("The same query shapes against plaintext tables with equivalent "
+                "indexes (see `benches/plaintext_v3.rs`). Ratios are encrypted ÷ "
+                "plaintext median; the JSON plaintext baseline is an unindexed "
+                "`->` filter, hence ratios below 1.\n\n")
+        f.write("| Scenario | " + " | ".join(f"{int(t):,} rows" for t in tiers) + " |\n")
+        f.write("|-" * (len(tiers) + 1) + "|\n")
+        for enc_prefix, plain in cmp.PLAINTEXT_MAP.items():
+            cells = []
+            for t in tiers:
+                enc = v3q.get(f"{enc_prefix}/{t}")
+                if plain.startswith("@"):
+                    pt = v3q.get(f"{plain[1:]}/{t}")
+                else:
+                    pt = v3q.get(f"PLAINTEXT/plaintext/{plain}/{t}")
+                cells.append(f"{cmp.fmt_ns(enc)} ({enc / pt:.1f}×)" if enc and pt else "—")
+            f.write(f"| {enc_prefix} | " + " | ".join(cells) + " |\n")
+        f.write("\n")
+
+        for t in tiers:
+            chart = Path("report/v3") / f"overhead_vs_plaintext_{t}.png"
+            if chart.exists():
+                f.write(f"![encrypted vs plaintext at {int(t):,} rows]"
+                        f"(v3/overhead_vs_plaintext_{t}.png)\n\n")
+
     def _write_footer(self, f):
         f.write("\n---\n\n")
         f.write("*Report generated by `report_benchmarks.py`*\n")
@@ -1259,10 +1365,19 @@ def main():
                        help="Directory containing benchmark results (default: results)")
     parser.add_argument("--sql-dir", type=Path, default=Path("sql"),
                        help="Directory containing SQL schema and index files (default: sql)")
-    parser.add_argument("--output", "-o", type=Path, default=Path("report/BENCHMARK_REPORT.md"),
-                       help="Output file path (default: report/BENCHMARK_REPORT.md)")
-    
+    parser.add_argument("--output", "-o", type=Path, default=None,
+                       help="Output file path (default: report/BENCHMARK_REPORT.md, "
+                            "or report/v2/BENCHMARK_REPORT.md with --v2)")
+    parser.add_argument("--v2", action="store_true",
+                       help="rebuild the archived EQL 2.3 report from the committed v2 "
+                            "baseline results into report/v2/ (default builds the main "
+                            "EQL v3 report from results/{query,ingest}/v3/)")
+
     args = parser.parse_args()
+    args.v3 = not args.v2
+    if args.output is None:
+        args.output = Path("report/v2/BENCHMARK_REPORT.md") if args.v2 \
+            else Path("report/BENCHMARK_REPORT.md")
     
     if not args.results_dir.exists():
         print(f"Error: Results directory '{args.results_dir}' does not exist", file=sys.stderr)
@@ -1271,7 +1386,7 @@ def main():
     # Create output directory if it doesn't exist
     args.output.parent.mkdir(parents=True, exist_ok=True)
     
-    reporter = BenchmarkReporter(args.results_dir, args.output, args.sql_dir)
+    reporter = BenchmarkReporter(args.results_dir, args.output, args.sql_dir, v3=args.v3)
     
     print("Loading ingest results...")
     reporter.load_ingest_results()

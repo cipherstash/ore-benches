@@ -1,0 +1,3 @@
+DROP INDEX IF EXISTS string_encrypted_v3_1000000_eq_btree_index;
+DROP INDEX IF EXISTS string_encrypted_v3_1000000_match_gin_index;
+DROP INDEX IF EXISTS string_encrypted_v3_1000000_ord_index;

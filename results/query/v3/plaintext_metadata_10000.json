@@ -1,0 +1,204 @@
+{
+  "scenarios": [
+    {
+      "explain": [
+        {
+          "Plan": {
+            "Async Capable": false,
+            "Node Type": "Limit",
+            "Parallel Aware": false,
+            "Plan Rows": 1,
+            "Plan Width": 37,
+            "Plans": [
+              {
+                "Alias": "string_plaintext_10000",
+                "Async Capable": false,
+                "Index Cond": "(value = '267f4e4740f4d3598ed11f9332de54a0'::text)",
+                "Index Name": "string_plaintext_10000_value_idx",
+                "Node Type": "Index Scan",
+                "Parallel Aware": false,
+                "Parent Relationship": "Outer",
+                "Plan Rows": 1,
+                "Plan Width": 37,
+                "Relation Name": "string_plaintext_10000",
+                "Scan Direction": "Forward",
+                "Startup Cost": 0.29,
+                "Total Cost": 8.3
+              }
+            ],
+            "Startup Cost": 0.29,
+            "Total Cost": 8.3
+          }
+        }
+      ],
+      "id": "PLAINTEXT/plaintext/exact_eq/10000",
+      "indexes_used": [
+        "string_plaintext_10000_value_idx"
+      ],
+      "parameters": [],
+      "query": "SELECT id, value FROM string_plaintext_10000 WHERE value = $1 LIMIT 1",
+      "rows_returned": 1
+    },
+    {
+      "explain": [
+        {
+          "Plan": {
+            "Async Capable": false,
+            "Node Type": "Limit",
+            "Parallel Aware": false,
+            "Plan Rows": 10,
+            "Plan Width": 8,
+            "Plans": [
+              {
+                "Alias": "integer_plaintext_10000",
+                "Async Capable": false,
+                "Filter": "(value > 5000)",
+                "Node Type": "Seq Scan",
+                "Parallel Aware": false,
+                "Parent Relationship": "Outer",
+                "Plan Rows": 5019,
+                "Plan Width": 8,
+                "Relation Name": "integer_plaintext_10000",
+                "Startup Cost": 0.0,
+                "Total Cost": 170.0
+              }
+            ],
+            "Startup Cost": 0.0,
+            "Total Cost": 0.34
+          }
+        }
+      ],
+      "id": "PLAINTEXT/plaintext/range_gt_10/10000",
+      "indexes_used": [],
+      "parameters": [],
+      "query": "SELECT id, value FROM integer_plaintext_10000 WHERE value > $1 LIMIT 10",
+      "rows_returned": 10
+    },
+    {
+      "explain": [
+        {
+          "Plan": {
+            "Async Capable": false,
+            "Node Type": "Limit",
+            "Parallel Aware": false,
+            "Plan Rows": 10,
+            "Plan Width": 8,
+            "Plans": [
+              {
+                "Alias": "integer_plaintext_10000",
+                "Async Capable": false,
+                "Index Cond": "(value < 5000)",
+                "Index Name": "integer_plaintext_10000_value_idx",
+                "Node Type": "Index Scan",
+                "Parallel Aware": false,
+                "Parent Relationship": "Outer",
+                "Plan Rows": 4980,
+                "Plan Width": 8,
+                "Relation Name": "integer_plaintext_10000",
+                "Scan Direction": "Forward",
+                "Startup Cost": 0.29,
+                "Total Cost": 327.43
+              }
+            ],
+            "Startup Cost": 0.29,
+            "Total Cost": 0.94
+          }
+        }
+      ],
+      "id": "PLAINTEXT/plaintext/range_lt_ordered_10/10000",
+      "indexes_used": [
+        "integer_plaintext_10000_value_idx"
+      ],
+      "parameters": [],
+      "query": "SELECT id, value FROM integer_plaintext_10000 WHERE value < $1 ORDER BY value LIMIT 10",
+      "rows_returned": 10
+    },
+    {
+      "explain": [
+        {
+          "Plan": {
+            "Async Capable": false,
+            "Node Type": "Limit",
+            "Parallel Aware": false,
+            "Plan Rows": 10,
+            "Plan Width": 4,
+            "Plans": [
+              {
+                "Alias": "json_small_plaintext_10000",
+                "Async Capable": false,
+                "Node Type": "Bitmap Heap Scan",
+                "Parallel Aware": false,
+                "Parent Relationship": "Outer",
+                "Plan Rows": 101,
+                "Plan Width": 4,
+                "Plans": [
+                  {
+                    "Async Capable": false,
+                    "Index Cond": "(value @> '{\"age\": 97}'::jsonb)",
+                    "Index Name": "json_small_plaintext_10000_gin_idx",
+                    "Node Type": "Bitmap Index Scan",
+                    "Parallel Aware": false,
+                    "Parent Relationship": "Outer",
+                    "Plan Rows": 101,
+                    "Plan Width": 0,
+                    "Startup Cost": 0.0,
+                    "Total Cost": 13.33
+                  }
+                ],
+                "Recheck Cond": "(value @> '{\"age\": 97}'::jsonb)",
+                "Relation Name": "json_small_plaintext_10000",
+                "Startup Cost": 13.36,
+                "Total Cost": 213.28
+              }
+            ],
+            "Startup Cost": 13.36,
+            "Total Cost": 33.15
+          }
+        }
+      ],
+      "id": "PLAINTEXT/plaintext/json_contains/10000",
+      "indexes_used": [
+        "json_small_plaintext_10000_gin_idx"
+      ],
+      "parameters": [],
+      "query": "SELECT id FROM json_small_plaintext_10000 WHERE value @> $1::jsonb LIMIT 10",
+      "rows_returned": 10
+    },
+    {
+      "explain": [
+        {
+          "Plan": {
+            "Async Capable": false,
+            "Node Type": "Limit",
+            "Parallel Aware": false,
+            "Plan Rows": 10,
+            "Plan Width": 4,
+            "Plans": [
+              {
+                "Alias": "json_small_plaintext_10000",
+                "Async Capable": false,
+                "Filter": "((value -> 'age'::text) = '97'::jsonb)",
+                "Node Type": "Seq Scan",
+                "Parallel Aware": false,
+                "Parent Relationship": "Outer",
+                "Plan Rows": 50,
+                "Plan Width": 4,
+                "Relation Name": "json_small_plaintext_10000",
+                "Startup Cost": 0.0,
+                "Total Cost": 421.0
+              }
+            ],
+            "Startup Cost": 0.0,
+            "Total Cost": 84.2
+          }
+        }
+      ],
+      "id": "PLAINTEXT/plaintext/json_field_eq/10000",
+      "indexes_used": [],
+      "parameters": [],
+      "query": "SELECT id FROM json_small_plaintext_10000 WHERE value -> 'age' = $1::jsonb LIMIT 10",
+      "rows_returned": 10
+    }
+  ],
+  "target_rows": "10000"
+}

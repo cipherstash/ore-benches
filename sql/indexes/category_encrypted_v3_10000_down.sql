@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS category_encrypted_v3_10000_eq_btree_index;

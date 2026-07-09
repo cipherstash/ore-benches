@@ -1,0 +1,2 @@
+CREATE INDEX integer_encrypted_ope_v3_10000000_ope_index
+ON integer_encrypted_ope_v3_10000000 (eql_v3.ord_ope_term(value));

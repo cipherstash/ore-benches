@@ -56,15 +56,19 @@ def format_age(mtime: float, now: float) -> str:
     return f"{delta // (86400 * 7)}w ago"
 
 
-def collect_slow(results_dir, threshold_ns, prefix):
+def collect_slow(results_dir, threshold_ns, prefix, v3=False):
     """Walk `results_dir/query/*_rows_*.json`, return events above threshold.
+
+    With `v3=True`, scans `results_dir/query/v3/` instead — the EQL v3 bench
+    results live in a subdirectory so the committed v2 baseline files stay
+    untouched (see report_v3_compare.py).
 
     Returns a list of `(median_ns, rows, bench_id, mtime)` tuples — unsorted.
     Bench ids are filtered by `prefix` (str.startswith) when given.
     """
-    query_dir = results_dir / "query"
+    query_dir = results_dir / "query" / "v3" if v3 else results_dir / "query"
     if not query_dir.is_dir():
-        sys.exit(f"no `query/` subdirectory under {results_dir}")
+        sys.exit(f"no `{query_dir}` directory")
 
     filename_re = re.compile(r"^(.+)_rows_(\d+)\.json$")
     slow = []
@@ -111,6 +115,8 @@ def main():
                         help="list every scenario, ignoring the threshold")
     parser.add_argument("--results-dir", type=Path, default=Path("results"),
                         help="benchmark results root (default ./results)")
+    parser.add_argument("--v3", action="store_true",
+                        help="scan the EQL v3 results (results/query/v3/) instead of the v2 baseline")
     parser.add_argument("prefix", nargs="?", default=None,
                         help="if given, only include scenarios whose id starts with this prefix "
                              "(e.g. 'ORE' or 'EXACT/exact_decrypt')")
@@ -119,25 +125,26 @@ def main():
     # --all lists everything; a -inf threshold admits every (positive) median.
     threshold_ns = float("-inf") if args.all else args.ms * 1_000_000
 
-    slow = collect_slow(args.results_dir, threshold_ns, args.prefix)
+    slow = collect_slow(args.results_dir, threshold_ns, args.prefix, v3=args.v3)
     # Worst offenders first.
     slow.sort(key=lambda r: r[0], reverse=True)
 
     prefix_note = f" matching prefix '{args.prefix}'" if args.prefix else ""
+    scanned = f"{args.results_dir}/query/v3" if args.v3 else f"{args.results_dir}/query"
 
     if not slow:
         if args.all:
-            print(f"No benchmark results found under {args.results_dir}/query{prefix_note}.")
+            print(f"No benchmark results found under {scanned}{prefix_note}.")
         else:
             print(f"No queries exceed {args.ms:g} ms{prefix_note}.")
         return
 
     if args.all:
         print(f"All {len(slow)} benchmark scenarios{prefix_note} "
-              f"(scanned {args.results_dir}/query), slowest first:")
+              f"(scanned {scanned}), slowest first:")
     else:
         print(f"Queries with median runtime > {args.ms:g} ms{prefix_note} "
-              f"(scanned {args.results_dir}/query):")
+              f"(scanned {scanned}):")
     print()
 
     now = time.time()

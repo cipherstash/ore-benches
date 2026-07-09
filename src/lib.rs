@@ -33,6 +33,8 @@ impl EqlV2Encrypted {
         self.data.0
     }
 }
+pub mod v3;
+
 use stack_profile::ProfileStore;
 use std::borrow::Cow;
 use std::env;
@@ -151,6 +153,10 @@ pub struct IngestOptions {
     pub batch_size: usize,
     pub identifier: Identifier,
     pub column_config: ColumnConfig,
+    /// When set, every storage payload is converted v2→v3 for this target
+    /// domain (via `eql_bindings::from_v2`) before the INSERT — the v3
+    /// ingest path. `None` binds the client's v2 ciphertext as-is.
+    pub eql_target: Option<v3::TargetDomain>,
 }
 
 pub struct IngestOptionsBuilder {
@@ -159,6 +165,7 @@ pub struct IngestOptionsBuilder {
     batch_size: Option<usize>,
     identifier: Option<Identifier>,
     column_config: Option<ColumnConfig>,
+    eql_target: Option<v3::TargetDomain>,
 }
 
 impl IngestOptionsBuilder {
@@ -172,7 +179,17 @@ impl IngestOptionsBuilder {
             batch_size: None,
             identifier: None,
             column_config: None,
+            eql_target: None,
         }
+    }
+
+    /// Convert every storage payload v2→v3 for `target` before the INSERT
+    /// (the v3 ingest path). See [`IngestOptions::eql_target`].
+    /// API shape adopted from PR #21 (versioning as configuration on the
+    /// single ingest pipeline, typed target resolved at the call site).
+    pub fn convert_to_v3(mut self, target: v3::TargetDomain) -> Self {
+        self.eql_target = Some(target);
+        self
     }
 
     pub fn num_records(mut self, num_records: i32) -> Self {
@@ -202,6 +219,7 @@ impl IngestOptionsBuilder {
             batch_size: self.batch_size.unwrap_or(Self::DEFAULT_BATCH_SIZE),
             identifier: self.identifier.context("identifier is required")?,
             column_config: self.column_config.context("column_config is required")?,
+            eql_target: self.eql_target,
         })
     }
 }
@@ -261,20 +279,60 @@ impl IngestOptions {
 
             let out = encrypt_eql(scoped_cipher.clone(), prepared, &Default::default()).await?;
 
-            QueryBuilder::new(format!("INSERT INTO {} (value) ", self.identifier.table()))
-                .push_values(out, |mut b, v| {
-                    // Every PreparedPlaintext above used EqlOperation::Store, so
-                    // encrypt_eql yields only EqlOutput::Store. cipherstash-client
-                    // splits the storage and query payload shapes (since
-                    // 0.34.1-alpha.9) — unwrap the storage ciphertext for binding.
-                    let EqlOutput::Store(ciphertext) = v else {
-                        unreachable!("storage batch must yield EqlOutput::Store");
-                    };
-                    b.push_bind(Json(ciphertext));
-                })
-                .build()
-                .execute(&pool)
-                .await?;
+            match self.eql_target {
+                // v2 path: bind the client's storage ciphertext as-is.
+                // Every PreparedPlaintext above used EqlOperation::Store, so
+                // encrypt_eql yields only EqlOutput::Store. cipherstash-client
+                // splits the storage and query payload shapes (since
+                // 0.34.1-alpha.9) — unwrap the storage ciphertext for binding.
+                None => {
+                    QueryBuilder::new(format!(
+                        "INSERT INTO {} (value) ",
+                        self.identifier.table()
+                    ))
+                    .push_values(out.into_iter(), |mut b, v| {
+                        let EqlOutput::Store(ciphertext) = v else {
+                            unreachable!("storage batch must yield EqlOutput::Store");
+                        };
+                        b.push_bind(Json(ciphertext));
+                    })
+                    .build()
+                    .execute(&pool)
+                    .await?;
+                }
+                // v3 path: convert each storage payload to the target domain
+                // before binding. The conversion is deliberately inside the
+                // measured path — v3 ingest cost for the intended consumer IS
+                // "encrypt + convert + insert". `V3_CONVERT_ONLY=1` skips the
+                // INSERT so the conversion overhead is attributable when
+                // comparing against the v2 ingest numbers.
+                Some(target) => {
+                    let converted = out
+                        .into_iter()
+                        .map(|v| {
+                            let EqlOutput::Store(ciphertext) = v else {
+                                unreachable!("storage batch must yield EqlOutput::Store");
+                            };
+                            v3::to_v3_stored_target(&ciphertext, target)
+                        })
+                        .collect::<Result<Vec<_>>>()?;
+
+                    if env::var("V3_CONVERT_ONLY").is_ok_and(|v| v == "1") {
+                        continue;
+                    }
+
+                    QueryBuilder::new(format!(
+                        "INSERT INTO {} (value) ",
+                        self.identifier.table()
+                    ))
+                    .push_values(converted.into_iter(), |mut b, v| {
+                        b.push_bind(Json(v));
+                    })
+                    .build()
+                    .execute(&pool)
+                    .await?;
+                }
+            }
         }
 
         let result = json!({
@@ -698,7 +756,19 @@ pub fn write_metadata_file(
     target_rows: &str,
     scenarios: Vec<ScenarioMetadata>,
 ) -> Result<()> {
-    let dir = std::path::PathBuf::from("results/query");
+    write_metadata_file_in("results/query", prefix, target_rows, scenarios)
+}
+
+/// [`write_metadata_file`] with an explicit output directory — the v3
+/// benches keep their sidecars under `results/query/v3/` so the committed
+/// v2 results stay untouched as the regression baseline.
+pub fn write_metadata_file_in(
+    dir: &str,
+    prefix: &str,
+    target_rows: &str,
+    scenarios: Vec<ScenarioMetadata>,
+) -> Result<()> {
+    let dir = std::path::PathBuf::from(dir);
     std::fs::create_dir_all(&dir)?;
     let path = dir.join(format!("{}_metadata_{}.json", prefix, target_rows));
     let payload = serde_json::json!({

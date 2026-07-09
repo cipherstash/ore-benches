@@ -1,0 +1,42 @@
+{
+  "metadata": {
+    "timestamp": "2026-07-09T00:38:55.335442+00:00",
+    "rust_version": "rustc 1.86.0 (05f9846f8 2025-03-31)",
+    "postgres_version": "psql (PostgreSQL) 17.10 (Homebrew)",
+    "host_info": {
+      "os": "macOS",
+      "cpu_model": "Apple M1 Max",
+      "cpu_cores": 10,
+      "total_memory_gb": 64.0
+    }
+  },
+  "results": [
+    {
+      "num_records": 500,
+      "total_time_seconds": 0.6083774457800001,
+      "total_records": 500,
+      "throughput_records_per_second": 821.8582123125069,
+      "average_memory_usage_bytes": 25174016,
+      "average_memory_usage_mb": 24.0078125,
+      "num_runs": 2
+    },
+    {
+      "num_records": 1000,
+      "total_time_seconds": 0.41082944528,
+      "total_records": 1000,
+      "throughput_records_per_second": 2434.100114996509,
+      "average_memory_usage_bytes": 36257792,
+      "average_memory_usage_mb": 34.578125,
+      "num_runs": 2
+    },
+    {
+      "num_records": 10000,
+      "total_time_seconds": 2.24182234128,
+      "total_records": 10000,
+      "throughput_records_per_second": 4460.656768319277,
+      "average_memory_usage_bytes": 41222144,
+      "average_memory_usage_mb": 39.3125,
+      "num_runs": 2
+    }
+  ]
+}

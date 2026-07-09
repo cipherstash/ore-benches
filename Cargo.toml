@@ -21,9 +21,19 @@ rand = "0.8.5"
 # EQL v2 wire payloads (`k`/`c`/`v`/`i`) byte-identical to the
 # 0.34.1-alpha.9 pre-release that EQL 2.3.0 targets — the eql wire formats
 # module is unchanged between the two — so the EQL release pin in
-# mise.toml's setup-db task stays at eql-2.3.0. Bump both together.
+# mise.toml's setup-db task stays at eql-2.3.0. 0.38.1 adds scalar
+# OPE-CLLW `op` term emission via `Index::new_ope()` (CIP-3280), which the
+# `_ord_ope` benches require (real OPE ciphertexts). Bump both together.
 cipherstash-client = { version = "=0.38.1", features = ["tokio"] }
 stack-profile = "=0.38.1"
+# EQL v2.3 -> v3 payload conversion (the supported migration path; the
+# converter's docs name these benches as a consumer). eql-bindings::from_v2
+# reshapes the client's v2.3 payloads into the eql_v3 domain payloads.
+# Published on crates.io as of 0.4.2 (was a git dep on the eql_v3 branch).
+eql-bindings = "=0.4.2"
+# Plaintext::Decimal takes rust_decimal::Decimal, which cipherstash-client
+# does not re-export — used by the scalar_smoke_v3 numeric-family coverage.
+rust_decimal = "1"
 anyhow = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -76,6 +86,38 @@ path = "src/bin/encrypt_category.rs"
 name = "encrypt_combo"
 path = "src/bin/encrypt_combo.rs"
 
+[[bin]]
+name = "encrypt_string_v3"
+path = "src/bin/encrypt_string_v3.rs"
+
+[[bin]]
+name = "encrypt_int_v3"
+path = "src/bin/encrypt_int_v3.rs"
+
+[[bin]]
+name = "encrypt_int_ope_v3"
+path = "src/bin/encrypt_int_ope_v3.rs"
+
+[[bin]]
+name = "encrypt_category_v3"
+path = "src/bin/encrypt_category_v3.rs"
+
+[[bin]]
+name = "encrypt_combo_v3"
+path = "src/bin/encrypt_combo_v3.rs"
+
+[[bin]]
+name = "encrypt_ste_vec_small_v3"
+path = "src/bin/encrypt_ste_vec_small_v3.rs"
+
+[[bin]]
+name = "encrypt_scalar_smoke_v3"
+path = "src/bin/encrypt_scalar_smoke_v3.rs"
+
+[[bin]]
+name = "decrypt_probe"
+path = "src/bin/decrypt_probe.rs"
+
 [[bench]]
 name = "ore"
 harness = false
@@ -98,4 +140,40 @@ harness = false
 
 [[bench]]
 name = "combo"
+harness = false
+
+[[bench]]
+name = "exact_v3"
+harness = false
+
+[[bench]]
+name = "ore_v3"
+harness = false
+
+[[bench]]
+name = "group_by_v3"
+harness = false
+
+[[bench]]
+name = "match_v3"
+harness = false
+
+[[bench]]
+name = "ope_v3"
+harness = false
+
+[[bench]]
+name = "combo_v3"
+harness = false
+
+[[bench]]
+name = "json_v3"
+harness = false
+
+[[bench]]
+name = "scalar_smoke_v3"
+harness = false
+
+[[bench]]
+name = "plaintext_v3"
 harness = false

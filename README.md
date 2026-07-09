@@ -6,9 +6,53 @@ Performance benchmarks for CipherStash's searchable encryption operations using 
 
 The latest benchmark results are available in the [`report/`](report/) directory:
 
-- **[Benchmark Report](report/BENCHMARK_REPORT.md)** - Comprehensive report with performance tables and charts
-- Includes ingest throughput, query performance, SQL statements, and index configurations
-- Performance indicators (⚠️) highlight queries exceeding 100ms
+- **[Benchmark Report](report/BENCHMARK_REPORT.md)** - the main report (EQL v3): ingest throughput, per-family query performance, SQL/plans/index configs, plus comparison sections vs EQL 2.3 and vs plaintext PostgreSQL
+- **[EQL v3 vs v2 Comparison](report/V3_COMPARISON.md)** - full regression tables, index-engagement audit, and docs/marketing charts (`report/v3/`)
+- **[EQL 2.3 report archive](report/v2/BENCHMARK_REPORT.md)** - the frozen v2 baseline report
+
+## 🆕 EQL v3 benches
+
+The `*_v3` benches target the EQL v3 release (domain-specific types —
+`public.text_search`, `public.integer_ord`, … — replacing the single
+`eql_v2_encrypted` composite). They live alongside the v2 benches; the
+committed v2 results are the regression baseline and are never overwritten
+(v3 results land in `results/query/v3/` and `results/ingest/v3/`).
+
+```bash
+# Install the v3 bundle alongside v2. Defaults to the pinned release
+# download (eql-3.0.0-alpha.3); override with EQL_V3_VERSION=<tag>,
+# EQL_V3_SQL=<prebuilt bundle>, or EQL_V3_DIR=<local checkout to build>.
+mise run setup-db-v3
+
+# Populate all v3 tables at a tier
+mise run prepare:v3:all 10000
+
+# Query benches: exact | match | ore | ope | group_by | combo | json | plaintext | smoke
+mise run bench:v3:query:all 10000     # arg = max tier (10000 | 100000 | 1000000)
+
+# Ingest benches (hyperfine, same tiers as v2)
+mise run bench:v3:ingest
+
+# Terminal overviews (v3 siblings of report / report:slow / report:ingest,
+# which scan only the v2 baseline results)
+mise run report:v3
+mise run report:v3:slow [ms]
+mise run report:v3:ingest
+
+# v2-vs-v3 side-by-side on the CLI (medians + delta per scenario/tier)
+mise run report:v3-compare
+
+# Full comparison artifacts: report/V3_COMPARISON.md + report/v3/ charts
+mise run report:build:v3-compare
+
+# Main report (EQL v3 numbers + v2/plaintext comparison sections)
+mise run report:build
+```
+
+v3 payloads are produced by converting the pinned cipherstash-client's v2.3
+output through `eql-bindings::from_v2` (the supported migration path — see
+`src/v3.rs` for the details and caveats). The `ope` benches use real
+CLLW-OPE `op` terms emitted by cipherstash-client 0.38.1 (`Index::new_ope()`).
 
 ### Other benchmarks
 

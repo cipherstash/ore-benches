@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS integer_encrypted_ope_v3_100000_ope_index;
