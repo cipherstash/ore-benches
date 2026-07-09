@@ -27,7 +27,7 @@ export type OpStats = { kmsCalls: number };
 
 export interface EncryptionBackend {
   /** Backend identifier, also written to the `backend` column for traceability. */
-  readonly name: "zerokms" | "aws-kms" | "aws-kms-envelope";
+  readonly name: "zerokms" | "aws-kms" | "aws-kms-envelope" | "vault-transit";
   /** One-time async setup (client construction, schema registration). */
   init(): Promise<void>;
   /** Encrypt a batch of records. One bulk operation for ZeroKMS; N×fields calls for AWS. */
